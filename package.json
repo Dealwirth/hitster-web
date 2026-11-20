@@ -1,0 +1,39 @@
+{
+  "name": "hitster-web",
+  "version": "1.0.0",
+  "description": "Kostenloser Hitster-Kartengenerator mit 1000+ Songs, 30-Sekunden-Clips und Spotify-Umblättern. Kein Login, keine Werbung.",
+  "type": "module",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "build:catalog": "node scripts/build-catalog.js",
+    "test": "node --test tests/catalog.test.js tests/api.test.js tests/range.test.js",
+    "test:e2e": "node tests/e2e.test.js",
+    "test:a11y": "node tests/a11y.mjs",
+    "test:audio": "node tests/sample-audio.mjs && node tests/fallback-audio.mjs",
+    "screenshots": "node tests/screenshots.mjs",
+    "test:small": "node tests/small-viewport.mjs"
+  },
+  "keywords": [
+    "hitster",
+    "musik",
+    "quiz",
+    "partyspiel",
+    "spotify",
+    "open-source"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "compression": "^1.8.2",
+    "express": "^4.22.3"
+  },
+  "devDependencies": {
+    "axe-core": "^4.14.1",
+    "playwright-core": "^1.65.1",
+    "supertest": "^7.1.4"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

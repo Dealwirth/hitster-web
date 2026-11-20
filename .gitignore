@@ -1,0 +1,8 @@
+node_modules/
+data/.cache/
+data/.cache-*
+data/spotify-ids.csv
+test-results/
+playwright-report/
+*.log
+.DS_Store

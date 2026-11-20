@@ -1,0 +1,41 @@
+{
+  "generatedAt": "2026-11-20T20:33:34.122Z",
+  "sourceSongs": 1777,
+  "resolved": 1777,
+  "failed": 0,
+  "withSpotifyId": 1250,
+  "withArt": 1777,
+  "byGenre": {
+    "rock": 354,
+    "pop": 454,
+    "jazz": 3,
+    "rnb": 82,
+    "folk": 37,
+    "film": 10,
+    "funk": 51,
+    "country": 61,
+    "metal": 44,
+    "electronic": 267,
+    "reggae": 4,
+    "punk": 31,
+    "hiphop": 91,
+    "ska": 3,
+    "ndw": 13,
+    "indie": 103,
+    "schlager": 15,
+    "deutschpop": 64,
+    "deutschrap": 21,
+    "latin": 69
+  },
+  "byDecade": {
+    "1950s": 23,
+    "1960s": 123,
+    "1970s": 220,
+    "1980s": 293,
+    "1990s": 254,
+    "2000s": 397,
+    "2010s": 378,
+    "2020s": 89
+  },
+  "failedSongs": []
+}
