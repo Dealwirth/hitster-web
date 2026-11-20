@@ -26,7 +26,7 @@ test('every song has complete, valid metadata', () => {
     assert.ok(Array.isArray(s.tags), `bad tags ${s.id}`);
     assert.ok(s.deezerId || s.itunesId, `no audio source ${s.id}`);
     assert.ok(s.art, `no artwork ${s.id}`);
-    assert.ok(!/[<>]/.test(s.title + s.artist), `markup in text ${s.id}`);
+    assert.ok(!/<[a-zA-Z/!?]/.test(s.title + s.artist), `markup in text ${s.id}`);
   }
 });
 

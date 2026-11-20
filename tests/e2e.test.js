@@ -69,7 +69,7 @@ await step('card shows all ten Bingo categories', async () => {
 await step('front card shows genre, number and play prompt', async () => {
   assert.ok((await page.locator('#frontGenre').innerText()).length > 1);
   assert.match(await page.locator('#frontNumber').innerText(), /^#\d{4}$/);
-  assert.match(await page.locator('.card-question').innerText(), /Song/);
+  assert.match(await page.locator('.card-question').innerText(), /Song/i);
 });
 
 await step('no audio is downloaded before the user presses play', async () => {
@@ -78,8 +78,10 @@ await step('no audio is downloaded before the user presses play', async () => {
 
 await step('clicking play starts a real audio clip', async () => {
   await page.locator('#cardPlay').click();
-  await page.waitForFunction(() => document.querySelector('#card')?.classList.contains('is-playing'), { timeout: 15000 });
-  await page.waitForTimeout(900);
+  await page.waitForFunction(() => {
+    const a = document.querySelector('#audio');
+    return !a.paused && a.currentTime > 0.2;
+  }, { timeout: 20000 });
   const audio = await page.evaluate(() => {
     const a = document.querySelector('#audio');
     return { paused: a.paused, currentTime: a.currentTime, duration: a.duration, readyState: a.readyState };
@@ -113,13 +115,13 @@ await step('flipping reveals title, artist and year', async () => {
   assert.equal(await page.locator('#cardBack').getAttribute('aria-hidden'), 'false');
 });
 
-await step('album artwork is requested from the server', async () => {
-  const img = page.locator('#backArt img');
+await step('card back shows a scannable QR code', async () => {
+  const img = page.locator('#backQrImg');
   await img.waitFor({ state: 'visible', timeout: 8000 });
   const src = await img.getAttribute('src');
-  assert.match(src, /^\/api\/art\/s\d{4}$/);
+  assert.match(src, /^\/api\/qr\/s\d{4}\?base=/);
   const natural = await img.evaluate((i) => ({ w: i.naturalWidth, h: i.naturalHeight }));
-  assert.ok(natural.w > 10 && natural.h > 10, JSON.stringify(natural));
+  assert.ok(natural.w >= 64 && natural.h >= 64, JSON.stringify(natural));
 });
 
 await step('judging a correct answer updates the statistics', async () => {
@@ -181,7 +183,7 @@ await step('genre filter changes the card and URL', async () => {
 await step('decade filter combines with genre filter', async () => {
   await page.locator('.chip[data-decade="1990s"]').click();
   await page.waitForTimeout(700);
-  assert.match(await page.locator('#backGenre').innerText(), /1990ER/);
+  assert.match(await page.locator('#backDecade').innerText(), /1990ER/);
   assert.match(page.url(), /decade=1990s/);
 });
 
@@ -203,6 +205,97 @@ await step('keyboard shortcuts control the game', async () => {
   await page.keyboard.press('n');
   await page.waitForTimeout(700);
   assert.equal(await page.locator('#card').getAttribute('data-flipped'), 'false');
+});
+
+await step('extension mode draws a song from the chosen year', async () => {
+  await page.locator('.mode-btn[data-mode="extension"]').click();
+  await page.waitForTimeout(300);
+  assert.equal(await page.locator('#extensionBar').isVisible(), true);
+  await page.locator('#yearInput').fill('1984');
+  await page.locator('#yearGo').click();
+  await page.waitForTimeout(700);
+  assert.equal(await page.evaluate(() => window.HITSTER.state.mode), 'extension');
+  assert.equal(await page.evaluate(() => window.HITSTER.state.current.year), 1984);
+  assert.equal(await page.locator('#frontYearBadge').innerText(), '1984');
+  assert.match(await page.locator('#yearHint').innerText(), /1984/);
+  assert.match(page.url(), /mode=extension/);
+  assert.match(page.url(), /year=1984/);
+});
+
+await step('random year stays in the catalogue range', async () => {
+  await page.locator('#yearRandom').click();
+  await page.waitForTimeout(500);
+  const year = await page.evaluate(() => window.HITSTER.state.current.year);
+  assert.ok(year >= 1950 && year <= 2024, String(year));
+  assert.equal(await page.evaluate(() => window.HITSTER.state.mode), 'extension');
+});
+
+await step('QR payload parser accepts cards, years and bare ids', async () => {
+  const parsed = await page.evaluate(() => ({
+    card: window.HITSTER.parseScan('https://example.com/?card=s0042'),
+    year: window.HITSTER.parseScan('1984'),
+    bare: window.HITSTER.parseScan('s0042'),
+    bad: window.HITSTER.parseScan('hello'),
+  }));
+  assert.deepEqual(parsed.card, { card: 's0042' });
+  assert.deepEqual(parsed.year, { year: 1984 });
+  assert.deepEqual(parsed.bare, { card: 's0042' });
+  assert.equal(parsed.bad, null);
+});
+
+await step('card deep link opens the exact card', async () => {
+  const target = await page.evaluate(() => window.HITSTER.state.songs[0].id);
+  const deep = await context.newPage();
+  await deep.goto(`${base}/?card=${target}`, { waitUntil: 'networkidle' });
+  await deep.waitForFunction(() => window.HITSTER?.state?.current?.id, { timeout: 15000 });
+  await deep.waitForTimeout(400);
+  assert.equal(await deep.evaluate(() => window.HITSTER.state.current.id), target);
+  assert.equal(await deep.locator('#frontNumber').innerText(), `#${target.slice(1)}`);
+  await deep.close();
+});
+
+await step('year deep link opens extension mode for that year', async () => {
+  const yp = await context.newPage();
+  await yp.goto(`${base}/?year=1984`, { waitUntil: 'networkidle' });
+  await yp.waitForFunction(() => window.HITSTER?.state?.current?.year, { timeout: 15000 });
+  await yp.waitForTimeout(400);
+  assert.equal(await yp.evaluate(() => window.HITSTER.state.mode), 'extension');
+  assert.equal(await yp.evaluate(() => window.HITSTER.state.current.year), 1984);
+  assert.equal(await yp.locator('#frontYearBadge').innerText(), '1984');
+  await yp.close();
+});
+
+await step('print sheet builds fronts, backs and QR codes', async () => {
+  await page.evaluate(() => { window.print = () => { window.__printed = true; }; window.HITSTER.openPrint(); });
+  await page.waitForTimeout(250);
+  assert.equal(await page.locator('#printModal').isVisible(), true);
+  await page.selectOption('#printCount', '6');
+  await page.locator('#printGo').click();
+  await page.waitForTimeout(1400);
+  const print = await page.evaluate(() => ({
+    printed: window.__printed,
+    cards: document.querySelectorAll('#printRoot .print-card').length,
+    fronts: document.querySelectorAll('#printRoot .print-sheet.fronts .print-card').length,
+    backs: document.querySelectorAll('#printRoot .print-sheet.backs .print-card').length,
+    qrs: document.querySelectorAll('#printRoot .pc-qr img').length,
+  }));
+  assert.equal(print.printed, true);
+  assert.equal(print.cards, 12);
+  assert.equal(print.fronts, 6);
+  assert.equal(print.backs, 6);
+  assert.equal(print.qrs, 6);
+});
+
+await step('mode switch shows and hides the extension bar', async () => {
+  await page.locator('.mode-btn[data-mode="bingo"]').click();
+  await page.waitForTimeout(250);
+  assert.equal(await page.evaluate(() => window.HITSTER.state.mode), 'bingo');
+  assert.equal(await page.locator('#extensionBar').isVisible(), false);
+  assert.ok(await page.evaluate(() => document.body.classList.contains('mode-bingo')));
+  await page.locator('.mode-btn[data-mode="classic"]').click();
+  await page.waitForTimeout(250);
+  assert.equal(await page.evaluate(() => window.HITSTER.state.mode), 'classic');
+  assert.equal(await page.locator('#frontYearBadge').isVisible(), false);
 });
 
 await step('no horizontal overflow on desktop', async () => {

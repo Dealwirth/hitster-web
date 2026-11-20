@@ -70,6 +70,10 @@ const state = {
   stats: { played: 0, flipped: 0, correct: 0, wrong: 0, streak: 0, bestStreak: 0 },
   bingo: { cells: [], marked: new Set(), celebrated: new Set() },
   prefs: { soundOn: true, volume: 0.85 },
+  mode: 'classic',
+  extensionYear: null,
+  initialCard: null,
+  scan: { stream: null, raf: null, active: false },
   toastTimer: null,
   ready: false,
 };
@@ -97,8 +101,28 @@ const el = {
   backDecade: $('#backDecade'),
   backTitle: $('#backTitle'),
   backArtist: $('#backArtist'),
-  backMeta: $('#backMeta'),
-  backArt: $('#backArt'),
+  backFacts: $('#backFacts'),
+  backQrImg: $('#backQrImg'),
+  frontYearBadge: $('#frontYearBadge'),
+  modeSwitch: $('#modeSwitch'),
+  extensionBar: $('#extensionBar'),
+  yearInput: $('#yearInput'),
+  yearGo: $('#yearGo'),
+  yearRandom: $('#yearRandom'),
+  scanBtn: $('#scanBtn'),
+  yearHint: $('#yearHint'),
+  printBtn: $('#printBtn'),
+  printModal: $('#printModal'),
+  printCount: $('#printCount'),
+  printSides: $('#printSides'),
+  printFilter: $('#printFilter'),
+  printGo: $('#printGo'),
+  printRoot: $('#printRoot'),
+  scanModal: $('#scanModal'),
+  scanVideo: $('#scanVideo'),
+  scanCanvas: $('#scanCanvas'),
+  scanStatus: $('#scanStatus'),
+  footerCount: $('#footerCount'),
   answersA: $('#answersA'),
   answersB: $('#answersB'),
   frontBingo: $('#frontBingo'),
@@ -150,13 +174,6 @@ function genreColor(genre) {
   return GENRES[genre]?.color || '#ff2d95';
 }
 
-function formatDuration(seconds) {
-  if (!seconds) return '–';
-  const m = Math.floor(seconds / 60);
-  const s = String(seconds % 60).padStart(2, '0');
-  return `${m}:${s}`;
-}
-
 function shuffle(arr) {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
@@ -180,7 +197,10 @@ function currentPool() {
 }
 
 function pickSong() {
-  const pool = currentPool();
+  let pool = currentPool();
+  if (state.mode === 'extension' && state.extensionYear) {
+    pool = pool.filter((s) => s.year === state.extensionYear);
+  }
   if (!pool.length) return null;
   const fresh = pool.filter((s) => !state.recent.includes(s.id));
   const list = fresh.length ? fresh : pool;
@@ -308,7 +328,8 @@ function renderDecadeChips() {
 function updateFilterSummary() {
   const parts = [];
   if (state.filters.genre !== 'all') parts.push(genreLabel(state.filters.genre));
-  if (state.filters.decade !== 'all') parts.push(state.filters.decade);
+  if (state.mode === 'extension' && state.extensionYear) parts.push(`Jahr ${state.extensionYear}`);
+  else if (state.filters.decade !== 'all') parts.push(state.filters.decade);
   if (state.filters.oneHit) parts.push('One-Hit-Wonder');
   if (state.filters.spotifyOnly) parts.push('mit Spotify');
   const count = currentPool().length;
@@ -340,6 +361,10 @@ function selectDecade(decade) {
   }).length;
   if (!count) return showToast('Keine Karten mit dieser Kombination.');
   state.filters.decade = decade;
+  if (state.mode === 'extension') {
+    state.extensionYear = null;
+    setMode('classic', { silent: true, reload: false });
+  }
   afterFilterChange();
 }
 
@@ -364,18 +389,36 @@ function syncUrl() {
   if (state.filters.decade !== 'all') params.set('decade', state.filters.decade);
   if (state.filters.oneHit) params.set('onehit', '1');
   if (state.filters.spotifyOnly) params.set('spotify', '1');
+  if (state.mode !== 'classic') params.set('mode', state.mode);
+  if (state.mode === 'extension' && state.extensionYear) params.set('year', String(state.extensionYear));
   const qs = params.toString();
   history.replaceState(null, '', qs ? `?${qs}` : location.pathname);
 }
 
 function readUrl() {
   const p = new URLSearchParams(location.search);
+  state.filters.genre = 'all';
+  state.filters.decade = 'all';
+  state.filters.oneHit = false;
+  state.filters.spotifyOnly = false;
+  state.mode = 'classic';
+  state.extensionYear = null;
+  state.initialCard = null;
   const genre = p.get('genre');
   const decade = p.get('decade');
   if (genre && GENRES[genre]) state.filters.genre = genre;
   if (decade && /^\d{4}s$/.test(decade)) state.filters.decade = decade;
   state.filters.oneHit = p.get('onehit') === '1';
   state.filters.spotifyOnly = p.get('spotify') === '1';
+  const mode = p.get('mode');
+  if (['classic', 'bingo', 'extension'].includes(mode)) state.mode = mode;
+  const year = Number(p.get('year'));
+  if (year >= 1950 && year <= 2024) {
+    state.mode = 'extension';
+    state.extensionYear = year;
+  }
+  const card = p.get('card');
+  if (card && /^s\d{4}$/.test(card)) state.initialCard = card;
 }
 
 /* --------------------------------------------------------------------------
@@ -419,38 +462,272 @@ function renderAnswers(song) {
   build('B', el.answersB);
 }
 
-function renderMeta(song) {
-  const items = [
-    ['Album', song.album || '–'],
-    ['Dauer', formatDuration(song.duration)],
-    ['Besetzung', song.group ? 'Gruppe' : 'Solo'],
-    ['Genre', genreLabel(song.genre)],
-  ];
-  const frag = document.createDocumentFragment();
-  for (const [k, v] of items) {
-    const div = document.createElement('div');
-    const span = document.createElement('span');
-    span.textContent = k;
-    const strong = document.createElement('strong');
-    strong.textContent = v;
-    strong.title = v;
-    div.append(span, strong);
-    frag.append(div);
-  }
-  el.backMeta.replaceChildren(frag);
+function renderFacts(song) {
+  el.backFacts.textContent = song.group ? 'Gruppe' : 'Solo';
 }
 
-function renderArt(song) {
-  const old = el.backArt.querySelector('img');
-  if (old) old.remove();
-  if (!song.artUrl) return;
-  const img = document.createElement('img');
-  img.src = song.artUrl;
-  img.alt = `Cover von ${song.title} – ${song.artist}`;
-  img.loading = 'lazy';
-  img.decoding = 'async';
-  img.addEventListener('error', () => img.remove());
-  el.backArt.append(img);
+function yearPool(year) {
+  return state.songs.filter((s) => s.year === year && matches(s, { ignoreDecade: true }));
+}
+
+function updateYearHint() {
+  if (!state.extensionYear) {
+    el.yearHint.textContent = 'Jahr eingeben – wir ziehen ein Lied aus demselben Jahr.';
+    return;
+  }
+  const n = yearPool(state.extensionYear).length;
+  el.yearHint.textContent = n
+    ? `Jahr ${state.extensionYear} · ${n} Lieder im Katalog.`
+    : `Für ${state.extensionYear} ist kein Lied mit diesen Filtern dabei.`;
+}
+
+function setMode(mode, { silent = false, reload = true } = {}) {
+  if (!['classic', 'bingo', 'extension'].includes(mode)) return;
+  state.mode = mode;
+  document.body.classList.remove('mode-classic', 'mode-bingo', 'mode-extension');
+  document.body.classList.add(`mode-${mode}`);
+  for (const btn of $$('.mode-btn', el.modeSwitch)) {
+    const active = btn.dataset.mode === mode;
+    btn.classList.toggle('active', active);
+    btn.setAttribute('aria-selected', active ? 'true' : 'false');
+  }
+  el.extensionBar.hidden = mode !== 'extension';
+  if (mode === 'extension' && state.filters.decade !== 'all') {
+    state.filters.decade = 'all';
+    renderDecadeChips();
+  }
+  if (mode === 'extension') {
+    if (!state.extensionYear && state.current) state.extensionYear = state.current.year;
+    if (state.extensionYear) el.yearInput.value = String(state.extensionYear);
+    updateYearHint();
+  } else {
+    state.extensionYear = null;
+    el.yearInput.value = '';
+    el.yearHint.textContent = 'Jahr eingeben – wir ziehen ein Lied aus demselben Jahr.';
+  }
+  if (reload && state.current) loadCard(state.current);
+  syncUrl();
+  if (!silent) showToast(mode === 'classic' ? 'Modus: Klassisch' : mode === 'bingo' ? 'Modus: Bingo' : 'Modus: Erweiterung');
+}
+
+function applyYear(year, { silent = false } = {}) {
+  year = Number(year);
+  if (!Number.isInteger(year) || year < 1950 || year > 2024) {
+    showToast('Bitte ein Jahr zwischen 1950 und 2024 eingeben.');
+    return false;
+  }
+  state.extensionYear = year;
+  state.mode = 'extension';
+  setMode('extension', { silent: true, reload: false });
+  const pool = yearPool(year);
+  if (!pool.length) {
+    showToast(`Kein Lied aus ${year} für diese Filter.`);
+    updateYearHint();
+    syncUrl();
+    return false;
+  }
+  const fresh = pool.filter((s) => !state.recent.includes(s.id));
+  const list = fresh.length ? fresh : pool;
+  const song = list[Math.floor(Math.random() * list.length)];
+  state.recent.push(song.id);
+  if (state.recent.length > 80) state.recent.shift();
+  loadCard(song);
+  state.stats.played += 1;
+  saveStats();
+  renderStats();
+  updateYearHint();
+  syncUrl();
+  if (!silent) showToast(`Jahr ${year} · ${pool.length} Lieder`);
+  return true;
+}
+
+function randomYear() {
+  const years = [...new Set(state.songs.filter((s) => matches(s, { ignoreDecade: true })).map((s) => s.year))];
+  if (!years.length) return showToast('Keine Lieder für diese Filter.');
+  applyYear(years[Math.floor(Math.random() * years.length)]);
+}
+
+async function loadCardById(id) {
+  let song = state.songs.find((s) => s.id === id);
+  if (!song) {
+    try {
+      const res = await fetch(`/api/song/${id}`, { headers: { accept: 'application/json' } });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      song = data.song;
+    } catch {
+      showToast('Karte nicht gefunden.');
+      return false;
+    }
+  }
+  state.mode = 'classic';
+  setMode('classic', { silent: true, reload: false });
+  loadCard(song);
+  state.stats.played += 1;
+  saveStats();
+  renderStats();
+  return true;
+}
+
+function parseScan(text) {
+  const t = String(text || '').trim();
+  if (!t) return null;
+  if (/^\d{4}$/.test(t)) {
+    const y = Number(t);
+    if (y >= 1950 && y <= 2024) return { year: y };
+  }
+  try {
+    const u = new URL(t);
+    const card = u.searchParams.get('card');
+    if (card && /^s?\d{4}$/.test(card)) return { card: card.startsWith('s') ? card : `s${card}` };
+    const year = Number(u.searchParams.get('year'));
+    if (year >= 1950 && year <= 2024) return { year };
+    const m = u.pathname.match(/\b(s\d{4})\b/);
+    if (m) return { card: m[1] };
+  } catch { /* not a URL */ }
+  const card = t.match(/\b(s\d{4})\b/);
+  if (card) return { card: card[1] };
+  const y = t.match(/\b(19[5-9]\d|20[0-2]\d)\b/);
+  if (y) {
+    const n = Number(y[1]);
+    if (n >= 1950 && n <= 2024) return { year: n };
+  }
+  return null;
+}
+
+function stopScan() {
+  state.scan.active = false;
+  if (state.scan.raf) cancelAnimationFrame(state.scan.raf);
+  state.scan.raf = null;
+  if (state.scan.stream) {
+    for (const track of state.scan.stream.getTracks()) track.stop();
+    state.scan.stream = null;
+  }
+  el.scanVideo.srcObject = null;
+}
+
+function scanFrame() {
+  if (!state.scan.active) return;
+  const video = el.scanVideo;
+  if (video.readyState >= 2 && video.videoWidth) {
+    const w = video.videoWidth;
+    const h = video.videoHeight;
+    el.scanCanvas.width = w;
+    el.scanCanvas.height = h;
+    const ctx = el.scanCanvas.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(video, 0, 0, w, h);
+    const img = ctx.getImageData(0, 0, w, h);
+    const code = window.jsQR ? window.jsQR(img.data, w, h, { inversionAttempts: 'dontInvert' }) : null;
+    if (code?.data) {
+      const parsed = parseScan(code.data);
+      if (parsed) {
+        stopScan();
+        closeModal(el.scanModal);
+        if (parsed.card) {
+          showToast('Karte geladen.');
+          loadCardById(parsed.card);
+        } else {
+          setMode('extension', { silent: true, reload: false });
+          applyYear(parsed.year);
+        }
+        return;
+      }
+      el.scanStatus.textContent = 'QR-Code erkannt, aber kein Jahr/keine Karte. Bitte Jahr manuell eingeben.';
+    }
+  }
+  state.scan.raf = requestAnimationFrame(scanFrame);
+}
+
+async function openScan() {
+  if (!navigator.mediaDevices?.getUserMedia) {
+    showToast('Kamera nicht verfügbar. Bitte Jahr manuell eingeben.');
+    return;
+  }
+  if (!window.jsQR) {
+    showToast('QR-Scanner konnte nicht geladen werden. Bitte Jahr manuell eingeben.');
+    return;
+  }
+  openModal(el.scanModal);
+  el.scanStatus.textContent = 'Kamera wird gestartet …';
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
+    state.scan.stream = stream;
+    el.scanVideo.srcObject = stream;
+    await el.scanVideo.play();
+    el.scanStatus.textContent = 'Richte die Kamera auf den QR-Code.';
+    state.scan.active = true;
+    scanFrame();
+  } catch {
+    el.scanStatus.textContent = 'Kamera nicht verfügbar oder Zugriff verweigert. Bitte Jahr manuell eingeben.';
+    showToast('Kamera nicht verfügbar.');
+  }
+}
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function printCardHtml(song, side) {
+  const color = genreColor(song.genre);
+  if (side === 'front') {
+    return `<div class="print-card" style="--c:${color}">
+      <div class="pc-band"><span>HITSTER</span><span>${genreLabel(song.genre).toUpperCase()}</span></div>
+      <div class="pc-center">
+        <div class="pc-vinyl"></div>
+        <div class="pc-question">Wie heißt der Song?</div>
+        <div class="pc-sub">30-Sekunden-Clip · QR scannen</div>
+      </div>
+      <div class="pc-bingo">${BINGO.map((b) => `<div class="pc-chip">${escapeHtml(b.short)}</div>`).join('')}</div>
+      <div class="pc-qr"><img src="/api/qr/${song.id}?base=${encodeURIComponent(location.origin)}" alt="QR-Code Karte ${song.id}" /></div>
+      <div class="pc-qr-label">Scan &amp; Play</div>
+      <div class="pc-foot"><span>#${song.id.slice(1)}</span><span>Umdrehen</span></div>
+    </div>`;
+  }
+  const answers = (sideKey) => BINGO.filter((b) => b.side === sideKey)
+    .map((b) => `<div class="pc-answer"><span>${escapeHtml(b.label)}</span><b>${escapeHtml(b.answer(song))}</b></div>`)
+    .join('');
+  return `<div class="print-card" style="--c:${color}">
+    <div class="pc-band"><span>AUFGELÖST</span><span>${genreLabel(song.genre).toUpperCase()}</span></div>
+    <div class="pc-center" style="align-items:flex-start;text-align:left;">
+      <div class="pc-year-label">Erschienen</div>
+      <div class="pc-year">${song.year}</div>
+      <div class="pc-decade">${decadeLabel(song.year)}</div>
+      <div class="pc-title">${escapeHtml(song.title)}</div>
+      <div class="pc-artist">${escapeHtml(song.artist)}</div>
+      <div class="pc-facts">${song.group ? 'Gruppe' : 'Solo'}</div>
+    </div>
+    <div class="pc-answers">
+      <div><h4>A · Anfänger</h4>${answers('A')}</div>
+      <div><h4>B · Experten</h4>${answers('B')}</div>
+    </div>
+    <div class="pc-foot"><span>#${song.id.slice(1)}</span><span>HITSTER BINGO</span></div>
+  </div>`;
+}
+
+function openPrint() {
+  el.printFilter.checked = state.filters.genre !== 'all' || state.filters.decade !== 'all' || state.filters.oneHit || state.filters.spotifyOnly;
+  openModal(el.printModal);
+}
+
+async function doPrint() {
+  const count = Math.max(1, Math.min(18, Number(el.printCount.value) || 9));
+  const pool = el.printFilter.checked ? currentPool() : state.songs;
+  if (!pool.length) {
+    showToast('Keine Karten für diese Filter.');
+    return;
+  }
+  const songs = shuffle(pool).slice(0, count);
+  const sides = el.printSides.value;
+  const fronts = songs.map((s) => printCardHtml(s, 'front')).join('');
+  const backs = songs.map((s) => printCardHtml(s, 'back')).join('');
+  let html = '';
+  if (sides === 'both' || sides === 'front') html += `<section class="print-sheet fronts"><div class="print-grid">${fronts}</div></section>`;
+  if (sides === 'both' || sides === 'back') html += `<section class="print-sheet backs"><div class="print-grid backs">${backs}</div></section>`;
+  el.printRoot.innerHTML = html;
+  closeModal(el.printModal);
+  const images = [...el.printRoot.querySelectorAll('img')];
+  await Promise.all(images.map((img) => (img.decode ? img.decode().catch(() => {}) : Promise.resolve())));
+  window.print();
 }
 
 function loadCard(song) {
@@ -466,20 +743,25 @@ function loadCard(song) {
   el.audio.src = song.streamUrl;
   resetTimer();
 
+  el.card.style.setProperty('--c', genreColor(song.genre));
   el.frontGenre.textContent = genreLabel(song.genre).toUpperCase();
   el.frontNumber.textContent = `#${song.id.slice(1)}`;
-  el.frontSub.textContent = 'Tippe auf die Karte, um den Clip zu starten.';
-  el.backGenre.textContent = `${genreLabel(song.genre)} · ${decadeLabel(song.year)}`;
+  el.frontSub.textContent = state.mode === 'extension'
+    ? `Jahr ${song.year} – tippe für den Clip.`
+    : 'Tippe auf die Karte, um den Clip zu starten.';
+  el.frontYearBadge.hidden = state.mode !== 'extension';
+  el.frontYearBadge.textContent = String(song.year);
+  el.backGenre.textContent = genreLabel(song.genre).toUpperCase();
   el.backNumber.textContent = `#${song.id.slice(1)}`;
   el.backYear.textContent = String(song.year);
   el.backDecade.textContent = decadeLabel(song.year);
   el.backTitle.textContent = song.title;
   el.backArtist.textContent = song.artist;
+  el.backQrImg.src = `/api/qr/${song.id}?base=${encodeURIComponent(location.origin)}`;
 
   renderFrontBingo();
   renderAnswers(song);
-  renderMeta(song);
-  renderArt(song);
+  renderFacts(song);
   updateFlipButton();
 
   el.cardWrap.classList.remove('dealing');
@@ -630,6 +912,21 @@ function flipCard() {
 }
 
 function nextCard() {
+  if (state.mode === 'extension' && state.extensionYear) {
+    const pool = yearPool(state.extensionYear);
+    if (pool.length) {
+      const fresh = pool.filter((s) => !state.recent.includes(s.id));
+      const list = fresh.length ? fresh : pool;
+      const song = list[Math.floor(Math.random() * list.length)];
+      state.recent.push(song.id);
+      if (state.recent.length > 80) state.recent.shift();
+      loadCard(song);
+      state.stats.played += 1;
+      saveStats();
+      renderStats();
+      return;
+    }
+  }
   const song = pickSong();
   if (!song) {
     showToast('Keine Karte für diese Filter. Setze die Filter zurück.');
@@ -795,12 +1092,15 @@ function closeModal(modal) {
   modal.hidden = true;
   document.body.style.overflow = '';
   if (modal === el.spotifyModal) el.spotifyFrame.replaceChildren();
+  if (modal === el.scanModal) stopScan();
   if (lastFocus && typeof lastFocus.focus === 'function') lastFocus.focus({ preventScroll: true });
 }
 
 function closeAllModals() {
   closeModal(el.helpModal);
   closeModal(el.spotifyModal);
+  closeModal(el.scanModal);
+  closeModal(el.printModal);
 }
 
 /* --------------------------------------------------------------------------
@@ -874,6 +1174,22 @@ function bindEvents() {
   el.helpBtn.addEventListener('click', () => openModal(el.helpModal));
   el.soundToggle.addEventListener('click', toggleSound);
 
+  el.modeSwitch.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-mode]');
+    if (btn) setMode(btn.dataset.mode);
+  });
+  el.yearGo.addEventListener('click', () => applyYear(el.yearInput.value));
+  el.yearInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      applyYear(el.yearInput.value);
+    }
+  });
+  el.yearRandom.addEventListener('click', randomYear);
+  el.scanBtn.addEventListener('click', openScan);
+  el.printBtn.addEventListener('click', openPrint);
+  el.printGo.addEventListener('click', doPrint);
+
   el.resetFilters.addEventListener('click', () => {
     state.filters = { genre: 'all', decade: 'all', oneHit: false, spotifyOnly: false };
     el.oneHitToggle.checked = false;
@@ -919,7 +1235,7 @@ function bindEvents() {
     savePrefs();
   });
 
-  for (const modal of [el.helpModal, el.spotifyModal]) {
+  for (const modal of [el.helpModal, el.spotifyModal, el.scanModal, el.printModal]) {
     modal.addEventListener('click', (e) => {
       if (e.target.dataset.close) closeModal(modal);
     });
@@ -947,7 +1263,7 @@ function bindEvents() {
   });
 
   document.addEventListener('keydown', (e) => {
-    const modalOpen = !el.helpModal.hidden || !el.spotifyModal.hidden;
+    const modalOpen = !el.helpModal.hidden || !el.spotifyModal.hidden || !el.scanModal.hidden || !el.printModal.hidden;
     if (e.key === 'Escape') {
       closeAllModals();
       return;
@@ -979,8 +1295,15 @@ function bindEvents() {
     renderGenreChips();
     renderDecadeChips();
     updateFilterSummary();
-    const song = pickSong();
-    if (song) loadCard(song);
+    setMode(state.mode, { silent: true, reload: false });
+    if (state.initialCard) {
+      loadCardById(state.initialCard);
+    } else if (state.mode === 'extension' && state.extensionYear) {
+      applyYear(state.extensionYear, { silent: true });
+    } else {
+      const song = pickSong();
+      if (song) loadCard(song);
+    }
   });
 }
 
@@ -1003,6 +1326,7 @@ async function init() {
     state.catalog = data;
     state.songs = data.songs || [];
     el.catalogPill.textContent = `${data.count} Karten`;
+    if (el.footerCount) el.footerCount.textContent = data.count.toLocaleString('de-DE');
     if (!state.songs.length) throw new Error('Katalog leer');
   } catch (err) {
     console.error(err);
@@ -1020,13 +1344,20 @@ async function init() {
   renderBingo();
   renderFrontBingo();
   bindEvents();
+  setMode(state.mode, { silent: true, reload: false });
 
-  const song = pickSong();
-  if (song) {
-    loadCard(song);
-    state.stats.played += 1;
-    saveStats();
-    renderStats();
+  if (state.initialCard) {
+    await loadCardById(state.initialCard);
+  } else if (state.mode === 'extension' && state.extensionYear) {
+    applyYear(state.extensionYear, { silent: true });
+  } else {
+    const song = pickSong();
+    if (song) {
+      loadCard(song);
+      state.stats.played += 1;
+      saveStats();
+      renderStats();
+    }
   }
 
   state.ready = true;
@@ -1038,6 +1369,13 @@ async function init() {
     openSpotify,
     openHelp: () => openModal(el.helpModal),
     loadCard,
+    setMode,
+    applyYear,
+    randomYear,
+    openPrint,
+    openScan,
+    loadCardById,
+    parseScan,
   };
 }
 

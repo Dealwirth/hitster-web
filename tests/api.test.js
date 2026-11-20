@@ -12,9 +12,9 @@ test('GET /api/health reports a healthy catalog', async () => {
 
 test('GET /api/catalog returns all songs with filters metadata', async () => {
   const res = await request(app).get('/api/catalog').expect(200);
-  assert.ok(res.body.count >= 1000);
+  assert.ok(res.body.count >= 4000, `only ${res.body.count} songs`);
   assert.equal(res.body.songs.length, res.body.count);
-  assert.ok(res.body.genres.length >= 15);
+  assert.ok(res.body.genres.length >= 20);
   assert.ok(res.body.decades.length >= 7);
   assert.ok(res.body.songs.every((s) => s.streamUrl && s.spotifyUrl && s.artUrl));
   assert.match(res.headers['content-type'], /application\/json/);
@@ -101,6 +101,18 @@ test('GET /api/audio/:id serves a playable 30 second clip with Range support', a
     .set('Range', 'bytes=99999999-')
     .expect(416);
   assert.match(bad.headers['content-range'], /^bytes \*\//);
+});
+
+test('GET /api/qr/:id returns a scannable SVG QR code', async () => {
+  const song = songs[0];
+  const res = await request(app).get(`/api/qr/${song.id}`).expect(200);
+  assert.match(res.headers['content-type'], /^image\/svg\+xml/);
+  assert.ok(res.body.length > 500, `qr bytes=${res.body.length}`);
+  const svg = res.body.toString();
+  assert.match(svg, /<svg/);
+  assert.match(svg, /width="256"/);
+  await request(app).get(`/api/qr/${song.id}?base=https%3A%2F%2Fexample.com`).expect(200);
+  await request(app).get('/api/qr/nope').expect(404);
 });
 
 test('GET /api/art/:id serves cached cover artwork', async () => {

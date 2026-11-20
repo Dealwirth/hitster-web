@@ -25,6 +25,25 @@ await page.waitForTimeout(700);
 await page.screenshot({ path:'docs/screenshot-spotify.png', fullPage:false });
 await page.keyboard.press('Escape');
 
+await page.locator('.mode-btn[data-mode="extension"]').click();
+await page.waitForTimeout(300);
+await page.locator('#yearInput').fill('1984');
+await page.locator('#yearGo').click();
+await page.waitForTimeout(900);
+await page.screenshot({ path:'docs/screenshot-extension.png', fullPage:false });
+
+await page.evaluate(() => { window.print = () => {}; window.HITSTER.openPrint(); });
+await page.waitForTimeout(300);
+await page.selectOption('#printCount', '6');
+await page.locator('#printGo').click();
+await page.waitForTimeout(1200);
+await page.emulateMedia({ media:'print' });
+await page.setViewportSize({ width: 794, height: 1123 });
+await page.waitForTimeout(300);
+await page.locator('#printRoot .print-sheet.fronts').screenshot({ path:'docs/screenshot-print.png' });
+await page.emulateMedia({ media:'screen' });
+await page.setViewportSize({ width: 1440, height: 1000 });
+
 const m = await browser.newPage({ viewport:{width:390,height:844}, deviceScaleFactor:2, isMobile:true, hasTouch:true });
 await m.goto('http://localhost:12000/', { waitUntil:'networkidle' });
 await m.waitForFunction(() => window.HITSTER?.state?.songs?.length > 1000);

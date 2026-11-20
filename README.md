@@ -1,9 +1,12 @@
 # HITSTER Web 🎧
 
-**Das kostenlose Musik-Partyspiel im Hitster-Stil – direkt im Browser.**
+**Die kostenlose Karten-Erweiterung für Hitster und Hitster Bingo – direkt im Browser.**
 Zufällige Karte ziehen, 30-Sekunden-Clip hören, umdrehen und das Jahr erraten.
-Über **1.700 Songs**, **20 Musik-Kategorien**, **alle zehn Hitster-Bingo-Kategorien**,
-Spotify-Links, kein Login, keine Werbung, kein Tracking.
+Oder das Jahr deiner Original-Hitster-Karte eingeben bzw. den QR-Code scannen –
+und ein Lied aus genau diesem Jahr ziehen.
+
+**4.121 Songs · 20 Musik-Kategorien · alle 10 Hitster-Bingo-Kategorien · 3 Spielmodi ·
+QR-Scanner · Druckbogen · kein Login · keine Werbung · kein Tracking · kein Online-Mehrspieler.**
 
 ![HITSTER Web Karte](docs/screenshot-front.png)
 
@@ -11,18 +14,27 @@ Spotify-Links, kein Login, keine Werbung, kein Tracking.
 
 ## Was ist das?
 
-Ein inoffizielles Open-Source-Fanprojekt für alle, die Hitster mögen, aber keine Karten
-dabeihaben. Du bekommst eine zufällige Karte aus einer kuratierten Datenbank mit
-**1.777 Songs von 1954 bis 2024**. Ein Klick startet einen offiziellen
-30-Sekunden-Clip, ein 25-Sekunden-Timer läuft mit. Auf der Rückseite stehen
-Titel, Interpret, Jahr, Album, Cover und **alle Antworten für die Hitster-Bingo-Kategorien**.
-Zusätzlich öffnet ein Button den passenden Song auf Spotify.
+Ein inoffizielles Open-Source-Fanprojekt für alle, die Hitster mögen. Die App ist
+zugleich eine **Karten-Erweiterung** für das Original und ein **eigenständiges Partyspiel**:
+
+- **Mit Original:** Jahr der gezogenen Hitster-Karte eingeben oder QR scannen – die App
+  zieht ein Lied aus demselben Jahr. Die zehn Bingo-Kategorien auf der Rückseite passen
+  zu deiner Hitster-Bingo-Scorecard.
+- **Ohne Original:** Klassisch oder Bingo wählen und einfach spielen.
+- **Karten drucken:** Erweiterungskarten im Hitster-Look mit QR-Code auf der Vorderseite
+  und Auflösung auf der Rückseite – zum Ausschneiden und Dazulegen.
+
+Alles läuft lokal am Tisch. Es gibt **keinen Online-Mehrspieler**, keinen Login und
+keine Konten. Statistiken und die Bingo-Scorecard bleiben in deinem Browser.
 
 ### Features
 
-- 🎲 **Zufällige Karten** aus 1.777 Songs, gefiltert nach Genre und Jahrzehnt
+- 🎲 **4.121 Songs** von 1950 bis 2024, gefiltert nach Genre und Jahrzehnt
 - 🎵 **30-Sekunden-Clips** über Deezer (Fallback: iTunes), serverseitig gecacht
-- 🔄 **3D-Karten-Flip** mit Jahr, Titel, Interpret, Album-Cover und Metadaten
+- 🃏 **Drei Spielmodi:** Klassisch, Bingo, Erweiterung
+- 📅 **Erweiterungsmodus:** Jahr der Originalkarte eingeben, zufällig ziehen oder scannen
+- 🔳 **QR-Scanner:** Kamera öffnen, QR einer Karte oder eines Jahres scannen
+- 🖨️ **Druckbogen:** 6/9/12/18 Karten, Vorder- und Rückseite, QR-Code, duplexfähig
 - 🎯 **Alle 10 Hitster-Bingo-Kategorien** auf jeder Karte:
   - **A – Anfänger:** Gruppe/Solo, Vor 2000?, ±4 Jahre, Dekade, ±2 Jahre
   - **B – Experten:** Songtitel, exaktes Jahr, Interpret, Dekade, ±3 Jahre
@@ -41,6 +53,60 @@ Zusätzlich öffnet ein Button den passenden Song auf Spotify.
 - 🧩 **Vanilla JS + Express** – kein Build-Schritt für das Frontend, leicht zu hosten
 
 ![Rückseite der Karte](docs/screenshot-back.png)
+
+![Erweiterungsmodus mit Jahr](docs/screenshot-extension.png)
+
+![Druckbogen für Erweiterungskarten](docs/screenshot-print.png)
+
+---
+
+## Die drei Spielmodi
+
+| Modus | Was passiert? |
+|---|---|
+| **Klassisch** | Zufällige Karte, Clip hören, Jahr raten, umdrehen. |
+| **Bingo** | Wie klassisch, dazu die 5×5-Scorecard für Hitster Bingo. |
+| **Erweiterung** | Jahr der Originalkarte eingeben oder QR scannen – ein Lied aus demselben Jahr wird gezogen. |
+
+### Mit dem Original spielen
+
+1. Ziehe eine Karte aus deinem **Hitster** oder **Hitster Bingo**.
+2. Öffne hier den Modus **Erweiterung**.
+3. Gib das Jahr der Originalkarte ein – oder tippe auf **QR scannen** und halte den
+   QR-Code einer gedruckten Erweiterungskarte vor die Kamera.
+4. Die App zieht ein Lied aus demselben Jahr. Clip abspielen, raten, umdrehen.
+5. Die zehn Bingo-Kategorien auf der Rückseite passen zu deiner Bingo-Scorecard.
+
+### Ohne Original
+
+Einfach **Klassisch** oder **Bingo** wählen und spielen. Du brauchst kein Original-Spiel.
+Die Karten funktionieren auch als eigenständiges Partyspiel.
+
+### Karten drucken
+
+Im Bereich **Karten drucken** auf **Druckbogen erstellen** tippen:
+
+- 6, 9, 12 oder 18 Karten
+- Vorder- und Rückseite, nur Vorderseiten oder nur Rückseiten
+- optional nur die aktuellen Filter
+- Vorderseite mit QR-Code, Rückseite mit Jahr, Titel, Interpret und allen Bingo-Antworten
+- **Beidseitig drucken und an der langen Kante spiegeln** – die Rückseiten sind dafür
+  spiegelverkehrt angeordnet
+- ausschneiden, fertig
+
+Die Karten sind **62 × 88 mm** groß und passen auf A4 (3 × 2 Karten pro Seite).
+
+### QR-Code scannen
+
+Der Scanner nutzt die Kamera des Geräts (Rückkamera, falls vorhanden) und `jsQR`.
+Er versteht:
+
+- `https://…/?card=s0042` – öffnet genau diese Karte
+- `https://…/?year=1984` – zieht ein Lied aus 1984
+- `1984` – zieht ein Lied aus 1984
+- `s0042` – öffnet die Karte
+
+Kein QR-Code zur Hand? Das Jahr lässt sich jederzeit manuell eingeben.
 
 ---
 
@@ -62,7 +128,7 @@ PORT=8080 npm start
 ```
 
 Das Frontend liegt in `public/` und braucht keinen Build. Der Server liefert
-Statics, Katalog-API, Audio-Proxy und Cover-Cache aus.
+Statics, Katalog-API, Audio-Proxy, Cover-Cache und QR-Codes aus.
 
 ---
 
@@ -75,13 +141,14 @@ Statics, Katalog-API, Audio-Proxy und Cover-Cache aus.
 3. **Raten.** Titel, Interpret, Jahr – auf der Vorderseite stehen alle zehn
    Bingo-Kategorien als Erinnerung.
 4. **Umdrehen.** Mit „Karte umdrehen“, `F` oder einem Klick auf die Karte.
-   Die Rückseite zeigt die Auflösung und alle Bingo-Antworten.
+   Die Rückseite zeigt Jahr, Titel, Interpret und alle Bingo-Antworten.
 5. **Bewerten.** „Richtig“ oder „Daneben“ aktualisiert deine Serie und Quote.
 6. **Bingo!** Markiere richtige Felder auf der 5×5-Scorecard. Fünf in einer Reihe
    (waagerecht, senkrecht oder diagonal) = **HITSTER!**
 
-> Tipp: Die Filter zählen live mit. „Klassik“ wird nur angezeigt, wenn es Karten gibt.
-> Der Zufall vermeidet Wiederholungen der letzten 80 Karten.
+> Tipp: Die Filter zählen live mit. Der Zufall vermeidet Wiederholungen der letzten
+> 80 Karten. Im Erweiterungsmodus bleibt das gewählte Jahr aktiv, bis du es änderst
+> oder ein Jahrzehnt auswählst.
 
 ---
 
@@ -89,19 +156,28 @@ Statics, Katalog-API, Audio-Proxy und Cover-Cache aus.
 
 | Kategorie | Songs | Kategorie | Songs |
 |---|---:|---|---:|
-| Pop | 454 | Rock | 354 |
-| Electronic | 267 | Indie | 103 |
-| Hip-Hop | 91 | R&B / Soul | 82 |
-| Latin | 69 | Deutschpop | 64 |
-| Country | 61 | Funk / Disco | 51 |
-| Metal | 44 | Folk | 37 |
-| Punk | 31 | Deutschrap | 21 |
-| Schlager | 15 | NDW | 13 |
-| Film / Musical | 10 | Reggae | 4 |
+| Pop | 1.021 | Rock | 928 |
+| Electronic | 465 | R&B / Soul | 239 |
+| Hip-Hop | 215 | Indie | 184 |
+| Metal | 147 | Latin | 140 |
+| Funk / Disco | 133 | Punk | 125 |
+| Country | 114 | Deutschpop | 113 |
+| Folk | 87 | Deutschrap | 83 |
+| Schlager | 58 | Reggae | 33 |
+| NDW | 16 | Film / Musical | 14 |
 | Jazz | 3 | Ska | 3 |
 
-*(Stand: automatisch aus `data/catalog.json` generiert; die Zahlen können nach
-einem Rebuild leicht abweichen.)*
+**Gesamt: 4.121 Songs** (Stand: automatisch aus `data/catalog.json`; die Zahlen
+können nach einem Rebuild leicht abweichen).
+
+### Jahrzehnte
+
+| Jahrzehnt | Songs | Jahrzehnt | Songs |
+|---|---:|---|---:|
+| 1950er | 100 | 1960er | 493 |
+| 1970er | 522 | 1980er | 607 |
+| 1990er | 581 | 2000er | 727 |
+| 2010er | 823 | 2020er | 268 |
 
 ---
 
@@ -110,19 +186,22 @@ einem Rebuild leicht abweichen.)*
 ```
 .
 ├── server/
-│   ├── index.js        Express-App, API, Security-Header, Static-Server
+│   ├── index.js        Express-App, API, Security-Header, Static-Server, QR-Route
 │   ├── catalog.js      Katalog laden, filtern, Zufall, Bingo-Antworten
 │   └── audio.js        Deezer/iTunes-Auflösung, Audio-Cache, Range-Support, Cover-Cache
 ├── public/
-│   ├── index.html      Semantische Single-Page-Struktur
-│   ├── styles.css      Design-System, Karten-Flip, Responsive, Reduced Motion
-│   ├── app.js          Spiel-Logik, Audio, Timer, Bingo, Filter, Statistik
+│   ├── index.html      Semantische Single-Page-Struktur, Modals, Druckbogen-Container
+│   ├── styles.css      Papierkarten-Design, 3D-Flip, Druck-CSS, Responsive
+│   ├── app.js          Spiel-Logik, Audio, Timer, Bingo, Filter, Jahr-Modus, QR, Druck
+│   ├── vendor/jsqr.js  QR-Decoder (lokal gebündelt, keine externe Anfrage)
 │   └── fonts/          Selbst gehostete Schriften (Archivo Black, Anton, Inter)
 ├── scripts/
-│   └── build-catalog.js  TSV → JSON, Deezer/iTunes-Matching, Spotify-IDs
+│   ├── build-catalog.js  TSV → JSON, Deezer/iTunes-Matching, Spotify-IDs
+│   ├── expand-catalog.js Zusätzliche Songs aus Deezer-Künstlern
+│   └── expand-oldies.js  Oldies ergänzen
 ├── data/
 │   ├── songs.source.tsv  Kuratierte Quelle (Jahr | Genre | G/S | Interpret | Titel | Tags)
-│   ├── catalog.json      Generierter Katalog (1.777 Songs)
+│   ├── catalog.json      Generierter Katalog (4.121 Songs)
 │   └── build-report.json Build-Report (Trefferquote, fehlende Songs)
 ├── tests/
 │   ├── catalog.test.js   Datenqualität (node:test)
@@ -136,6 +215,19 @@ einem Rebuild leicht abweichen.)*
 │   └── screenshots.mjs   Screenshots für die Docs
 └── docs/                 Screenshots
 ```
+
+### API
+
+| Endpoint | Zweck |
+|---|---|
+| `GET /api/health` | Status und Songanzahl |
+| `GET /api/catalog` | Alle Karten, Genres, Jahrzehnte |
+| `GET /api/random` | Zufällige Karte mit Filtern (`genre`, `decade`, `group`, `tag`, `spotifyOnly`, `exclude`) |
+| `GET /api/song/:id` | Eine Karte inkl. Bingo-Antworten |
+| `GET /api/bingo/:id` | Nur die zehn Bingo-Antworten |
+| `GET /api/audio/:id` | 30-Sekunden-Clip mit Range-Support |
+| `GET /api/art/:id` | Cover-Cache |
+| `GET /api/qr/:id` | QR-Code (SVG) zur Karte; optional `?base=https://…` |
 
 ### Datenpipeline
 
@@ -182,7 +274,7 @@ Beide Caches sind in `.gitignore` und nicht Teil des Repos.
 
 ### Spotify
 
-- 1.250 der 1.777 Songs haben eine direkte Spotify-Track-ID.
+- **2.618 der 4.121 Songs** haben eine direkte Spotify-Track-ID.
 - Der grüne Button öffnet ein Modal mit dem offiziellen Spotify-Embed-Player.
 - Ohne Login spielt Spotify in der Regel eine Vorschau; für den vollen Song
   ist ein Spotify-Konto nötig. Der Button „In Spotify öffnen“ führt zur App.
@@ -194,8 +286,8 @@ Beide Caches sind in `.gitignore` und nicht Teil des Repos.
 ## Tests
 
 ```bash
-npm test            # 26 Unit- und API-Tests (Katalog, Filter, Audio, Range, Security)
-npm run test:e2e    # 24 Browser-Checks mit Chromium (Desktop + Mobile)
+npm test            # 27 Unit- und API-Tests (Katalog, Filter, Audio, QR, Range, Security)
+npm run test:e2e    # 31 Browser-Checks mit Chromium (Desktop + Mobile)
 ```
 
 Zusätzlich (Server muss auf Port 12000 laufen):
@@ -211,13 +303,19 @@ Die E2E-Tests prüfen u. a.:
 
 - Katalog lädt, 10 Bingo-Kategorien, 5+5 Antworten, 25 Scorecard-Felder
 - kein Audio-Download vor dem ersten Klick
-- echter Audio-Clip startet (`currentTime > 0`, Dauer ~30 s)
+- echter Audio-Clip startet (`currentTime > 0,2`, Dauer ~30 s)
 - Timer zählt herunter
-- Flip zeigt Titel/Interpret/Jahr, Cover lädt
+- Flip zeigt Titel/Interpret/Jahr, QR-Code lädt
 - „Richtig“ aktualisiert Statistik und Confetti
 - Bingo-Feld wird markiert und in `localStorage` gespeichert
-- Hilfe- und Spotify-Modal, Escape schließt
+- Hilfe-, Spotify- und Druck-Modal, Escape schließt
 - Filter (Genre + Jahrzehnt), URL-Parameter, Reset
+- Erweiterungsmodus: Jahr 1984 zieht genau ein Lied aus 1984, URL wird aktualisiert
+- Zufallsjahr bleibt im Bereich 1950–2024
+- QR-Parser versteht Karten, Jahre und nackte IDs
+- Deep-Link `?card=s0001` öffnet genau diese Karte
+- Druckbogen erzeugt 6 Vorderseiten, 6 Rückseiten und 6 QR-Codes
+- Moduswechsel zeigt/versteckt die Erweiterungsleiste
 - Tastatur-Shortcuts
 - Mobile: kein horizontaler Overflow, Karte passt, Tap spielt, Filter funktionieren
 - keine Runtime-Fehler
@@ -232,10 +330,14 @@ Alternativ: `CHROMIUM_PATH=/pfad/zu/chromium npm run test:e2e`.
 - **Kein Login, keine Werbung, kein Tracking.** Es werden keine Analyse-Skripte
   geladen. Statistiken und die Bingo-Scorecard liegen ausschließlich in
   `localStorage` deines Browsers.
+- **Kein Online-Mehrspieler.** Es gibt keine Lobby, keine Konten und keine
+  Übertragung von Spielständen. Alles läuft am Tisch.
 - **Audio:** Es werden offizielle 30-Sekunden-Vorschauen von Deezer bzw. iTunes
   gestreamt. Die Rechte an Musik, Covern und Marken liegen bei den jeweiligen
   Künstler:innen, Labels und Rechteinhabern. Dieses Projekt hostet keine Musik.
 - **Spotify** wird nur auf ausdrücklichen Klick als iframe geladen.
+- **QR-Codes** werden lokal auf dem Server erzeugt; der Scanner läuft komplett im
+  Browser. Es werden keine Kamerabilder hochgeladen.
 - **HITSTER** ist eine Marke der Jumbo Group bzw. ihrer Rechteinhaber. Dieses
   Projekt ist **nicht** mit HITSTER verbunden, wird nicht von Jumbo unterstützt
   und dient nur dem privaten Spaß.

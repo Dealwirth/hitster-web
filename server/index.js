@@ -1,5 +1,6 @@
 import express from 'express';
 import compression from 'compression';
+import QRCode from 'qrcode';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -104,6 +105,26 @@ api.get('/song/:id', (req, res) => {
   const song = byId.get(req.params.id);
   if (!song) return res.status(404).json({ error: 'Karte nicht gefunden.' });
   res.json({ song: publicSong(song), bingo: bingoAnswers(song) });
+});
+
+api.get('/qr/:id', async (req, res) => {
+  const song = byId.get(req.params.id);
+  if (!song) return res.status(404).json({ error: 'Karte nicht gefunden.' });
+  const base = String(req.query.base || `${req.protocol}://${req.get('host')}`).replace(/\/$/, '');
+  if (!/^https?:\/\//i.test(base)) return res.status(400).json({ error: 'Ungültige Basis-URL.' });
+  try {
+    const svg = await QRCode.toString(`${base}/?card=${song.id}`, {
+      type: 'svg',
+      margin: 1,
+      width: 256,
+      color: { dark: '#101010', light: '#f5efe3' },
+    });
+    res.setHeader('Content-Type', 'image/svg+xml');
+    res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+    return res.send(svg);
+  } catch {
+    return res.status(500).json({ error: 'QR-Code konnte nicht erzeugt werden.' });
+  }
 });
 
 api.get('/bingo/:id', (req, res) => {
