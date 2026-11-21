@@ -7,7 +7,7 @@ const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
 const CLIP_SECONDS = 30;
-const VERSION = '4.8.0';
+const VERSION = '4.9.0';
 const STATIC = document.documentElement.dataset.static === 'true' || location.hostname.endsWith('github.io');
 const API_BASE = (document.querySelector('meta[name="hitster-api"]')?.content || '').replace(/\/$/, '');
 const API = (path) => `${API_BASE}${path}`;
@@ -2587,7 +2587,9 @@ function bindEvents() {
    -------------------------------------------------------------------------- */
 
 async function init() {
-  const startRequested = new URLSearchParams(location.search).get('start') === '1';
+  const params = new URLSearchParams(location.search);
+  const startRequested = params.get('start') === '1';
+  const directPlay = params.get('play') === '1' || params.has('online') || params.has('card') || params.has('hitster') || params.has('year') || params.has('playlist') || params.has('mode');
   loadStats();
   loadPrefs();
   applyPrefs();
@@ -2644,7 +2646,8 @@ async function init() {
     }
   }
 
-  if (!startRequested) document.body.classList.add('started');
+  if (startRequested || !directPlay) document.body.classList.remove('started');
+  else document.body.classList.add('started');
   state.ready = true;
   window.HITSTER = {
     state,

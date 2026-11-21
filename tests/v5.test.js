@@ -37,7 +37,7 @@ page.on('console', (m) => {
   if (m.type() === 'error' && !m.text().toLowerCase().includes('spotify')) errors.push(`console: ${m.text()}`);
 });
 
-await page.goto(base, { waitUntil: 'networkidle' });
+await page.goto(`${base}/?play=1`, { waitUntil: 'networkidle' });
 await page.waitForFunction(() => window.HITSTER?.state?.ready, { timeout: 15000 });
 
 await step('official card database covers all 51.208 cards', async () => {

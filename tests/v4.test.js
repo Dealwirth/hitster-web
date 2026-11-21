@@ -36,7 +36,7 @@ page.on('console', (m) => {
   if (m.type() === 'error' && !m.text().toLowerCase().includes('spotify') && !/Failed to load resource.*403/.test(m.text())) errors.push(`console: ${m.text()}`);
 });
 
-await page.goto(base, { waitUntil: 'networkidle' });
+await page.goto(`${base}/?play=1`, { waitUntil: 'networkidle' });
 await page.waitForFunction(() => window.HITSTER?.state?.ready, { timeout: 15000 });
 
 const visibleYear = async () => {

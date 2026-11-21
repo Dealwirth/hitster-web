@@ -1,14 +1,40 @@
-/* HITSTER Web – Online-Bingo (host-authoritative, PeerJS/WebRTC or BroadcastChannel demo). */
+/* HITSTER Web – Online-Bingo 1:1 (host-authoritative, PeerJS/WebRTC or BroadcastChannel). */
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const NAME_KEY = 'hitster-web-online-name';
+const BINGO_MODES = {
+  easy: {
+    label: 'Einsteiger', side: 'A',
+    desc: 'Fünf einfache Kategorien. Perfekt für den ersten Abend.',
+    categories: [
+      { id: 'solo', label: 'Solo oder Gruppe', short: 'Solo/Gruppe', icon: 'S/G', color: '#ff7aa8', ink: '#2a0715', question: 'Solo oder Gruppe?', type: 'choice', options: [{ value: 'solo', label: 'Solo' }, { value: 'group', label: 'Gruppe' }] },
+      { id: 'before2000', label: 'Vor 2000?', short: 'Vor 2000?', icon: '00', color: '#ffd166', ink: '#2d2100', question: 'Erschien der Song vor 2000?', type: 'choice', options: [{ value: 'yes', label: 'Ja' }, { value: 'no', label: 'Nein' }] },
+      { id: 'year4', label: '4 Jahre daneben', short: '±4 Jahre', icon: '±4', color: '#6ee7b7', ink: '#05251a', question: 'In welchem Jahr erschien der Song? ±4 zählt.', type: 'year', tolerance: 4 },
+      { id: 'decade', label: 'Jahrzehnt', short: 'Jahrzehnt', icon: '10s', color: '#7dd3fc', ink: '#082333', question: 'Aus welchem Jahrzehnt ist der Song?', type: 'decade' },
+      { id: 'year2', label: '2 Jahre daneben', short: '±2 Jahre', icon: '±2', color: '#c4a7ff', ink: '#1e1038', question: 'In welchem Jahr erschien der Song? ±2 zählt.', type: 'year', tolerance: 2 }
+    ]
+  },
+  hard: {
+    label: 'Expert', side: 'B',
+    desc: 'Fünf präzise Kategorien für echte Musiknerds.',
+    categories: [
+      { id: 'title', label: 'Songtitel', short: 'Titel', icon: 'T', color: '#ff7aa8', ink: '#2a0715', question: 'Wie heißt der Song?', type: 'title' },
+      { id: 'year', label: 'Exaktes Jahr', short: 'Exakt', icon: 'J', color: '#ffd166', ink: '#2d2100', question: 'In welchem Jahr erschien der Song?', type: 'year', tolerance: 0 },
+      { id: 'artist', label: 'Interpret / Band', short: 'Interpret', icon: 'A', color: '#6ee7b7', ink: '#05251a', question: 'Wer singt oder spielt den Song?', type: 'artist' },
+      { id: 'decade', label: 'Jahrzehnt', short: 'Jahrzehnt', icon: '10s', color: '#7dd3fc', ink: '#082333', question: 'Aus welchem Jahrzehnt ist der Song?', type: 'decade' },
+      { id: 'year3', label: '3 Jahre daneben', short: '±3 Jahre', icon: '±3', color: '#c4a7ff', ink: '#1e1038', question: 'In welchem Jahr erschien der Song? ±3 zählt.', type: 'year', tolerance: 3 }
+    ]
+  }
+};
 const online = {
   role: null, code: '', name: '', transport: null, peerId: '', players: [], connections: new Map(),
-  settings: { rounds: 10, timer: 25, versionMode: 'fixed', version: 'party', difficultyMode: 'fixed', difficulty: 'easy' },
-  phase: 'lobby', round: 0, song: null, audio: null, deadline: 0, timerId: null, tickId: null,
-  answers: {}, votes: {}, choices: {}, card: null, marked: new Set(), selectedYear: null,
-  winner: null, recent: [], localMode: new URLSearchParams(location.search).has('localonline'), screen: null,
+  settings: { rounds: 15, timer: 25 }, phase: 'lobby', round: 0, category: null, song: null,
+  audioUrl: '', startAt: 0, deadline: 0, answers: {}, correct: {}, pending: new Set(), revealAnswers: {},
+  votes: {}, choices: { version: '', difficulty: '' }, card: null, marked: new Set(), answer: null,
+  submitted: false, winner: null, recent: [], recentCategories: [], audioBlocked: false, audioUnlocked: false,
+  screen: null, localMode: new URLSearchParams(location.search).has('localonline'), markDeadline: 0,
+  timers: { phase: null, audio: null, round: null, tick: null, mark: null, countdown: null }
 };
 const api = () => window.HITSTER;
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -16,21 +42,71 @@ const cleanCode = (v) => String(v || '').toUpperCase().replace(/[^A-Z0-9]/g, '')
 const cleanName = (v) => String(v || '').replace(/[<>&"']/g, '').replace(/\s+/g, ' ').trim().slice(0, 18);
 const roomId = (code) => `hitster-bingo-${String(code).toLowerCase()}`;
 const randomCode = () => [...crypto.getRandomValues(new Uint8Array(6))].map((b) => ALPHABET[b % ALPHABET.length]).join('');
-const yearsPool = () => [...new Set((api()?.state?.songs || []).map((s) => s.year))].sort((a, b) => a - b);
-const makeCard = () => {
-  const pool = yearsPool();
-  const picked = [];
-  while (picked.length < 24 && pool.length) picked.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
-  return Array.from({ length: 25 }, (_, i) => (i === 12 ? { free: true, year: null } : { free: false, year: picked.shift() }));
-};
-const hit = (card, marked, i) => card[i]?.free || marked.has(i);
-function hasBingo(card, marked) {
-  for (let r = 0; r < 5; r++) if ([0, 1, 2, 3, 4].every((c) => hit(card, marked, r * 5 + c))) return true;
-  for (let c = 0; c < 5; c++) if ([0, 1, 2, 3, 4].every((r) => hit(card, marked, r * 5 + c))) return true;
-  return [0, 6, 12, 18, 24].every((i) => hit(card, marked, i)) || [4, 8, 12, 16, 20].every((i) => hit(card, marked, i));
+const shuffle = (list) => { const out = [...list]; for (let i = out.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [out[i], out[j]] = [out[j], out[i]]; } return out; };
+const myId = () => (online.role === 'host' ? 'host' : online.peerId);
+const categoriesFor = (difficulty) => BINGO_MODES[difficulty]?.categories || BINGO_MODES.easy.categories;
+const categoryById = (id) => categoriesFor(online.choices.difficulty || 'easy').find((c) => c.id === id) || null;
+const publicCategory = (c) => c ? { id: c.id, label: c.label, short: c.short, icon: c.icon, color: c.color, ink: c.ink, question: c.question, type: c.type, options: c.options || [], tolerance: c.tolerance ?? null } : null;
+const decadeOf = (year) => `${Math.floor(Number(year) / 10) * 10}s`;
+const decadeLabel = (key) => String(key || '').replace(/s$/, 'er');
+const versionLabel = (id) => api()?.versions?.[id]?.label || 'Version';
+const difficultyLabel = (id) => (id === 'hard' ? 'Expert' : 'Einsteiger');
+const publicPlayers = () => online.players.map((p) => ({ id: p.id, name: p.name, connected: p.connected !== false, score: p.score || 0, bingo: Boolean(p.bingo), marked: [...(p.marked || [])], correct: Boolean(online.correct[p.id]), pending: Boolean(online.pending?.has(p.id)) }));
+const publicState = () => ({
+  code: online.code, phase: online.phase, round: online.round, settings: online.settings,
+  players: publicPlayers(), votes: online.votes, winner: online.winner,
+  category: publicCategory(online.category), choices: online.choices,
+  answersCount: Object.keys(online.answers || {}).length, startIn: online.startAt ? Math.max(0, online.startAt - Date.now()) : null,
+  deadline: online.deadline || null, timer: online.settings.timer, versionLabel: versionLabel(online.choices.version || 'party'),
+  difficulty: online.choices.difficulty || '', difficultyLabel: difficultyLabel(online.choices.difficulty || 'easy')
+});
+const isPlayable = (song) => Boolean(song?.previewUrl || song?.itunesId || song?.deezerId || song?.spotifyId || song?.streamUrl);
+const audioUrl = (song) => song?.previewUrl || ((api()?.API_BASE || '') ? `${api().API_BASE}/api/audio/${song.id}` : (song?.streamUrl || ''));
+const spotifyLink = (song) => song?.spotifyId && /^[A-Za-z0-9]{22}$/.test(song.spotifyId) ? `https://open.spotify.com/track/${song.spotifyId}` : `https://open.spotify.com/search/${encodeURIComponent(`${song?.title || ''} ${song?.artist || ''}`.trim())}`;
+function makeBingoCard(difficulty) {
+  const ids = categoriesFor(difficulty).map((c) => c.id);
+  const cells = [];
+  for (let i = 0; i < 5; i++) cells.push(...ids);
+  return shuffle(cells);
 }
-const publicPlayers = () => online.players.map((p) => ({ id: p.id, name: p.name, connected: p.connected !== false, score: p.score || 0, bingo: Boolean(p.bingo) }));
-const publicState = () => ({ code: online.code, phase: online.phase, round: online.round, settings: online.settings, players: publicPlayers(), votes: online.votes, answers: Object.keys(online.answers).length, winner: online.winner, deadline: online.deadline, versionLabel: api()?.versions?.[online.choices.version || online.settings.version]?.label || '', difficulty: online.choices.difficulty || online.settings.difficulty, audio: online.phase === 'playing' && online.song ? audioUrl(online.song) : null });
+function hasBingo(marked) {
+  for (let r = 0; r < 5; r++) if ([0, 1, 2, 3, 4].every((c) => marked.has(r * 5 + c))) return true;
+  for (let c = 0; c < 5; c++) if ([0, 1, 2, 3, 4].every((r) => marked.has(r * 5 + c))) return true;
+  return [0, 6, 12, 18, 24].every((i) => marked.has(i)) || [4, 8, 12, 16, 20].every((i) => marked.has(i));
+}
+function normalizeText(value) {
+  return String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\([^)]*\)|\[[^\]]*\]/g, ' ').replace(/\b(feat|ft|featuring|with|vs)\.?\b.*$/g, ' ').replace(/[^a-z0-9]+/g, ' ').trim();
+}
+function similarity(a, b) {
+  if (!a || !b) return 0;
+  if (a === b) return 1;
+  if (a.includes(b) || b.includes(a)) return 0.92;
+  const m = a.length, n = b.length, dp = Array.from({ length: m + 1 }, (_, i) => [i]);
+  for (let j = 1; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++) for (let j = 1; j <= n; j++) dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+  return 1 - dp[m][n] / Math.max(m, n);
+}
+function isCorrect(category, song, raw) {
+  const value = String(raw ?? '').trim();
+  if (!category || !song || !value) return false;
+  if (category.type === 'choice') return value === (category.id === 'solo' ? (song.group ? 'group' : 'solo') : (song.year < 2000 ? 'yes' : 'no'));
+  if (category.type === 'year') { const year = Number(value); return Number.isFinite(year) && Math.abs(year - Number(song.year)) <= (category.tolerance || 0); }
+  if (category.type === 'decade') { const m = value.match(/(19|20)\d{2}/); const d = m ? decadeOf(m[0]) : value.replace(/[^0-9]/g, '').replace(/^(\d{2})$/, '19$1').replace(/^(\d{4})$/, '$1s'); return d === decadeOf(song.year) || value === decadeLabel(decadeOf(song.year)); }
+  if (category.type === 'title') return similarity(normalizeText(value), normalizeText(song.title)) >= 0.8;
+  if (category.type === 'artist') {
+    const target = normalizeText(song.artist), answer = normalizeText(value);
+    if (similarity(answer, target) >= 0.78) return true;
+    const parts = target.split(/\s+(?:and|und|x|&|,)\s+|,|\s+feat\s+/).filter(Boolean);
+    return parts.some((part) => part.length > 2 && similarity(answer, part) >= 0.84);
+  }
+  return false;
+}
+function formatAnswer(category, raw) {
+  if (raw == null || raw === '') return '—';
+  if (category?.type === 'choice') return category.options.find((o) => o.value === raw)?.label || String(raw);
+  if (category?.type === 'decade') return decadeLabel(raw);
+  return String(raw);
+}
 function send(type, payload = {}, to = null) {
   if (!online.transport) return;
   const message = { type, payload, from: online.peerId };
@@ -90,81 +166,176 @@ function buildScreen() {
   const section = document.createElement('section');
   section.className = 'online-screen'; section.id = 'onlineScreen'; section.hidden = true;
   section.innerHTML = `
-    <header class="online-top"><button class="btn btn-ghost btn-small" id="onlineBack" type="button">← Startseite</button><div><span class="eyebrow">ONLINE BINGO</span><h1>Gemeinsam spielen</h1></div><div class="online-room-badge" id="onlineRoomBadge" hidden>Raum <strong id="onlineRoomCode"></strong></div></header>
+    <header class="online-top">
+      <button class="btn btn-ghost btn-small online-back" id="onlineBack" type="button">← Startseite</button>
+      <div class="online-wordmark"><span>HITSTER</span><strong>BINGO</strong><small>ONLINE</small></div>
+      <div class="online-top-actions">
+        <button class="online-text-btn" id="onlineHowBtn" type="button">Spielregeln</button>
+        <div class="online-room-badge" id="onlineRoomBadge" hidden><span>RAUM</span><strong id="onlineRoomCode"></strong><button id="onlineCopyCode" type="button" aria-label="Raum-Code kopieren">Kopieren</button></div>
+      </div>
+    </header>
+
     <div class="online-lobby" id="onlineLobby">
-      <div class="online-hero"><h2>Ein Raum, viele Geräte.</h2><p>Der Host öffnet den Raum, alle anderen kommen per Link oder QR-Code dazu. Jeder hört den Clip am eigenen Gerät. Kein Konto, kein eigener Server – die Verbindung läuft direkt zwischen den Geräten.</p></div>
-      <form class="online-card online-form" id="onlineHostForm">
-        <h2>Raum erstellen</h2>
-        <label>Dein Name<input id="onlineHostName" maxlength="18" autocomplete="nickname" required placeholder="z. B. Alex" /></label>
-        <div class="online-field-grid"><label>Runden<select id="onlineRounds"><option value="5">5 Runden</option><option value="10" selected>10 Runden</option><option value="15">15 Runden</option></select></label><label>Timer<select id="onlineTimerSelect"><option value="15">15 Sekunden</option><option value="25" selected>25 Sekunden</option><option value="35">35 Sekunden</option><option value="45">45 Sekunden</option></select></label></div>
-        <label>Version<select id="onlineVersion"></select></label>
-        <label>Version entscheiden<select id="onlineVersionMode"><option value="fixed">Host wählt</option><option value="ask">Spieler wählen</option></select></label>
-        <label>Schwierigkeit<select id="onlineDifficulty"><option value="easy">Leicht – nur bekannte Hits</option><option value="hard">Schwer – alles</option></select></label>
-        <label>Schwierigkeit entscheiden<select id="onlineDifficultyMode"><option value="fixed">Host wählt</option><option value="ask">Spieler wählen</option></select></label>
-        <button class="btn btn-primary btn-wide" type="submit">Raum erstellen →</button><p class="online-error" id="onlineError" role="alert"></p>
-      </form>
-      <form class="online-card online-form" id="onlineJoinForm">
-        <h2>Raum beitreten</h2><label>Dein Name<input id="onlineJoinName" maxlength="18" autocomplete="nickname" required placeholder="z. B. Sam" /></label><label>Raum-Code<input id="onlineJoinCode" maxlength="6" autocapitalize="characters" autocomplete="off" required placeholder="ABC123" /></label><button class="btn btn-accent btn-wide" type="submit">Beitreten →</button><p class="online-hint">Den Code findest du im Einladungslink oder im QR-Code des Hosts.</p>
-      </form>
-    </div>
-    <div id="onlineRoom" hidden><div class="online-grid">
-      <aside class="online-side">
-        <div class="online-card"><h3>Einladung</h3><div class="online-invite-link"><input id="onlineInvite" readonly aria-label="Einladungslink" /><button class="btn btn-ghost btn-small" id="onlineCopy" type="button">Kopieren</button></div><img class="online-qr" id="onlineQr" alt="QR-Code zum Online-Raum" hidden /><p class="online-hint" id="onlineInviteHint">Link teilen – fertig.</p></div>
-        <div class="online-card"><h3>Spieler <span class="panel-count" id="onlinePlayerCount">0</span></h3><ul class="online-players" id="onlinePlayers"></ul><div class="online-reactions" id="onlineReactions"><button type="button" data-reaction="😂">😂</button><button type="button" data-reaction="🔥">🔥</button><button type="button" data-reaction="👏">👏</button><button type="button" data-reaction="😱">😱</button><button type="button" data-reaction="🎉">🎉</button></div></div>
-        <div class="online-card" id="onlineHostControls"><h3>Host-Steuerung</h3><p class="online-hint" id="onlineHostHint">Stelle die Grundeinstellungen ein und starte die erste Runde.</p><button class="btn btn-primary btn-wide" id="onlineStart" type="button">Spiel starten</button></div>
-      </aside>
-      <main class="online-main">
-        <div class="online-panel" id="onlineWaiting"><h2 id="onlineWaitingTitle">Warte auf den Host …</h2><p class="online-hint" id="onlineWaitingText">Sobald der Host startet, erscheint hier deine Bingo-Karte.</p><div class="online-toast" id="onlineStatus" aria-live="polite"></div></div>
-        <div class="online-panel" id="onlineGame" hidden>
-          <div class="online-roundbar"><strong id="onlineRoundLabel">Runde 1</strong><span class="pill" id="onlineVersionLabel"></span><span class="pill" id="onlineDifficultyLabel"></span><span class="online-timer" id="onlineTimer">25<small>s</small></span></div>
-          <div class="online-audio"><button class="online-play" id="onlinePlay" type="button" aria-label="Song abspielen"><svg><use href="#i-play"></use></svg></button><div class="online-audio-copy"><strong>Song läuft</strong><small>Hör zu und tippe dein Jahr an.</small></div><div class="online-progress"><i id="onlineProgress"></i></div></div>
-          <div class="online-vote" id="onlineVote" hidden></div><div class="online-bingo" id="onlineBingo" aria-label="Bingo-Karte"></div><div class="online-toast" id="onlineGameStatus" aria-live="polite"></div><div class="online-reveal" id="onlineReveal" hidden></div><div class="online-score" id="onlineScore"></div>
+      <div class="online-hero">
+        <div class="online-hero-copy">
+          <span class="online-kicker">DIE MUSIKPARTY FÜR DEINE RUNDE</span>
+          <h1>HITSTER <em>BINGO</em></h1>
+          <p>Discokugel drehen, Song hören, Antwort eintippen. Wer zuerst eine Reihe auf seiner Farbkarte voll hat, ruft <strong>BINGO</strong>.</p>
+          <div class="online-hero-chips"><span>4.860 Hits</span><span>5 Farben</span><span>2–10 Spieler</span><span>ohne Login</span></div>
+          <div class="online-hero-actions"><button class="online-cta" id="onlineScrollHost" type="button">Raum erstellen <span>→</span></button><button class="online-cta online-cta-ghost" id="onlineScrollJoin" type="button">Raum beitreten</button></div>
         </div>
-      </main>
-    </div></div>
+        <div class="online-hero-art" aria-hidden="true">
+          <div class="online-orbit online-orbit-a"></div><div class="online-orbit online-orbit-b"></div>
+          <div class="online-hero-ball"><i></i><b></b><span>H</span></div>
+          <div class="online-hero-note note-a">POP</div><div class="online-hero-note note-b">2000s</div><div class="online-hero-note note-c">BINGO!</div>
+        </div>
+      </div>
+
+      <div class="online-lobby-grid">
+        <form class="online-card online-form online-create" id="onlineHostForm">
+          <div class="online-card-head"><span class="online-step">01</span><div><h2>Raum erstellen</h2><p>Du bist der Host und teilst den Code.</p></div></div>
+          <label>Dein Name<input id="onlineHostName" maxlength="18" autocomplete="nickname" required placeholder="z. B. Alex" /></label>
+          <div class="online-field-grid"><label>Runden<select id="onlineRounds"><option value="10">10 Runden</option><option value="15" selected>15 Runden</option><option value="20">20 Runden</option></select></label><label>Timer<select id="onlineTimerSelect"><option value="15">15 Sekunden</option><option value="25" selected>25 Sekunden</option><option value="35">35 Sekunden</option></select></label></div>
+          <p class="online-hint">Version und Schwierigkeit wählen später <strong>alle Spieler gemeinsam</strong>.</p>
+          <button class="btn btn-primary btn-wide" type="submit">Raum erstellen →</button>
+          <p class="online-error" id="onlineError" role="alert"></p>
+        </form>
+
+        <form class="online-card online-form online-join" id="onlineJoinForm">
+          <div class="online-card-head"><span class="online-step">02</span><div><h2>Raum beitreten</h2><p>Mit Code oder Einladungslink.</p></div></div>
+          <label>Dein Name<input id="onlineJoinName" maxlength="18" autocomplete="nickname" required placeholder="z. B. Sam" /></label>
+          <label>Raum-Code<input id="onlineJoinCode" maxlength="6" autocapitalize="characters" autocomplete="off" required placeholder="ABC123" /></label>
+          <button class="btn btn-accent btn-wide" type="submit">Beitreten →</button>
+          <p class="online-hint">Den Code findest du im Einladungslink oder im QR-Code des Hosts.</p>
+        </form>
+      </div>
+
+      <div class="online-steps">
+        <div class="online-step-card"><span class="online-step-num">01</span><strong>1. Drehen</strong><p>Die Discokugel wählt eine Kategorie – für alle gleich.</p></div>
+        <div class="online-step-card"><span class="online-step-num">02</span><strong>2. Hören &amp; tippen</strong><p>Der Song läuft bei allen gleichzeitig. 25 Sekunden für die Antwort.</p></div>
+        <div class="online-step-card"><span class="online-step-num">03</span><strong>3. Kreuzen</strong><p>Richtig? Setze dein Kreuz auf ein Feld in der Kategoriefarbe.</p></div>
+        <div class="online-step-card"><span class="online-step-num">04</span><strong>4. Bingo</strong><p>Die erste vollständige Reihe gewinnt – waagerecht, senkrecht oder diagonal.</p></div>
+      </div>
+    </div>
+
+    <div id="onlineRoom" hidden>
+      <div class="online-room-head">
+        <div class="online-room-code"><span>RAUM-CODE</span><strong id="onlineRoomCodeBig">------</strong><button class="online-text-btn" id="onlineCopyCodeBig" type="button">Code kopieren</button></div>
+        <div class="online-invite"><label for="onlineInvite">Einladungslink</label><div class="online-invite-row"><input id="onlineInvite" readonly aria-label="Einladungslink" /><button class="btn btn-ghost btn-small" id="onlineCopy" type="button">Link kopieren</button><button class="online-qr-toggle" id="onlineQrToggle" type="button" aria-label="QR-Code anzeigen">QR</button></div><img class="online-qr" id="onlineQr" alt="QR-Code zum Online-Raum" hidden /></div>
+      </div>
+
+      <div class="online-grid">
+        <aside class="online-side">
+          <div class="online-card online-players-card"><div class="online-card-head"><h3>Spieler <span class="panel-count" id="onlinePlayerCount">0</span></h3><span class="online-live-dot" title="Live verbunden"></span></div><ul class="online-players" id="onlinePlayers"></ul><div class="online-reactions" id="onlineReactions" aria-label="Reaktionen"><button type="button" data-reaction="☺" aria-label="Lächeln">☺</button><button type="button" data-reaction="♥" aria-label="Herz">♥</button><button type="button" data-reaction="★" aria-label="Stern">★</button><button type="button" data-reaction="!" aria-label="Überraschung">!</button><button type="button" data-reaction="♪" aria-label="Musik">♪</button></div></div>
+          <div class="online-card" id="onlineHostControls"><h3>Host</h3><p class="online-hint" id="onlineHostHint">Lade Spieler ein und starte dann die Abstimmung.</p><button class="btn btn-primary btn-wide" id="onlineStart" type="button">Spiel vorbereiten</button><button class="btn btn-ghost btn-wide" id="onlineForceStart" type="button" hidden>Jetzt starten</button></div>
+          <div class="online-card online-legend-card"><h3>Deine Farben</h3><div class="online-legend" id="onlineLegendSide"></div></div>
+        </aside>
+
+        <main class="online-main">
+          <div class="online-panel online-waiting" id="onlineWaiting"><span class="online-waiting-icon">H</span><h2 id="onlineWaitingTitle">Raum ist offen</h2><p class="online-hint" id="onlineWaitingText">Teile den Link. Sobald alle da sind, startet der Host die Abstimmung.</p><div class="online-toast" id="onlineStatus" aria-live="polite"></div></div>
+
+          <section class="online-setup" id="onlineSetup" hidden>
+            <div class="online-setup-head"><span class="online-kicker">SPIELVORBEREITUNG</span><h2>Was spielt ihr heute?</h2><p>Jede Stimme zählt. Version und Schwierigkeit wählt die ganze Runde – nicht nur der Host.</p></div>
+            <div class="online-setup-block"><div class="online-block-head"><h3>Version</h3><span id="onlineVersionVoteCount"></span></div><div class="online-vote-grid" id="onlineVersionVote"></div></div>
+            <div class="online-setup-block"><div class="online-block-head"><h3>Schwierigkeit</h3><span id="onlineDifficultyVoteCount"></span></div><div class="online-difficulty-grid" id="onlineDifficultyVote"></div></div>
+            <div class="online-vote-footer"><div id="onlineVoteProgress" class="online-vote-progress"></div><button class="btn btn-ghost" id="onlineForceStart2" type="button" hidden>Ohne Warten starten</button></div>
+            <div class="online-vote-result" id="onlineVoteResult" hidden></div>
+          </section>
+
+          <section class="online-game" id="onlineGame" hidden>
+            <div class="online-roundbar">
+              <div class="online-round-title"><span class="online-kicker">RUNDE</span><strong id="onlineRoundLabel">1 / 15</strong></div>
+              <span class="online-pill" id="onlineVersionLabel"></span><span class="online-pill" id="onlineDifficultyLabel"></span>
+              <div class="online-timer" id="onlineTimer">25<small>s</small></div>
+            </div>
+            <div class="online-game-grid">
+              <div class="online-game-main">
+                <div class="online-spin-card">
+                  <div class="online-disco-wrap"><div class="online-disco" id="onlineDisco"><div class="online-disco-shine"></div><div class="online-disco-grid"></div><span class="online-disco-letter">H</span></div><div class="online-disco-base"></div></div>
+                  <div class="online-category-card" id="onlineCategoryCard"><span class="online-kicker">KATEGORIE</span><strong id="onlineCategoryLabel">Dreht …</strong><small id="onlineCategoryQuestion">Die Discokugel entscheidet.</small></div>
+                </div>
+                <div class="online-audio" id="onlineAudio" hidden><button class="online-play" id="onlinePlay" type="button" aria-label="Song abspielen"><svg><use href="#i-play"></use></svg></button><div class="online-audio-copy"><strong id="onlineAudioTitle">Song für alle</strong><small id="onlineAudioHint">Gleich geht es los.</small></div><div class="online-progress"><i id="onlineProgress"></i></div></div>
+                <div class="online-answer" id="onlineAnswerBox" hidden></div>
+                <div class="online-toast" id="onlineGameStatus" aria-live="polite"></div>
+                <div class="online-reveal" id="onlineReveal" hidden></div>
+              </div>
+              <aside class="online-card-panel">
+                <div class="online-card-head"><div><span class="online-kicker">DEINE KARTE</span><strong id="onlineCardName">Bingo</strong></div><span id="onlineCardProgress">0 / 25</span></div>
+                <div class="online-bingo" id="onlineBingo" aria-label="Bingo-Karte"></div>
+                <div class="online-legend" id="onlineLegend"></div>
+                <div class="online-score" id="onlineScore"></div>
+              </aside>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <div class="online-modal" id="onlineRulesModal" hidden><div class="online-modal-card" role="dialog" aria-modal="true" aria-labelledby="onlineRulesTitle"><button class="online-modal-close" id="onlineRulesClose" type="button" aria-label="Schließen">×</button><span class="online-kicker">SO FUNKTIONIERT'S</span><h2 id="onlineRulesTitle">Hitster Bingo</h2><p>Eine Person ist DJ. Alle anderen spielen mit. Die Discokugel zeigt eine Kategorie, der Song läuft für alle gleichzeitig, und ihr tippt eure Antwort ein.</p><div class="online-rules-grid"><div><h3>Einsteiger · Seite A</h3><ul>${BINGO_MODES.easy.categories.map((c) => `<li><i style="--c:${c.color}"></i><strong>${esc(c.label)}</strong><span>${esc(c.question)}</span></li>`).join('')}</ul></div><div><h3>Expert · Seite B</h3><ul>${BINGO_MODES.hard.categories.map((c) => `<li><i style="--c:${c.color}"></i><strong>${esc(c.label)}</strong><span>${esc(c.question)}</span></li>`).join('')}</ul></div></div><p class="online-hint">Richtig? Dann setzt du ein Kreuz auf ein freies Feld in der Farbe der Kategorie. Wer zuerst fünf in einer Reihe hat – waagerecht, senkrecht oder diagonal – gewinnt.</p></div></div>
     <div class="online-toast" id="onlineGlobalStatus" aria-live="polite"></div>`;
   document.body.append(section); online.screen = section;
-  const select = $('#onlineVersion', section);
-  select.innerHTML = Object.entries(api()?.versions || {}).map(([id, v]) => `<option value="${esc(id)}">${esc(v.label)}</option>`).join('');
-  select.value = 'party';
+  section.addEventListener('submit', (event) => {
+    if (event.target.id === 'onlineAnswerForm') { event.preventDefault(); submitAnswer($('#onlineAnswerInput')?.value ?? ''); }
+  });
+  section.addEventListener('click', (event) => {
+    const answer = event.target.closest('[data-answer]'); if (answer) return submitAnswer(answer.dataset.answer);
+    const version = event.target.closest('[data-vote-version]'); if (version) return submitVote(version.dataset.voteVersion, online.votes[myId()]?.difficulty || 'easy');
+    const difficulty = event.target.closest('[data-vote-difficulty]'); if (difficulty) return submitVote(online.votes[myId()]?.version || 'party', difficulty.dataset.voteDifficulty);
+    const cell = event.target.closest('#onlineBingo button[data-index]'); if (cell) return onCellClick(Number(cell.dataset.index));
+  });
   $('#onlineBack', section).addEventListener('click', close);
   $('#onlineHostForm', section).addEventListener('submit', onCreateRoom);
   $('#onlineJoinForm', section).addEventListener('submit', onJoinRoom);
-  $('#onlineStart', section).addEventListener('click', startNextRound);
+  $('#onlineStart', section).addEventListener('click', primaryAction);
+  $('#onlineForceStart', section).addEventListener('click', finishVotes);
+  $('#onlineForceStart2', section).addEventListener('click', finishVotes);
+  $('#onlineCopy', section).addEventListener('click', () => copyText($('#onlineInvite').value, 'Einladungslink kopiert.'));
+  $('#onlineCopyCode', section).addEventListener('click', () => copyText(online.code, 'Raum-Code kopiert.'));
+  $('#onlineCopyCodeBig', section).addEventListener('click', () => copyText(online.code, 'Raum-Code kopiert.'));
+  $('#onlineQrToggle', section).addEventListener('click', () => { const qr = $('#onlineQr'); qr.hidden = !qr.hidden; });
+  $('#onlineHowBtn', section).addEventListener('click', () => { $('#onlineRulesModal').hidden = false; });
+  $('#onlineRulesClose', section).addEventListener('click', () => { $('#onlineRulesModal').hidden = true; });
+  $('#onlineRulesModal', section).addEventListener('click', (event) => { if (event.target.id === 'onlineRulesModal') event.currentTarget.hidden = true; });
   $('#onlinePlay', section).addEventListener('click', playOnlineAudio);
-  $('#onlineCopy', section).addEventListener('click', copyInvite);
-  $('#onlineReactions', section).addEventListener('click', (e) => { const b = e.target.closest('[data-reaction]'); if (b) { send('reaction', { emoji: b.dataset.reaction }); showReaction(b.dataset.reaction, online.name); } });
-  $('#onlineBingo', section).addEventListener('click', (e) => { const b = e.target.closest('button[data-index]'); if (b) chooseYear(Number(b.dataset.index)); });
+  $('#onlineScrollHost', section).addEventListener('click', () => $('#onlineHostName')?.focus());
+  $('#onlineScrollJoin', section).addEventListener('click', () => $('#onlineJoinName')?.focus());
+  $('#onlineReactions', section).addEventListener('click', (event) => { const button = event.target.closest('[data-reaction]'); if (button) { send('reaction', { emoji: button.dataset.reaction }); showReaction(button.dataset.reaction, online.name); } });
+  document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && !$('#onlineRulesModal')?.hidden) $('#onlineRulesModal').hidden = true; });
   return section;
 }
 function showScreen() { buildScreen(); online.screen.hidden = false; document.body.classList.add('online-active', 'started'); document.body.style.overflow = ''; }
 function close() {
   online.transport?.close(); online.transport = null; online.role = null; online.phase = 'lobby'; stopTimers();
+  onlineAudio?.pause();
   if (online.screen) online.screen.hidden = true;
   document.body.classList.remove('online-active', 'started');
-  const url = new URL(location.href); url.searchParams.delete('online');
+  const url = new URL(location.href); url.searchParams.delete('online'); url.searchParams.delete('play');
   history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`); window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 function open(prefillCode = '') {
   if (!api()?.state?.songs?.length) { setTimeout(() => open(prefillCode), 350); return; }
+  online.transport?.close(); online.transport = null; online.role = null; online.phase = 'lobby';
   showScreen(); online.name = localStorage.getItem(NAME_KEY) || '';
   $('#onlineHostName').value = online.name; $('#onlineJoinName').value = online.name;
+  $('#onlineLobby').hidden = false; $('#onlineRoom').hidden = true; $('#onlineSetup').hidden = true; $('#onlineGame').hidden = true;
+  $('#onlineRoomBadge').hidden = true; $('#onlineError').textContent = ''; $('#onlineQr').hidden = true;
   if (prefillCode) { $('#onlineJoinCode').value = cleanCode(prefillCode); $('#onlineJoinName').focus(); } else $('#onlineHostName').focus();
-  $('#onlineLobby').hidden = false; $('#onlineRoom').hidden = true; $('#onlineError').textContent = '';
+  unlockAudio();
 }
 
 function readSettings() {
-  return { rounds: Number($('#onlineRounds').value) || 10, timer: Number($('#onlineTimerSelect').value) || 25, versionMode: $('#onlineVersionMode').value, version: $('#onlineVersion').value, difficultyMode: $('#onlineDifficultyMode').value, difficulty: $('#onlineDifficulty').value };
+  return { rounds: Number($('#onlineRounds').value) || 15, timer: Number($('#onlineTimerSelect').value) || 25 };
 }
 function onCreateRoom(event) {
-  event.preventDefault();
+  event.preventDefault(); unlockAudio();
   const name = cleanName($('#onlineHostName').value);
   if (!name) return showError('Bitte gib deinen Namen ein.');
   localStorage.setItem(NAME_KEY, name); online.name = name; online.role = 'host'; online.code = randomCode();
   online.settings = readSettings(); online.players = []; online.connections = new Map(); online.phase = 'lobby';
-  online.round = 0; online.answers = {}; online.votes = {}; online.choices = {}; online.winner = null; online.recent = [];
-  const player = { id: 'host', name, connected: true, score: 0, card: makeCard(), marked: new Set(), bingo: false };
-  online.players.push(player); online.card = player.card; online.marked = player.marked;
+  online.round = 0; online.answers = {}; online.correct = {}; online.pending = new Set(); online.votes = {};
+  online.choices = { version: '', difficulty: '' }; online.winner = null; online.recent = []; online.recentCategories = [];
+  const player = { id: 'host', name, connected: true, score: 0, card: null, marked: new Set(), bingo: false, correct: false };
+  online.players.push(player); online.card = null; online.marked = player.marked;
   try {
     online.transport = createTransport(online.code, 'host', handleMessage); online.peerId = 'host';
     if (online.transport instanceof PeerTransport) online.transport.ready.then((id) => { online.peerId = id; }).catch((err) => showError(`Verbindung fehlgeschlagen: ${err.message || err}`));
@@ -172,12 +343,12 @@ function onCreateRoom(event) {
   showRoom(); broadcastState();
 }
 function onJoinRoom(event) {
-  event.preventDefault();
+  event.preventDefault(); unlockAudio();
   const name = cleanName($('#onlineJoinName').value), code = cleanCode($('#onlineJoinCode').value);
   if (!name) return showError('Bitte gib deinen Namen ein.');
   if (code.length !== 6) return showError('Der Raum-Code hat 6 Zeichen.');
   localStorage.setItem(NAME_KEY, name); online.name = name; online.role = 'player'; online.code = code;
-  online.phase = 'lobby'; online.players = []; online.connections = new Map(); online.card = makeCard(); online.marked = new Set();
+  online.phase = 'lobby'; online.players = []; online.connections = new Map(); online.card = null; online.marked = new Set();
   try {
     online.transport = createTransport(code, 'player', handleMessage); online.peerId = online.transport.id || 'player';
     if (online.transport instanceof PeerTransport) online.transport.ready.then((id) => { online.peerId = id; send('join', { name }); }).catch((err) => showError(`Raum nicht erreichbar: ${err.message || err}`));
@@ -198,18 +369,24 @@ function handleHostMessage(message, from) {
   if (message.type === 'join') {
     const name = cleanName(message.payload?.name) || 'Gast';
     let player = online.players.find((p) => p.id === from);
-    if (!player) { player = { id: from, name, connected: true, score: 0, card: makeCard(), marked: new Set(), bingo: false }; online.players.push(player); }
+    if (!player && online.players.length >= 10) { sendTo(from, 'full', {}); return; }
+    if (!player) { player = { id: from, name, connected: true, score: 0, card: null, marked: new Set(), bingo: false, correct: false }; online.players.push(player); }
     player.name = name; player.connected = true;
-    sendTo(from, 'welcome', { id: from, code: online.code, name: online.name, card: player.card, settings: online.settings, players: publicPlayers(), phase: online.phase });
+    if (!player.card && online.choices.difficulty && ['countdown', 'spinning', 'playing', 'reveal', 'ended'].includes(online.phase)) player.card = makeBingoCard(online.choices.difficulty);
+    sendTo(from, 'welcome', { id: from, code: online.code, name: online.name, card: player.card, settings: online.settings, players: publicPlayers(), phase: online.phase, votes: online.votes, choices: online.choices, category: publicCategory(online.category), round: online.round, winner: online.winner, correct: online.correct });
     broadcastState(); return;
   }
   if (message.type === 'answer' && online.phase === 'playing') {
-    const year = Number(message.payload?.year); if (Number.isInteger(year)) { online.answers[from] = year; broadcastState(); } return;
+    const value = String(message.payload?.value ?? '').slice(0, 80).trim();
+    if (value) { online.answers[from] = { value, at: Date.now() }; broadcastState(); }
+    return;
   }
-  if (message.type === 'vote' && online.phase === 'choose') {
-    online.votes[from] = { version: String(message.payload?.version || ''), difficulty: String(message.payload?.difficulty || '') };
-    broadcastState(); render(); return;
+  if (message.type === 'vote' && online.phase === 'setup') {
+    const version = String(message.payload?.version || ''), difficulty = String(message.payload?.difficulty || '');
+    if (api()?.versions?.[version] && BINGO_MODES[difficulty]) { online.votes[from] = { version, difficulty }; broadcastState(); if (allVoted()) setTimeout(finishVotes, 450); }
+    return;
   }
+  if (message.type === 'mark' && online.phase === 'reveal') { hostMark(from, Number(message.payload?.index)); return; }
   if (message.type === 'reaction') {
     const emoji = String(message.payload?.emoji || '').slice(0, 4), player = online.players.find((p) => p.id === from);
     if (emoji) { send('reaction', { emoji, name: player?.name || 'Gast' }); showReaction(emoji, player?.name || 'Gast'); }
@@ -219,198 +396,401 @@ function handlePlayerMessage(message) {
   if (message.type === 'welcome') {
     online.peerId = message.payload?.id || online.peerId; online.code = message.payload?.code || online.code;
     online.settings = message.payload?.settings || online.settings; online.players = message.payload?.players || [];
-    online.phase = message.payload?.phase || 'lobby'; if (message.payload?.card) online.card = message.payload.card;
+    online.phase = message.payload?.phase || 'lobby'; online.votes = message.payload?.votes || {};
+    online.choices = message.payload?.choices || online.choices; online.category = message.payload?.category || online.category;
+    online.round = message.payload?.round || online.round; online.winner = message.payload?.winner || null;
+    online.correct = message.payload?.correct || {};
+    online.pending = new Set((online.players || []).filter((p) => p.pending).map((p) => p.id));
+    if (message.payload?.card) online.card = message.payload.card;
+    const mine = online.players.find((p) => p.id === online.peerId); if (mine?.marked) online.marked = new Set(mine.marked);
     showRoom(); render(); return;
+  }
+  if (message.type === 'cards') {
+    online.card = message.payload?.card || online.card; online.marked = new Set(); online.submitted = false; online.answer = null;
+    render(); return;
   }
   if (message.type === 'state') {
     const next = message.payload || {};
     online.phase = next.phase || online.phase; online.round = next.round || online.round;
     online.settings = next.settings || online.settings; online.players = next.players || online.players;
-    online.votes = next.votes || {}; online.winner = next.winner || null; online.deadline = next.deadline || online.deadline; online.audio = next.audio || online.audio;
-    online.choices = { ...online.choices, version: next.version || online.choices.version, difficulty: next.difficulty || online.choices.difficulty };
-    if (next.phase === 'lobby') { $('#onlineWaiting').hidden = false; $('#onlineGame').hidden = true; }
-    if (next.phase === 'playing' && next.audio && !onlineAudio?.src) setupAudio(next.audio);
+    online.votes = next.votes || {}; online.winner = next.winner || null; online.choices = next.choices || online.choices;
+    online.category = next.category || online.category; online.correct = next.players ? Object.fromEntries(next.players.map((p) => [p.id, Boolean(p.correct)])) : online.correct;
+    online.pending = new Set((online.players || []).filter((p) => p.pending).map((p) => p.id));
+    if (next.deadline) online.deadline = next.deadline;
+    const mine = online.players.find((p) => p.id === online.peerId); if (mine?.marked) online.marked = new Set(mine.marked);
     render(); return;
   }
-  if (message.type === 'round') {
-    online.phase = 'playing'; online.round = message.payload?.round || online.round + 1;
-    online.deadline = message.payload?.deadline || Date.now() + (online.settings.timer || 25) * 1000;
-    online.selectedYear = null; online.choices = { version: message.payload?.version, difficulty: message.payload?.difficulty };
-    $('#onlineWaiting').hidden = true; $('#onlineGame').hidden = false; $('#onlineReveal').hidden = true;
-    setupAudio(message.payload?.audio); render(); startLocalTimer(); return;
-  }
+  if (message.type === 'round') { applyRound(message.payload || {}); return; }
   if (message.type === 'reveal') {
     stopTimers(); online.phase = message.payload?.phase || 'reveal'; online.winner = message.payload?.winner || null;
+    online.category = message.payload?.category || online.category; online.song = message.payload?.song || online.song;
+    online.correct = message.payload?.correct || {}; online.revealAnswers = message.payload?.answers || {};
     if (message.payload?.players) online.players = message.payload.players;
+    online.pending = new Set((online.players || []).filter((p) => p.pending).map((p) => p.id));
     const mine = online.players.find((p) => p.id === online.peerId); if (mine?.marked) online.marked = new Set(mine.marked);
-    const reveal = $('#onlineReveal'); reveal.hidden = false;
-    reveal.innerHTML = `<strong>${esc(message.payload?.year || '')}</strong><p>${esc(message.payload?.title || '')} · ${esc(message.payload?.artist || '')}</p>`;
-    $('#onlineGameStatus').textContent = online.winner ? `Bingo für ${online.winner.name}!` : 'Jahr aufgedeckt. Der Host startet die nächste Runde.';
     render(); return;
   }
   if (message.type === 'ended') { stopTimers(); online.phase = 'ended'; online.winner = message.payload?.winner || null; if (message.payload?.players) online.players = message.payload.players; render(); return; }
+  if (message.type === 'full') { showError('Dieser Raum ist voll (maximal 10 Spieler).'); return; }
   if (message.type === 'reaction') showReaction(message.payload?.emoji, message.payload?.name || 'Gast');
 }
 
-function startNextRound() {
-  if (online.role !== 'host' || online.winner || online.phase === 'ended') return;
-  if (online.phase === 'choose') return beginChosenRound();
-  if (online.round >= online.settings.rounds && online.phase !== 'lobby') return endGame();
-  if (online.settings.versionMode === 'ask' || online.settings.difficultyMode === 'ask') {
-    online.phase = 'choose'; online.votes = {};
-    online.choices = { version: online.settings.versionMode === 'ask' ? '' : online.settings.version, difficulty: online.settings.difficultyMode === 'ask' ? '' : online.settings.difficulty };
-    send('state', publicState()); render(); return;
-  }
-  beginRound();
+function primaryAction() {
+  if (online.role !== 'host') return;
+  if (online.phase === 'lobby' || online.phase === 'ended') return startSetup();
+  if (online.phase === 'setup') return finishVotes();
+  if (online.phase === 'reveal') return beginRound();
 }
-function beginChosenRound() {
-  const votes = Object.values(online.votes);
-  if (online.settings.versionMode === 'ask') {
-    const counts = {}; for (const v of votes) if (v.version) counts[v.version] = (counts[v.version] || 0) + 1;
-    online.choices.version = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] || online.settings.version;
+function startSetup() {
+  if (online.role !== 'host') return;
+  stopTimers();
+  online.phase = 'setup'; online.round = 0; online.votes = {}; online.choices = { version: '', difficulty: '' };
+  online.answers = {}; online.correct = {}; online.pending = new Set(); online.revealAnswers = {}; online.winner = null;
+  online.category = null; online.song = null; online.startAt = 0; online.deadline = 0; online.answer = null; online.submitted = false;
+  online.card = null; online.marked = new Set(); online.recent = []; online.recentCategories = [];
+  for (const player of online.players) { player.score = 0; player.card = null; player.marked = new Set(); player.bingo = false; player.correct = false; }
+  send('state', publicState()); render();
+}
+function submitVote(version, difficulty) {
+  if (online.phase !== 'setup') return;
+  if (!api()?.versions?.[version] || !BINGO_MODES[difficulty]) return;
+  unlockAudio();
+  const vote = { version, difficulty };
+  online.votes[myId()] = vote;
+  if (online.role === 'host') { broadcastState(); if (allVoted()) setTimeout(finishVotes, 450); }
+  else { send('vote', vote); render(); }
+}
+function allVoted() {
+  const active = online.players.filter((p) => p.connected !== false);
+  return active.length > 0 && active.every((p) => online.votes[p.id]?.version && online.votes[p.id]?.difficulty);
+}
+function tally(key, fallback) {
+  const counts = {};
+  for (const vote of Object.values(online.votes)) if (vote[key]) counts[vote[key]] = (counts[vote[key]] || 0) + 1;
+  const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  if (!entries.length) return fallback;
+  if (entries[1] && entries[1][1] === entries[0][1]) {
+    const hostVote = online.votes.host?.[key];
+    if (hostVote && counts[hostVote] === entries[0][1]) return hostVote;
   }
-  if (online.settings.difficultyMode === 'ask') {
-    const counts = {}; for (const v of votes) if (v.difficulty) counts[v.difficulty] = (counts[v.difficulty] || 0) + 1;
-    online.choices.difficulty = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] || online.settings.difficulty;
-  }
-  beginRound();
+  return entries[0][0];
+}
+function finishVotes() {
+  if (online.role !== 'host' || online.phase !== 'setup') return;
+  clearTimeout(online.timers.countdown);
+  const version = tally('version', online.votes.host?.version || 'party');
+  const difficulty = tally('difficulty', online.votes.host?.difficulty || 'easy');
+  online.choices = { version, difficulty };
+  for (const player of online.players) { player.card = makeBingoCard(difficulty); player.marked = new Set(); player.score = 0; player.bingo = false; player.correct = false; if (player.id === 'host') { online.card = player.card; online.marked = player.marked; } else sendTo(player.id, 'cards', { card: player.card, difficulty }); }
+  online.phase = 'countdown'; online.countdownStarted = Date.now(); online.winner = null; online.answers = {}; online.correct = {}; online.pending = new Set();
+  send('state', publicState()); render();
+  online.timers.countdown = setTimeout(beginRound, 3200);
+}
+function pickCategory() {
+  const cats = categoriesFor(online.choices.difficulty || 'easy');
+  const fresh = cats.filter((c) => !online.recentCategories.includes(c.id));
+  const category = (fresh.length ? fresh : cats)[Math.floor(Math.random() * (fresh.length || cats.length))];
+  online.recentCategories.push(category.id); if (online.recentCategories.length > 2) online.recentCategories.shift();
+  return category;
+}
+function pickSong() {
+  const version = online.choices.version || 'party', difficulty = online.choices.difficulty || 'easy';
+  const songs = api()?.state?.songs || [];
+  let pool = songs.filter((s) => api().versionMatches(s, version) && isPlayable(s) && s.title && s.artist && Number.isFinite(Number(s.year)));
+  if (!pool.length) pool = songs.filter((s) => isPlayable(s) && s.title && s.artist);
+  const ranked = [...pool].sort((a, b) => api().fameScore(b) - api().fameScore(a));
+  const ratio = difficulty === 'easy' ? 0.5 : 0.85;
+  let known = ranked.slice(0, Math.max(40, Math.ceil(ranked.length * ratio)));
+  let fresh = known.filter((s) => !online.recent.includes(s.id));
+  if (!fresh.length) fresh = known;
+  return fresh[Math.floor(Math.random() * fresh.length)] || null;
 }
 function beginRound() {
-  const version = online.choices.version || online.settings.version || 'party';
-  const difficulty = online.choices.difficulty || online.settings.difficulty || 'easy';
-  const songs = api()?.state?.songs || [];
-  let pool = songs.filter((s) => api().versionMatches(s, version) && (s.previewUrl || s.itunesId || s.deezerId || s.spotifyId || s.streamUrl) && !online.recent.includes(s.id));
-  if (!pool.length) pool = songs.filter((s) => api().versionMatches(s, version));
-  if (difficulty === 'easy') { const ranked = [...pool].sort((a, b) => api().fameScore(b) - api().fameScore(a)); pool = ranked.slice(0, Math.max(30, Math.ceil(ranked.length * 0.45))); }
-  if (!pool.length) return showError('Keine Lieder für diese Auswahl.');
-  const song = pool[Math.floor(Math.random() * pool.length)];
-  online.song = song; online.recent.push(song.id); if (online.recent.length > 80) online.recent.shift();
-  online.round += 1; online.phase = 'playing'; online.answers = {}; online.votes = {}; online.winner = null; online.selectedYear = null;
-  online.deadline = Date.now() + online.settings.timer * 1000;
-  const audio = audioUrl(song);
-  send('round', { round: online.round, audio, deadline: online.deadline, timer: online.settings.timer, version, difficulty });
-  send('state', publicState());
-  $('#onlineWaiting').hidden = true; $('#onlineGame').hidden = false; $('#onlineReveal').hidden = true;
-  setupAudio(audio); render(); startHostTimer();
+  if (online.role !== 'host' || !['countdown', 'reveal'].includes(online.phase)) return;
+  if (online.round >= online.settings.rounds) return endGame();
+  const category = pickCategory(), song = pickSong();
+  if (!song) return showError('Keine Lieder für diese Auswahl.');
+  online.round += 1; online.category = category; online.song = song; online.audioUrl = audioUrl(song);
+  online.phase = 'spinning'; online.answers = {}; online.correct = {}; online.pending = new Set(); online.revealAnswers = {}; online.winner = null;
+  online.answer = null; online.submitted = false; online.audioBlocked = false; online.startIn = 4200; online.startAt = Date.now() + online.startIn; online.deadline = online.startAt + online.settings.timer * 1000;
+  online.recent.push(song.id); if (online.recent.length > 100) online.recent.shift();
+  const payload = { round: online.round, startIn: online.startIn, timer: online.settings.timer, audio: online.audioUrl, category: publicCategory(category), version: online.choices.version, difficulty: online.choices.difficulty };
+  send('round', payload); send('state', publicState());
+  setupAudio(online.audioUrl); render(); scheduleHostRound(online.startIn);
 }
-function startHostTimer() { stopTimers(); online.timerId = setTimeout(revealRound, online.settings.timer * 1000 + 250); online.tickId = setInterval(render, 400); }
-function startLocalTimer() { stopTimers(); online.tickId = setInterval(render, 400); online.timerId = setTimeout(render, Math.max(0, online.deadline - Date.now()) + 100); }
-function stopTimers() { clearTimeout(online.timerId); clearInterval(online.tickId); online.timerId = null; online.tickId = null; }
+function applyRound(payload) {
+  stopTimers();
+  online.phase = 'spinning'; online.round = payload.round || online.round + 1;
+  online.category = payload.category || online.category; online.startIn = payload.startIn || 4200;
+  online.startAt = Date.now() + online.startIn; online.deadline = online.startAt + (payload.timer || online.settings.timer) * 1000;
+  online.answers = {}; online.correct = {}; online.pending = new Set(); online.revealAnswers = {}; online.winner = null;
+  online.answer = null; online.submitted = false; online.audioBlocked = false;
+  setupAudio(payload.audio); render(); scheduleClientRound(online.startIn);
+}
+function scheduleHostRound(startIn) {
+  clearRoundTimers();
+  online.timers.phase = setTimeout(() => {
+    if (online.phase !== 'spinning') return;
+    online.phase = 'playing'; render(); startHostTimer(); playScheduledAudio();
+  }, startIn);
+  online.timers.tick = setInterval(render, 300);
+}
+function scheduleClientRound(startIn) {
+  clearRoundTimers();
+  online.timers.phase = setTimeout(() => {
+    if (online.phase !== 'spinning') return;
+    online.phase = 'playing'; render(); playScheduledAudio(); startClientTimer();
+  }, startIn);
+  online.timers.tick = setInterval(render, 300);
+}
+function startHostTimer() { online.timers.round = setTimeout(revealRound, Math.max(0, online.deadline - Date.now())); }
+function startClientTimer() { online.timers.round = setTimeout(render, Math.max(0, online.deadline - Date.now()) + 200); }
 function revealRound() {
   if (online.role !== 'host' || online.phase !== 'playing' || !online.song) return;
-  stopTimers(); const year = online.song.year;
+  stopTimers();
+  const category = online.category, song = online.song;
+  online.correct = {}; online.revealAnswers = {}; online.pending = new Set();
   for (const player of online.players) {
-    if (!player.card) player.card = makeCard(); if (!player.marked) player.marked = new Set();
-    let correct = false;
-    player.card.forEach((cell, i) => { if (cell.year === year) { player.marked.add(i); correct = true; } });
-    if (online.answers[player.id] === year) { player.score = (player.score || 0) + 2; correct = true; }
-    if (correct) player.score = (player.score || 0) + 1;
-    player.bingo = hasBingo(player.card, player.marked);
-    if (player.bingo && !online.winner) online.winner = { id: player.id, name: player.name };
+    const raw = online.answers[player.id]?.value ?? '';
+    const ok = isCorrect(category, song, raw);
+    player.correct = ok; online.correct[player.id] = ok; online.revealAnswers[player.id] = formatAnswer(category, raw);
+    if (ok && (player.card || []).some((cat, i) => cat === category.id && !player.marked.has(i))) online.pending.add(player.id);
   }
-  online.phase = online.winner ? 'ended' : 'reveal';
-  if (online.winner) api()?.confetti?.(80);
-  const payload = { year, title: online.song.title, artist: online.song.artist, players: online.players.map((p) => ({ ...publicPlayers().find((e) => e.id === p.id), marked: [...p.marked] })), winner: online.winner, phase: online.phase };
-  const reveal = $('#onlineReveal');
-  reveal.hidden = false;
-  reveal.innerHTML = `<strong>${esc(year)}</strong><p>${esc(online.song.title)} · ${esc(online.song.artist)}</p>`;
-  send('reveal', payload); send('state', publicState()); if (online.winner) send('ended', { winner: online.winner, players: payload.players }); render();
+  online.phase = 'reveal'; online.markDeadline = Date.now() + 12000;
+  const payload = { phase: 'reveal', category: publicCategory(category), song: { year: song.year, title: song.title, artist: song.artist, group: Boolean(song.group), spotifyId: song.spotifyId || '' }, correct: online.correct, answers: online.revealAnswers, players: publicPlayers(), winner: null };
+  send('reveal', payload); send('state', publicState()); render();
+  online.timers.mark = setTimeout(() => { if (online.phase === 'reveal') { online.pending.clear(); send('state', publicState()); render(); } }, 12000);
+}
+function hostMark(playerId, index) {
+  if (online.role !== 'host' || online.phase !== 'reveal' || !online.correct[playerId]) return;
+  const player = online.players.find((p) => p.id === playerId); if (!player?.card || player.marked.has(index)) return;
+  if (player.card[index] !== online.category?.id) return;
+  player.marked.add(index); player.score = (player.score || 0) + 1; online.pending.delete(playerId);
+  if (playerId === 'host') online.marked = player.marked;
+  player.bingo = hasBingo(player.marked);
+  if (player.bingo && !online.winner) {
+    online.winner = { id: player.id, name: player.name }; online.phase = 'ended'; stopTimers();
+    api()?.confetti?.(90);
+    send('ended', { winner: online.winner, players: publicPlayers() }); send('state', publicState()); render(); return;
+  }
+  send('state', publicState()); render();
+}
+function onCellClick(index) {
+  const me = online.players.find((p) => p.id === myId());
+  const pending = online.role === 'host' ? online.pending.has('host') : Boolean(me?.pending);
+  if (online.phase !== 'reveal' || !online.correct[myId()] || !pending) return;
+  if (online.card?.[index] !== online.category?.id || online.marked.has(index)) return;
+  if (online.role === 'host') hostMark('host', index); else send('mark', { index });
 }
 function endGame() {
-  online.phase = 'ended';
+  if (online.role !== 'host') return;
+  stopTimers(); online.phase = 'ended';
   if (!online.winner) { const sorted = [...online.players].sort((a, b) => (b.score || 0) - (a.score || 0)); online.winner = sorted[0] ? { id: sorted[0].id, name: sorted[0].name } : null; }
-  send('ended', { winner: online.winner, players: online.players.map((p) => ({ ...publicPlayers().find((e) => e.id === p.id), marked: [...(p.marked || [])] })) });
-  send('state', publicState()); api()?.confetti?.(70); render();
-}
-function chooseYear(index) {
-  if (!online.card || online.phase !== 'playing' || online.selectedYear != null) return;
-  const cell = online.card[index]; if (!cell || cell.free || cell.year == null) return;
-  online.selectedYear = index;
-  if (online.role === 'host') { online.answers.host = cell.year; broadcastState(); } else send('answer', { year: cell.year });
-  render(); $('#onlineGameStatus').textContent = `Tipp gespeichert: ${cell.year}. Warte auf die Auflösung …`;
+  send('ended', { winner: online.winner, players: publicPlayers() }); send('state', publicState()); api()?.confetti?.(70); render();
 }
 
+function submitAnswer(value) {
+  if (online.phase !== 'playing' || online.submitted) return;
+  const clean = String(value ?? '').trim().slice(0, 80);
+  if (!clean) { $('#onlineGameStatus').textContent = 'Bitte gib zuerst eine Antwort ein.'; return; }
+  online.answer = clean; online.submitted = true;
+  if (online.role === 'host') { online.answers.host = { value: clean, at: Date.now() }; broadcastState(); }
+  else send('answer', { value: clean });
+  render(); $('#onlineGameStatus').textContent = 'Tipp gespeichert. Warte auf die Auflösung …';
+}
 function showRoom() {
   $('#onlineLobby').hidden = true; $('#onlineRoom').hidden = false;
-  const badge = $('#onlineRoomBadge'); badge.hidden = false; $('#onlineRoomCode').textContent = online.code;
+  $('#onlineRoomBadge').hidden = false; $('#onlineRoomCode').textContent = online.code; $('#onlineRoomCodeBig').textContent = online.code;
   const local = new URLSearchParams(location.search).has('localonline') ? '&localonline=1' : '';
   const invite = `${location.origin}${location.pathname}?online=${online.code}${local}`;
   $('#onlineInvite').value = invite;
   const qr = $('#onlineQr');
   const apiBase = api()?.API_BASE || (api()?.STATIC ? '' : location.origin);
+  qr.onerror = () => { if (!qr.dataset.fallback) { qr.dataset.fallback = '1'; qr.src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(invite)}`; } };
   qr.src = apiBase ? `${apiBase}/api/qr?text=${encodeURIComponent(invite)}` : `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(invite)}`;
-  qr.hidden = false;
-  $('#onlineInviteHint').textContent = online.role === 'host' ? 'Teile den Link – jeder tritt mit seinem Namen bei.' : 'Du bist im Raum. Viel Spaß!';
+  qr.hidden = true; qr.dataset.fallback = '';
   $('#onlineHostControls').hidden = online.role !== 'host';
   render();
 }
 function render() {
   if (!online.screen || online.screen.hidden) return;
-  const isHost = online.role === 'host', players = online.players || [];
+  const isHost = online.role === 'host', players = online.players || [], phase = online.phase;
+  const gamePhases = ['spinning', 'playing', 'reveal', 'ended'];
   $('#onlinePlayerCount').textContent = String(players.length);
-  $('#onlinePlayers').innerHTML = players.map((p) => `<li><span class="dot"></span><span>${esc(p.name)}</span>${p.id === (online.role === 'host' ? 'host' : online.peerId) ? ' <small>(du)</small>' : ''}<strong style="margin-left:auto">${p.score || 0}</strong></li>`).join('') || '<li>Noch niemand da.</li>';
-  $('#onlineRoundLabel').textContent = online.phase === 'lobby' ? 'Lobby' : `Runde ${Math.min(online.round || 1, online.settings.rounds)} / ${online.settings.rounds}`;
-  $('#onlineVersionLabel').textContent = api()?.versions?.[online.choices.version || online.settings.version]?.label || 'Version';
-  $('#onlineDifficultyLabel').textContent = (online.choices.difficulty || online.settings.difficulty) === 'easy' ? 'Leicht' : 'Schwer';
-  const remaining = online.phase === 'playing' ? Math.max(0, Math.ceil((online.deadline - Date.now()) / 1000)) : online.settings.timer;
-  $('#onlineTimer').innerHTML = `${remaining}<small>s</small>`;
-  $('#onlineWaiting').hidden = online.phase !== 'lobby' && online.phase !== 'ended';
-  $('#onlineGame').hidden = online.phase === 'lobby';
-  $('#onlineWaitingTitle').textContent = online.phase === 'ended' ? 'Spiel beendet' : online.phase === 'choose' ? 'Entscheidung läuft' : isHost ? 'Bereit?' : 'Warte auf den Host …';
-  $('#onlineWaitingText').textContent = online.phase === 'ended' ? (online.winner ? `${online.winner.name} gewinnt!` : 'Danke fürs Spielen.') : online.phase === 'choose' ? 'Version und Schwierigkeit werden abgestimmt. Der Host startet gleich.' : isHost ? 'Du kannst die erste Runde starten.' : 'Sobald der Host startet, erscheint hier deine Bingo-Karte.';
-  $('#onlineStart').hidden = !isHost || !['lobby', 'reveal', 'choose'].includes(online.phase) || Boolean(online.winner);
-  $('#onlineStart').textContent = online.phase === 'lobby' ? 'Spiel starten' : online.phase === 'choose' ? 'Runde starten' : 'Nächste Runde';
-  if (online.phase === 'choose') renderVote(); else $('#onlineVote').hidden = true;
-  renderBingo(); renderReveal(); renderScore();
-  if (online.phase === 'ended') $('#onlineGameStatus').textContent = online.winner ? `🏆 ${online.winner.name} hat Bingo!` : 'Spiel beendet.';
+  $('#onlinePlayers').innerHTML = players.map((p) => {
+    const vote = online.votes[p.id];
+    const badge = phase === 'setup' ? (vote ? '<span class="online-player-state done">✓</span>' : '<span class="online-player-state">…</span>') : p.correct && phase === 'reveal' ? '<span class="online-player-state done">✓</span>' : p.bingo ? '<span class="online-player-state bingo">B</span>' : '';
+    return `<li><span class="dot ${p.connected === false ? 'offline' : ''}"></span><span class="online-player-name">${esc(p.name)}${p.id === myId() ? ' <small>(du)</small>' : ''}</span>${badge}<strong>${p.score || 0}</strong></li>`;
+  }).join('') || '<li class="online-empty">Noch niemand da.</li>';
+  $('#onlineWaiting').hidden = phase !== 'lobby';
+  $('#onlineSetup').hidden = !['setup', 'countdown'].includes(phase);
+  $('#onlineGame').hidden = !gamePhases.includes(phase);
+  const start = $('#onlineStart');
+  start.hidden = !isHost || !['lobby', 'reveal', 'ended'].includes(phase);
+  start.textContent = phase === 'lobby' ? 'Spiel vorbereiten' : phase === 'ended' ? 'Nochmal spielen' : 'Nächste Runde';
+  $('#onlineForceStart').hidden = true;
+  $('#onlineForceStart2').hidden = !isHost || phase !== 'setup';
+  $('#onlineHostControls').hidden = !isHost;
+  const hint = phase === 'lobby' ? (isHost ? 'Lade Spieler ein. Danach startest du die gemeinsame Abstimmung.' : 'Warte, bis der Host die Abstimmung startet.')
+    : phase === 'setup' ? 'Alle wählen Version und Schwierigkeit. Danach geht es automatisch los.'
+    : phase === 'countdown' ? 'Die Runde startet gleich …'
+    : phase === 'reveal' ? (online.pending.size ? 'Warte kurz, bis alle richtigen Tipps ihr Kreuz gesetzt haben.' : 'Weiter mit der nächsten Runde.')
+    : phase === 'ended' ? 'Noch eine Runde?'
+    : isHost ? 'Du bist der Host. Die Discokugel dreht für alle.' : 'Hör zu und tippe deine Antwort ein.';
+  $('#onlineHostHint').textContent = hint;
+  if (phase === 'lobby') {
+    $('#onlineWaitingTitle').textContent = isHost ? 'Raum ist offen' : 'Warte auf den Host …';
+    $('#onlineWaitingText').textContent = isHost ? 'Teile den Link oder Code. Wenn alle da sind, startest du die gemeinsame Auswahl.' : 'Der Host startet gleich die Abstimmung.';
+  }
+  if (['setup', 'countdown'].includes(phase)) renderSetup();
+  if (gamePhases.includes(phase)) renderGame();
+  $('#onlineLegendSide').innerHTML = legendHtml();
+  $('#onlineRoomCode').textContent = online.code;
 }
-function renderVote() {
-  const isHost = online.role === 'host', vote = $('#onlineVote'); vote.hidden = false;
-  const myVote = online.votes[online.peerId] || {};
+function voteCount(key, value) { return Object.values(online.votes || {}).filter((v) => v[key] === value).length; }
+function renderSetup() {
+  const myVote = online.votes[myId()] || {};
   const versions = Object.entries(api()?.versions || {}).filter(([id]) => id !== 'all');
-  vote.innerHTML = `<label class="online-field">Version<select id="onlineVoteVersion">${versions.map(([id, v]) => `<option value="${esc(id)}" ${myVote.version === id ? 'selected' : ''}>${esc(v.label)}</option>`).join('')}</select></label><label class="online-field">Schwierigkeit<select id="onlineVoteDifficulty"><option value="easy" ${myVote.difficulty === 'easy' ? 'selected' : ''}>Leicht</option><option value="hard" ${myVote.difficulty === 'hard' ? 'selected' : ''}>Schwer</option></select></label><button class="btn btn-primary" id="onlineVoteSend" type="button">${isHost ? 'Auswahl übernehmen' : 'Abstimmen'}</button>`;
-  $('#onlineVoteSend').addEventListener('click', () => {
-    const version = $('#onlineVoteVersion').value, difficulty = $('#onlineVoteDifficulty').value;
-    if (isHost) { online.choices = { version, difficulty }; online.votes[online.peerId] = { version, difficulty }; broadcastState(); render(); }
-    else { online.votes[online.peerId] = { version, difficulty }; send('vote', { version, difficulty }); $('#onlineGameStatus').textContent = 'Stimme gespeichert. Der Host startet die Runde.'; }
-  });
+  $('#onlineVersionVote').innerHTML = versions.map(([id, v]) => `<button class="online-vote-option ${myVote.version === id ? 'selected' : ''}" type="button" data-vote-version="${esc(id)}" aria-pressed="${myVote.version === id}" style="--opt:${v.color}"><span class="online-vote-icon">${esc((v.short || v.label || '?').slice(0, 2))}</span><span><strong>${esc(v.label)}</strong><small>${esc(v.desc || '')}</small></span><b>${voteCount('version', id) || ''}</b></button>`).join('');
+  $('#onlineDifficultyVote').innerHTML = Object.entries(BINGO_MODES).map(([id, mode]) => `<button class="online-difficulty-option ${myVote.difficulty === id ? 'selected' : ''}" type="button" data-vote-difficulty="${id}" aria-pressed="${myVote.difficulty === id}"><span class="online-diff-mark">${id === 'easy' ? 'A' : 'B'}</span><span><strong>${mode.label} · Seite ${mode.side}</strong><small>${mode.desc}</small></span><b>${voteCount('difficulty', id) || ''}</b></button>`).join('');
+  const voted = Object.keys(online.votes || {}).filter((id) => online.players.some((p) => p.id === id && p.connected !== false)).length;
+  const active = online.players.filter((p) => p.connected !== false).length;
+  $('#onlineVoteProgress').innerHTML = `<strong>${voted} / ${active}</strong> haben gewählt${voted >= active && active ? ' · Startet automatisch …' : ''}`;
+  $('#onlineVoteResult').hidden = online.phase !== 'countdown';
+  if (online.phase === 'countdown') {
+    const remaining = Math.max(1, Math.ceil((3200 - (Date.now() - (online.countdownStarted || Date.now()))) / 1000));
+    $('#onlineVoteResult').innerHTML = `<span>Eure Wahl</span><strong>${esc(versionLabel(online.choices.version))} · ${esc(difficultyLabel(online.choices.difficulty))}</strong><b>${remaining}</b>`;
+  }
+}
+function legendHtml() {
+  return categoriesFor(online.choices.difficulty || 'easy').map((c) => `<div class="online-legend-row"><i style="--c:${c.color}"></i><span><strong>${esc(c.label)}</strong><small>${esc(c.question)}</small></span></div>`).join('');
+}
+function renderGame() {
+  const phase = online.phase, category = online.category, isHost = online.role === 'host';
+  $('#onlineRoundLabel').textContent = `${Math.min(online.round || 1, online.settings.rounds)} / ${online.settings.rounds}`;
+  $('#onlineVersionLabel').textContent = versionLabel(online.choices.version || 'party');
+  $('#onlineDifficultyLabel').textContent = difficultyLabel(online.choices.difficulty || 'easy');
+  const spinning = phase === 'spinning';
+  const disco = $('#onlineDisco'); disco.classList.toggle('is-spinning', spinning); disco.classList.toggle('is-playing', phase === 'playing');
+  if (category) { disco.style.setProperty('--cat', category.color); $('#onlineCategoryCard').style.setProperty('--cat', category.color); }
+  $('#onlineCategoryLabel').textContent = spinning ? 'Dreht …' : category?.label || 'Kategorie';
+  $('#onlineCategoryQuestion').textContent = spinning ? 'Die Discokugel entscheidet für alle.' : category?.question || '';
+  const remaining = phase === 'playing' ? Math.max(0, Math.ceil((online.deadline - Date.now()) / 1000)) : phase === 'spinning' ? Math.max(0, Math.ceil((online.startAt - Date.now()) / 1000)) : 0;
+  $('#onlineTimer').innerHTML = phase === 'playing' ? `${remaining}<small>s</small>` : phase === 'spinning' ? `${Math.max(1, remaining)}<small>s</small>` : phase === 'reveal' ? '✓<small>aufgelöst</small>' : '🏆<small>Bingo</small>';
+  const audio = $('#onlineAudio');
+  audio.hidden = !['spinning', 'playing', 'reveal'].includes(phase) || !online.audioUrl;
+  if (!audio.hidden) {
+    $('#onlineAudioTitle').textContent = phase === 'spinning' ? 'Song startet gleich' : 'Song läuft für alle';
+    $('#onlineAudioHint').textContent = online.audioBlocked ? 'Ton antippen, falls dein Browser blockiert.' : phase === 'playing' ? 'Hör zu und antworte unten.' : phase === 'reveal' ? 'Auflösung unten.' : 'Discokugel dreht …';
+    $('#onlinePlay').classList.toggle('is-blocked', online.audioBlocked);
+    $('#onlinePlay').setAttribute('aria-label', online.audioBlocked ? 'Ton aktivieren' : 'Song abspielen');
+  }
+  renderAnswerForm();
+  renderBingo();
+  renderReveal();
+  renderScore();
+  $('#onlineCardName').textContent = online.name || 'Deine Karte';
+  const marks = online.marked?.size || 0; $('#onlineCardProgress').textContent = `${marks} / 25`;
+  if (phase === 'spinning') $('#onlineGameStatus').textContent = '🪩 Die Discokugel dreht …';
+  else if (phase === 'playing') { const count = Object.keys(online.answers || {}).length; $('#onlineGameStatus').textContent = `${count} / ${online.players.filter((p) => p.connected !== false).length} haben getippt.`; }
+  else if (phase === 'reveal') { const me = online.correct[myId()]; $('#onlineGameStatus').textContent = me ? 'Richtig! Setze jetzt dein Kreuz in der Kategoriefarbe.' : 'Schade – diesmal kein Kreuz. Die Auflösung steht unten.'; }
+  else if (phase === 'ended') $('#onlineGameStatus').textContent = online.winner ? `🏆 ${online.winner.name} hat BINGO!` : 'Spiel beendet.';
+  $('#onlineLegend').innerHTML = legendHtml();
+}
+
+function renderAnswerForm() {
+  const box = $('#onlineAnswerBox');
+  if (online.phase !== 'playing' || !online.category) { box.hidden = true; return; }
+  box.hidden = false;
+  const key = `${online.round}:${online.category.id}:${online.submitted ? 'done' : 'open'}`;
+  if (box.dataset.key === key) return;
+  box.dataset.key = key;
+  const cat = online.category;
+  if (online.submitted) {
+    box.innerHTML = `<div class="online-answer-saved"><span>✓</span><div><strong>Tipp gespeichert</strong><small>${esc(formatAnswer(cat, online.answer))} · warte auf die Auflösung …</small></div></div>`;
+    return;
+  }
+  let fields = '';
+  if (cat.type === 'choice') fields = `<div class="online-answer-choices">${cat.options.map((o) => `<button type="button" class="online-answer-choice" data-answer="${esc(o.value)}">${esc(o.label)}</button>`).join('')}</div>`;
+  else if (cat.type === 'decade') fields = `<div class="online-answer-choices online-decades">${['1950s', '1960s', '1970s', '1980s', '1990s', '2000s', '2010s', '2020s'].map((d) => `<button type="button" class="online-answer-choice" data-answer="${d}">${decadeLabel(d)}</button>`).join('')}</div>`;
+  else if (cat.type === 'year') fields = `<form class="online-answer-form" id="onlineAnswerForm"><input id="onlineAnswerInput" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="z. B. 1998" aria-label="Jahr" autocomplete="off" /><button class="online-answer-submit" type="submit">Tipp abgeben</button></form>`;
+  else fields = `<form class="online-answer-form" id="onlineAnswerForm"><input id="onlineAnswerInput" maxlength="80" placeholder="${cat.type === 'title' ? 'Songtitel …' : 'Interpret oder Band …'}" aria-label="${esc(cat.label)}" autocomplete="off" /><button class="online-answer-submit" type="submit">Tipp abgeben</button></form>`;
+  box.innerHTML = `<div class="online-answer-head"><span class="online-kicker">DEINE ANTWORT</span><strong>${esc(cat.question)}</strong></div>${fields}`;
+  $('#onlineAnswerInput')?.focus({ preventScroll: true });
 }
 function renderBingo() {
-  const card = online.card || [], grid = $('#onlineBingo');
-  grid.innerHTML = card.map((cell, i) => {
-    const marked = cell.free || online.marked.has(i);
-    return `<button type="button" data-index="${i}" class="${online.selectedYear === i ? 'selected' : ''} ${marked ? 'hit' : ''}" ${cell.free || online.phase !== 'playing' || online.selectedYear != null ? 'disabled' : ''}>${cell.free ? 'FREI' : cell.year ?? ''}</button>`;
+  const grid = $('#onlineBingo'), card = online.card || [];
+  if (!card.length) { grid.innerHTML = '<div class="online-bingo-empty">Deine Karte erscheint nach der Abstimmung.</div>'; return; }
+  const me = online.players.find((p) => p.id === myId());
+  const pending = online.role === 'host' ? online.pending.has('host') : Boolean(me?.pending);
+  const canMark = online.phase === 'reveal' && Boolean(online.correct[myId()]) && pending;
+  const signature = JSON.stringify([card, [...online.marked], online.phase, online.category?.id || '', canMark, online.winner?.id || '']);
+  if (grid.dataset.signature === signature) return;
+  grid.dataset.signature = signature;
+  grid.innerHTML = card.map((catId, index) => {
+    const cat = categoryById(catId) || { color: '#ddd', ink: '#111', short: '?', icon: '♪', label: '?' };
+    const marked = online.marked.has(index);
+    const eligible = canMark && catId === online.category?.id && !marked;
+    return `<button type="button" data-index="${index}" class="online-cell ${marked ? 'is-marked' : ''} ${eligible ? 'is-eligible' : ''}" style="--cell:${cat.color};--cell-ink:${cat.ink}" ${eligible ? '' : 'disabled'} aria-label="${esc(cat.label)}${marked ? ', markiert' : ''}"><span class="online-cell-icon">${cat.icon}</span><span class="online-cell-label">${esc(cat.short)}</span>${marked ? '<b class="online-cell-check">✓</b>' : ''}</button>`;
   }).join('');
-  grid.classList.toggle('online-bingo-win', Boolean(online.winner && online.winner.id === (online.role === 'host' ? 'host' : online.peerId)));
+  grid.classList.toggle('online-bingo-win', Boolean(online.winner && online.winner.id === myId()));
 }
 function renderReveal() {
-  if (online.phase !== 'reveal' && online.phase !== 'ended') { $('#onlineReveal').hidden = true; return; }
-  if (!$('#onlineReveal').innerHTML) { $('#onlineReveal').hidden = false; $('#onlineReveal').innerHTML = `<strong>${online.winner ? 'Bingo!' : 'Aufgelöst'}</strong><p>${online.winner ? `${esc(online.winner.name)} hat eine Bingo-Reihe.` : 'Der Host startet die nächste Runde.'}</p>`; }
+  const box = $('#onlineReveal');
+  if (!['reveal', 'ended'].includes(online.phase) || !online.song) { box.hidden = true; return; }
+  box.hidden = false;
+  const cat = online.category, song = online.song, correct = online.correct[myId()];
+  const own = online.revealAnswers?.[myId()] || '—';
+  const winner = online.winner;
+  box.innerHTML = `<div class="online-reveal-head"><span class="online-kicker">AUFGELÖST</span><strong>${esc(song.year)}</strong><p>${esc(song.title)} · ${esc(song.artist)}</p></div><div class="online-reveal-answer ${correct ? 'is-right' : 'is-wrong'}"><span>${correct ? '✓' : '×'}</span><div><strong>${correct ? 'Richtig!' : 'Leider falsch'}</strong><small>Deine Antwort: ${esc(formatAnswer(cat, own))}</small></div></div>${winner ? `<div class="online-winner"><span>★</span><strong>${esc(winner.name)} hat BINGO!</strong><small>Erste vollständige Reihe.</small></div>` : `<p class="online-hint">${correct ? 'Wähle ein freies Feld in der Farbe der Kategorie.' : 'Der Host startet die nächste Runde.'}</p>`}<a class="online-spotify-link" href="${esc(spotifyLink(song))}" target="_blank" rel="noopener">Song auf Spotify öffnen ↗</a>`;
 }
 function renderScore() {
   const sorted = [...online.players].sort((a, b) => (b.score || 0) - (a.score || 0));
-  $('#onlineScore').innerHTML = sorted.length ? sorted.map((p, i) => `<div><span>${i + 1}. ${esc(p.name)}${p.bingo ? ' · BINGO' : ''}</span><strong>${p.score || 0} Pkt.</strong></div>`).join('') : '';
-}
-
-let onlineAudio = null;
-function audioUrl(song) { const base = api()?.API_BASE || ''; return song.previewUrl || (base ? `${base}/api/audio/${song.id}` : (song.streamUrl || '')); }
-function setupAudio(url) {
-  if (!onlineAudio) { onlineAudio = new Audio(); onlineAudio.preload = 'auto'; onlineAudio.addEventListener('timeupdate', () => { const bar = $('#onlineProgress'); if (bar && onlineAudio.duration) bar.style.width = `${Math.min(100, (onlineAudio.currentTime / onlineAudio.duration) * 100)}%`; }); }
-  onlineAudio.pause(); onlineAudio.src = url || ''; onlineAudio.currentTime = 0; $('#onlinePlay')?.classList.remove('is-playing');
-}
-function playOnlineAudio() {
-  if (!onlineAudio?.src) return;
-  if (onlineAudio.paused) onlineAudio.play().then(() => $('#onlinePlay')?.classList.add('is-playing')).catch(() => api()?.showToast('Audio konnte nicht gestartet werden.', 3000));
-  else { onlineAudio.pause(); $('#onlinePlay')?.classList.remove('is-playing'); }
+  $('#onlineScore').innerHTML = sorted.length ? sorted.map((p, i) => `<div class="${p.id === myId() ? 'is-me' : ''}"><span>${i + 1}. ${esc(p.name)}${p.bingo ? ' · <b>BINGO</b>' : ''}</span><strong>${p.score || 0} Pkt.</strong></div>`).join('') : '';
 }
 function broadcastState() { if (online.role === 'host') send('state', publicState()); render(); }
 function showReaction(emoji, name) { const layer = document.createElement('div'); layer.className = 'online-reaction-float'; layer.textContent = `${emoji} ${name}`; document.body.append(layer); setTimeout(() => layer.remove(), 2200); }
-async function copyInvite() { try { await navigator.clipboard.writeText($('#onlineInvite').value); api()?.showToast('Einladungslink kopiert.', 2200); } catch { $('#onlineInvite').select(); document.execCommand?.('copy'); api()?.showToast('Link markiert – bitte kopieren.', 2600); } }
+async function copyText(text, message) {
+  try { await navigator.clipboard.writeText(text); api()?.showToast(message, 2200); }
+  catch { const input = $('#onlineInvite'); input.value = text; input.select(); document.execCommand?.('copy'); api()?.showToast(message, 2600); }
+}
+
+let onlineAudio = null;
+const SILENT_AUDIO = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
+function ensureAudio() {
+  if (onlineAudio) return onlineAudio;
+  onlineAudio = new Audio(); onlineAudio.preload = 'auto';
+  onlineAudio.addEventListener('timeupdate', () => { const bar = $('#onlineProgress'); if (bar && onlineAudio.duration) bar.style.width = `${Math.min(100, (onlineAudio.currentTime / onlineAudio.duration) * 100)}%`; });
+  return onlineAudio;
+}
+function unlockAudio() {
+  if (online.audioUnlocked) return;
+  const audio = ensureAudio();
+  audio.muted = true; audio.src = SILENT_AUDIO;
+  audio.play().then(() => { audio.pause(); audio.muted = false; audio.removeAttribute('src'); online.audioUnlocked = true; }).catch(() => { audio.muted = false; });
+}
+function setupAudio(url) {
+  const audio = ensureAudio(); audio.pause(); audio.src = url || ''; audio.currentTime = 0; audio.muted = false;
+  $('#onlineProgress')?.style.setProperty('width', '0%'); $('#onlinePlay')?.classList.remove('is-playing');
+}
+function playScheduledAudio() {
+  const audio = ensureAudio(); if (!audio.src) return;
+  audio.currentTime = 0;
+  audio.play().then(() => { online.audioBlocked = false; $('#onlinePlay')?.classList.add('is-playing'); render(); })
+    .catch(() => { online.audioBlocked = true; render(); });
+}
+function playOnlineAudio() {
+  const audio = ensureAudio(); if (!audio.src) return;
+  if (audio.paused) audio.play().then(() => { online.audioBlocked = false; $('#onlinePlay')?.classList.add('is-playing'); render(); }).catch(() => { online.audioBlocked = true; render(); api()?.showToast('Audio konnte nicht gestartet werden.', 3000); });
+  else { audio.pause(); $('#onlinePlay')?.classList.remove('is-playing'); }
+}
+function clearRoundTimers() { clearTimeout(online.timers.phase); clearTimeout(online.timers.audio); clearTimeout(online.timers.round); clearTimeout(online.timers.mark); clearInterval(online.timers.tick); online.timers.phase = online.timers.audio = online.timers.round = online.timers.mark = online.timers.tick = null; }
+function stopTimers() { clearRoundTimers(); clearTimeout(online.timers.countdown); online.timers.countdown = null; }
 
 function boot() {
   buildScreen();
   const code = cleanCode(new URLSearchParams(location.search).get('online') || '');
   if (code) open(code);
-  window.HitsterOnline = { open, close, state: online };
+  window.HitsterOnline = { open, close, state: online, debug: { isCorrect, makeBingoCard, hasBingo, hostMark, revealRound, beginRound, endGame, render, online } };
 }
 if (window.HITSTER) boot(); else window.addEventListener('hitster-ready', boot, { once: true });

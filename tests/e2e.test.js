@@ -49,7 +49,7 @@ page.on('requestfailed', (r) => {
   if (!r.url().includes('spotify') && !r.url().includes('/api/audio/') && r.failure()?.errorText !== 'net::ERR_ABORTED') errors.push(`requestfailed: ${r.url()}`);
 });
 
-await page.goto(base, { waitUntil: 'networkidle' });
+await page.goto(`${base}/?play=1`, { waitUntil: 'networkidle' });
 await page.waitForFunction(() => document.querySelector('#catalogPill')?.textContent?.includes('Karten'), { timeout: 15000 });
 await page.waitForTimeout(600);
 
@@ -396,7 +396,7 @@ const mobile = await browser.newContext({
 const mp = await mobile.newPage();
 const mobileErrors = [];
 mp.on('pageerror', (e) => mobileErrors.push(e.message));
-await mp.goto(base, { waitUntil: 'networkidle' });
+await mp.goto(`${base}/?play=1`, { waitUntil: 'networkidle' });
 await mp.waitForFunction(() => document.querySelector('#catalogPill')?.textContent?.includes('Karten'), { timeout: 15000 });
 await mp.waitForTimeout(600);
 
@@ -447,6 +447,11 @@ await step('landing page opens every mode and starts free play', async () => {
   await page.waitForTimeout(500);
   assert.equal(await page.locator('#gameLayout').isVisible(), true);
   assert.equal(await page.locator('#startScreen').isVisible(), false);
+
+  await page.goto(base, { waitUntil: 'networkidle' });
+  await page.waitForFunction(() => window.HITSTER?.state?.ready, { timeout: 30000 });
+  assert.equal(await page.locator('#startScreen').isVisible(), true);
+  assert.equal(await page.locator('#gameLayout').isVisible(), false);
 });
 
 await step('desktop had no runtime errors', async () => {

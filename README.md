@@ -37,11 +37,12 @@ Kein Login, keine Werbung, kein externes Tracking. Open Source (MIT).
 - **Druckbogen:** 9 Karten pro A4-Seite, **kompakt 54 × 84 mm** oder klassisch
   **59 × 91 mm**, Vorder- und Rückseite, duplexfähig (lange Kante spiegeln).
   Vorderseite mit QR, Rückseite mit Auflösung und Kategorien.
-- **Online-Bingo:** Host erstellt einen Raum, alle anderen treten per Link oder
-  QR-Code bei – ohne Konto, ohne eigenen Server. Jeder hört den Clip am eigenen
-  Gerät und tippt Jahre auf einer 5×5-Bingo-Karte an. Der Host deckt auf; die erste
-  Bingo-Reihe gewinnt. Verbindung direkt zwischen den Geräten (WebRTC/PeerJS),
-  gleicher Browser zusätzlich per BroadcastChannel.
+- **Online-Bingo 1:1:** Host erstellt einen Raum, alle anderen treten per Link oder
+  QR-Code bei – ohne Konto, ohne eigenen Server. Jeder hat eine echte 5×5-Farbkarte
+  mit fünf Bingo-Kategorien, hört den Clip am eigenen Gerät und setzt bei richtiger
+  Antwort ein Kreuz in der passenden Farbe. Die erste vollständige Reihe gewinnt.
+  Verbindung direkt zwischen den Geräten (WebRTC/PeerJS), gleicher Browser
+  zusätzlich per BroadcastChannel.
 - **Datenbank:** Alle 4.860 Songs mit Jahr, Genre, Kategorien, Beliebtheit,
   Spotify-/Deezer-/iTunes-IDs und Versionen als JSON herunterladen (`/api/database`).
 - **PWA:** Installierbar, offlinefähige Shell, Manifest, Icons, Service Worker.
@@ -60,9 +61,15 @@ Kein Login, keine Werbung, kein externes Tracking. Open Source (MIT).
 
 1. Startseite → **Online-Bingo** → Raum erstellen.
 2. Link oder QR-Code teilen. Alle anderen öffnen ihn und treten mit Namen bei.
-3. Der Host startet die Runde. Jeder hört den Clip am eigenen Gerät.
-4. Jahr auf der eigenen Bingo-Karte antippen. Der Host deckt am Rundenende auf.
-5. Wer zuerst eine Reihe hat, gewinnt. Kein Login, keine Werbung.
+3. Alle stimmen über **Version** und **Schwierigkeit** ab – Seite A (Einsteiger) oder Seite B (Expert).
+4. Der Host startet. Die Discokugel wählt eine Kategorie, der Clip läuft für alle gleichzeitig.
+5. Innerhalb von 25 Sekunden antworten. Richtig? Kreuz auf ein freies Feld in der Kategoriefarbe.
+6. Wer zuerst fünf Felder waagerecht, senkrecht oder diagonal voll hat, ruft **BINGO**.
+
+Die Karte ist wie beim echten Hitster Bingo ein **5×5-Farbfeld**: jede Farbe steht
+für eine Kategorie, jede Kategorie kommt genau fünfmal vor. Seite A: Solo/Gruppe,
+Vor 2000, ±4 Jahre, Jahrzehnt, ±2 Jahre. Seite B: Songtitel, exaktes Jahr,
+Interpret/Band, Jahrzehnt, ±3 Jahre. Kein Login, keine Werbung.
 
 ## So spielst du
 
@@ -129,7 +136,7 @@ Kein Login, keine Werbung, kein externes Tracking. Open Source (MIT).
 - Die exakte Karten-Datenbank (`hitster-cards.json`) ist **~2,0 MB roh / ~420 KB gzip**
   und wird nur beim ersten Scan geladen.
 - `/api/catalog` ist **1 Tag** cachebar, versionierte CSS/JS-Dateien **1 Jahr**
-  (`immutable`), Asset-Version `4.8.0`.
+  (`immutable`), Asset-Version `4.9.0`.
 - Audio-Quellen werden **parallel** (Deezer/iTunes) aufgelöst, Timeouts 8–15 s.
 - Cache-Hits brauchen keinen Verzeichnis-Scan.
 - `scripts/serve-watchdog.sh` startet den Node-Prozess nach einem Absturz neu.
@@ -189,6 +196,6 @@ Logs: `server.log`. Für Dauerbetrieb eignen sich auch systemd, PM2 oder Docker.
 - Song-Clips sind offizielle 30-Sekunden-Vorschauen von Deezer, Spotify bzw. iTunes.
 - Jahres-Auflösung: kuratierter Katalog, sonst MusicBrainz-Erstveröffentlichung, sonst iTunes/Spotify.
 - Echte Kartendaten: `public/hitster-db.json` (176 Spieldatenbanken, Karten → Spotify-ID + Gruppe/Solo) und `public/hitster-cards.json` (5.192 Karten mit exakten Songdaten).
-- Kein Login, keine Werbung, kein externes Tracking, kein Online-Mehrspieler. Die lokale Nutzungsstatistik bleibt im Browser.
+- Kein Login, keine Werbung, kein externes Tracking. Online-Bingo verbindet die Geräte direkt per WebRTC/PeerJS; die lokale Nutzungsstatistik bleibt im Browser.
 - Code: **MIT-Lizenz**. HITSTER-Marke und Originalkarten gehören den jeweiligen
   Rechteinhabern.

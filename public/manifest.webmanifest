@@ -1,7 +1,7 @@
 {
-  "name": "HITSTER Web – Karten-Erweiterung",
-  "short_name": "HITSTER Web",
-  "description": "Kostenlose Hitster-Karten-Erweiterung mit 4.484 Songs, echten Hitster-QR-Codes, Playlist-Modus und Karten zum Drucken. Kein Login, keine Werbung.",
+  "name": "HITSTER BINGO – Online-Partyspiel",
+  "short_name": "HITSTER BINGO",
+  "description": "Kostenloses Online-Bingo im Hitster-Stil: 4.860 Songs, 5 Farben, 2–10 Spieler, 30-Sekunden-Clips, Spotify. Kein Login, keine Werbung.",
   "lang": "de",
   "dir": "ltr",
   "id": "./",
@@ -20,6 +20,7 @@
   ],
   "shortcuts": [
     { "name": "Neue Karte", "short_name": "Karte", "url": "./?mode=classic", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
-    { "name": "Karte scannen", "short_name": "Scannen", "url": "./?mode=extension", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
+    { "name": "Karte scannen", "short_name": "Scannen", "url": "./?mode=extension", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Online-Bingo", "short_name": "Bingo", "url": "./?online", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
   ]
 }

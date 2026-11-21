@@ -1,4 +1,4 @@
-const VERSION = 'hitster-web-v4.8.0';
+const VERSION = 'hitster-web-v4.9.0';
 const BASE = self.registration.scope;
 const SHELL = [
   '',

@@ -4,7 +4,7 @@ const axeSource = fs.readFileSync('node_modules/axe-core/axe.min.js','utf8');
 const browser = await chromium.launch({ executablePath: '/usr/bin/chromium', args:['--no-sandbox','--disable-dev-shm-usage'] });
 const ctx = await browser.newContext({ viewport:{width:1440,height:1000}, bypassCSP: true });
 const page = await ctx.newPage();
-await page.goto('http://localhost:12000/', { waitUntil:'networkidle' });
+await page.goto('http://localhost:12000/?play=1', { waitUntil:'networkidle' });
 await page.waitForTimeout(800);
 await page.addScriptTag({ content: axeSource });
 const result = await page.evaluate(async () => await axe.run(document, { runOnly: { type:'tag', values:['wcag2a','wcag2aa','wcag21a','wcag21aa'] } }));

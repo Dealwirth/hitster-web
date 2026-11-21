@@ -24,7 +24,7 @@ const browser = await chromium.launch({
   args: ['--no-sandbox', '--disable-dev-shm-usage', '--autoplay-policy=no-user-gesture-required'],
 });
 const page = await browser.newPage();
-await page.goto('http://localhost:12000/', { waitUntil: 'networkidle' });
+await page.goto('http://localhost:12000/?play=1', { waitUntil: 'networkidle' });
 await page.waitForFunction(() => window.HITSTER?.state?.songs?.length > 1000);
 const playSample = [...new Map([...fallback.slice(0, 12), ...fallback.slice(-12)].map((s) => [s.id, s])).values()];
 for (const s of playSample) {

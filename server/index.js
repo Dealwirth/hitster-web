@@ -57,7 +57,7 @@ app.use((req, res, next) => {
     [
       "default-src 'self'",
       "img-src 'self' data: https:",
-      "media-src 'self' https:",
+      "media-src 'self' https: data:",
       "style-src 'self' 'unsafe-inline'",
       "font-src 'self'",
       "script-src 'self'",

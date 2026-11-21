@@ -50,7 +50,7 @@ const page = await browser.newPage({ viewport: { width: 1280, height: 1000 } });
 const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));
 page.on('console', (m) => { if (m.type() === 'error' && !m.text().toLowerCase().includes('spotify')) errors.push(m.text()); });
-await page.goto(base, { waitUntil: 'networkidle' });
+await page.goto(`${base}/?play=1`, { waitUntil: 'networkidle' });
 await page.waitForFunction(() => window.HITSTER?.state?.ready, { timeout: 15000 });
 
 await step('static flag, catalog and API base are wired', async () => {

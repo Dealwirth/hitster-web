@@ -1,7 +1,7 @@
 import { chromium } from 'playwright-core';
 const browser = await chromium.launch({ executablePath: '/usr/bin/chromium', args:['--no-sandbox','--disable-dev-shm-usage'] });
 const page = await browser.newPage({ viewport:{width:1440,height:1000}, deviceScaleFactor:1 });
-await page.goto('http://localhost:12000/', { waitUntil:'networkidle' });
+await page.goto('http://localhost:12000/?play=1', { waitUntil:'networkidle' });
 await page.waitForFunction(() => window.HITSTER?.state?.songs?.length > 1000);
 const pick = async (title) => {
   await page.evaluate(async (t) => {
@@ -44,7 +44,7 @@ await page.emulateMedia({ media:'screen' });
 await page.setViewportSize({ width: 1440, height: 1000 });
 
 const m = await browser.newPage({ viewport:{width:390,height:844}, deviceScaleFactor:2, isMobile:true, hasTouch:true });
-await m.goto('http://localhost:12000/', { waitUntil:'networkidle' });
+await m.goto('http://localhost:12000/?play=1', { waitUntil:'networkidle' });
 await m.waitForFunction(() => window.HITSTER?.state?.songs?.length > 1000);
 await m.evaluate(async () => {
   const d = await (await fetch('/api/catalog')).json();

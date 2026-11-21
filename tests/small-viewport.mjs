@@ -18,7 +18,7 @@ const page = await browser.newPage({
 const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));
 page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
-await page.goto('http://localhost:12000/', { waitUntil: 'networkidle' });
+await page.goto('http://localhost:12000/?play=1', { waitUntil: 'networkidle' });
 await page.waitForFunction(() => window.HITSTER?.state?.songs?.length > 1000);
 await page.waitForTimeout(700);
 
