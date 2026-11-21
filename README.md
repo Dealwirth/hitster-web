@@ -4,6 +4,8 @@
 4.121 Songs · 20 Musik-Kategorien · 30-Sekunden-Clips · QR-Scanner · Karten zum Ausdrucken.
 Kein Login, kein Tracking, keine Werbung. Open Source (MIT).
 
+![HITSTER Web – Kartenvorderseite](docs/screenshot-front.png)
+
 - **Live (GitHub Pages):** https://dealwirth.github.io/hitster-web/
 - **Quellcode:** https://github.com/Dealwirth/hitster-web
 - **Lokal:** `npm install && npm start` → http://localhost:12000
@@ -46,6 +48,8 @@ Kein Login, kein Tracking, keine Werbung. Open Source (MIT).
 2. 9, 18 oder 27 Karten wählen.
 3. Beidseitig drucken, an der **langen Kante spiegeln**, ausschneiden.
 4. Im Druckdialog **Hintergrundgrafiken** aktivieren, damit die Farben mitgedruckt werden.
+
+![Druckbogen – 9 Karten pro A4-Seite](docs/screenshot-print.png)
 
 ## QR-Codes
 
