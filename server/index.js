@@ -73,12 +73,11 @@ const spotifyTrackCache = new Map();
 const playlistCache = new Map();
 
 api.use((req, res, next) => {
-  if (/^\/(spotify|resolve|playlist)/.test(req.path)) {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Accept, Content-Type');
-    if (req.method === 'OPTIONS') return res.status(204).end();
-  }
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Accept, Content-Type, Range');
+  res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Accept-Ranges');
+  if (req.method === 'OPTIONS') return res.status(204).end();
   next();
 });
 

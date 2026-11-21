@@ -70,6 +70,16 @@ await step('front is spoiler-free and back reveals metadata', async () => {
   assert.equal(await page.locator('#bingoYear').innerText(), await page.locator('#backYear').innerText());
 });
 
+await step('static page can call the API cross-origin (CORS)', async () => {
+  const result = await page.evaluate(async (baseUrl) => {
+    const res = await fetch(`${baseUrl}/api/hitster/de/00052`);
+    return { status: res.status, data: await res.json() };
+  }, apiBase);
+  assert.equal(result.status, 200);
+  assert.equal(result.data.card, '00052');
+  assert.equal(result.data.track.year, 2018);
+});
+
 await step('real Hitster card resolves against local API without showing year', async () => {
   const result = await page.evaluate(async () => {
     const ok = await window.HITSTER.handleHitster({ region: 'de', card: '00008' });

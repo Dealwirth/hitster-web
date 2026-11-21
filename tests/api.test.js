@@ -142,6 +142,14 @@ test('unknown API endpoints return JSON 404', async () => {
   assert.match(res.headers['content-type'], /application\/json/);
 });
 
+test('API allows cross-origin reads for the static GitHub Pages build', async () => {
+  const res = await request(app).get('/api/health').set('Origin', 'https://dealwirth.github.io').expect(200);
+  assert.equal(res.headers['access-control-allow-origin'], '*');
+  assert.match(res.headers['access-control-allow-methods'], /GET/);
+  const preflight = await request(app).options('/api/audio/s1').set('Origin', 'https://dealwirth.github.io').expect(204);
+  assert.equal(preflight.headers['access-control-allow-origin'], '*');
+});
+
 test('security headers are present', async () => {
   const res = await request(app).get('/').expect(200);
   assert.match(res.headers['content-security-policy'], /default-src 'self'/);
