@@ -1,7 +1,7 @@
 # HITSTER Web – Karten-Erweiterung
 
 **Die kostenlose, werbefreie Karten-Erweiterung für Hitster – direkt im Browser.**
-4.860 Songs · 30-Sekunden-Clips · echte Hitster-QR-Codes · Spotify-Playlists · eigene Kategorien · PWA · Karten zum Ausdrucken.
+4.860 Songs · 30-Sekunden-Clips · echte Hitster-QR-Codes · Spotify-Playlists · eigene Kategorien · Online-Bingo · PWA · Karten zum Ausdrucken.
 Kein Login, keine Werbung, kein externes Tracking. Open Source (MIT).
 
 ![HITSTER Web – Kartenvorderseite](docs/screenshot-front.png)
@@ -29,13 +29,21 @@ Kein Login, keine Werbung, kein externes Tracking. Open Source (MIT).
 - **Runde ohne Doppel:** Jede Karte kommt in einer Runde nur einmal. „Neue Runde“
   setzt Karten, Statistik und Fortschritt zurück.
 - **Hitster-Optik:** Vorderseite neutral (kein Jahr, kein Genre, kein Titel), Rückseite
-  nur mit großem Erscheinungsjahr, Songtitel, Interpret und Solo/Band-Icon oben
-  rechts. Keine Bingo-Antworten, keine Werbung, keine Ablenkung.
+  mit großem Erscheinungsjahr, Songtitel, Interpret, Solo/Band-Icon und allen
+  passenden Musik-/Bingo-Kategorien. Keine Bingo-Antworten, keine Werbung, keine Ablenkung.
 - **Bekannte Songs:** 300 zusätzliche Chart-Hits aus iTunes-Charts, 63 kuratierte
   Klassiker, **181 neue Rock-/Metal-Songs** aus dem Songseeker-Rock-Deck und
   **36 Oldie-Ergänzungen**, damit jedes Jahr ab 1950 mindestens zehn Lieder hat.
-- **Druckbogen:** 9 Karten pro A4-Seite, **59 × 91 mm**, Vorder- und Rückseite,
-  duplexfähig (lange Kante spiegeln). Vorderseite mit QR, Rückseite mit Auflösung.
+- **Druckbogen:** 9 Karten pro A4-Seite, **kompakt 54 × 84 mm** oder klassisch
+  **59 × 91 mm**, Vorder- und Rückseite, duplexfähig (lange Kante spiegeln).
+  Vorderseite mit QR, Rückseite mit Auflösung und Kategorien.
+- **Online-Bingo:** Host erstellt einen Raum, alle anderen treten per Link oder
+  QR-Code bei – ohne Konto, ohne eigenen Server. Jeder hört den Clip am eigenen
+  Gerät und tippt Jahre auf einer 5×5-Bingo-Karte an. Der Host deckt auf; die erste
+  Bingo-Reihe gewinnt. Verbindung direkt zwischen den Geräten (WebRTC/PeerJS),
+  gleicher Browser zusätzlich per BroadcastChannel.
+- **Datenbank:** Alle 4.860 Songs mit Jahr, Genre, Kategorien, Beliebtheit,
+  Spotify-/Deezer-/iTunes-IDs und Versionen als JSON herunterladen (`/api/database`).
 - **PWA:** Installierbar, offlinefähige Shell, Manifest, Icons, Service Worker.
 - **Filter:** 8 Jahrzehnte, **21 Musikrichtungen mit Live-Trefferzahlen**, Versionen,
   One-Hit-Wonder und „nur mit Spotify-Link“. Die Auswahl steht in der URL
@@ -47,6 +55,14 @@ Kein Login, keine Werbung, kein externes Tracking. Open Source (MIT).
   die Kamera aktiv ist. Alternativ lässt sich ein Foto der Karte wählen. Die App
   erkennt Region, Kartennummer und Kartenset automatisch. Deep-Links wie
   `?hitster=de/00052` funktionieren weiterhin.
+
+## Online-Bingo
+
+1. Startseite → **Online-Bingo** → Raum erstellen.
+2. Link oder QR-Code teilen. Alle anderen öffnen ihn und treten mit Namen bei.
+3. Der Host startet die Runde. Jeder hört den Clip am eigenen Gerät.
+4. Jahr auf der eigenen Bingo-Karte antippen. Der Host deckt am Rundenende auf.
+5. Wer zuerst eine Reihe hat, gewinnt. Kein Login, keine Werbung.
 
 ## So spielst du
 
@@ -93,13 +109,16 @@ Kein Login, keine Werbung, kein externes Tracking. Open Source (MIT).
   - `/api/art/:id` – Cover-Proxy mit Cache
   - `/api/resolve?spotify=…` – Spotify-Link → Titel/Künstler/Jahr (Katalog + Spotify-Metadaten)
   - `/api/spotify/track/:id` – Spotify-Embed-Metadaten + MusicBrainz-Erstveröffentlichung
+- `/api/database` – komplette Song-/Kategorie-Datenbank als JSON-Download
+- `/api/qr?text=…` – QR-Code für Online-Einladungen (SVG)
 - `/api/playlist?url=…` – Spotify-Playlist → **alle** Karten mit Jahr, Vorschau und Cover
 - **Daten:** `data/songs.source.tsv` (Quelle) → `data/catalog.json` (4.860 Songs, 1950–2026), ergänzt um Chart-Hits, kuratierte Klassiker, Songseeker-Rock/Metal, Oldie- sowie Soundtrack-/One-Hit-Ergänzungen.
-- **Echte Kartendaten:** `public/hitster-cards.json` mit **5.192 Karten aus 18 Decks** (Titel, Interpret, Jahr, Solo/Band, Spotify-/YouTube-Link) aus [Songseeker](https://github.com/andygruber/songseeker-hitster-playlists) (MIT). Import: `npm run import:cards`. Die Kartenmetadaten dienen nur zur Jahres-/Set-Erkennung; gespielt wird ein anderes Lied aus demselben Jahr.
+- **Echte Kartendaten:** `public/hitster-cards.json` mit **51.208 Karten aus 18 Decks** (Titel, Interpret, Jahr, Solo/Band, Spotify-/YouTube-Link) aus [Songseeker](https://github.com/andygruber/songseeker-hitster-playlists) (MIT). Import: `npm run import:cards`. Die Kartenmetadaten dienen nur zur Jahres-/Set-Erkennung; gespielt wird ein anderes Lied aus demselben Jahr.
 - **Statische Version:** `docs/` ist ein GitHub-Pages-Build. Sie nutzt `catalog.json`,
   `hitster-db.json`, `hitster-cards.json`, vorgenerierte QR-Codes und iTunes-Vorschauen direkt im Browser.
-  Für Playlist/Spotify-Auflösung wird die Server-API über `PUBLIC_API_BASE` eingebunden
-  (Standard: die Work-URL). Ohne API funktionieren Katalog, QR-Scan, Audio und Druck weiter.
+  Für Playlist/Spotify-Auflösung und Online-QR wird die Server-API über `PUBLIC_API_BASE` eingebunden
+  (Standard: die Work-URL). Ohne API funktionieren Katalog, QR-Scan, Audio und Druck weiter;
+  Online-Bingo nutzt PeerJS direkt zwischen den Geräten.
 - **Nutzungsdaten:** `localStorage` unter `hitster-web-analytics-v1`, aggregiert nach
   Aktionen, Versionen, Genres, Modi, Jahrzehnten und Scans. Keine Serverübertragung.
 - **PWA:** `public/manifest.webmanifest`, `public/sw.js`, Icons in `public/icons/`.
@@ -110,7 +129,7 @@ Kein Login, keine Werbung, kein externes Tracking. Open Source (MIT).
 - Die exakte Karten-Datenbank (`hitster-cards.json`) ist **~2,0 MB roh / ~420 KB gzip**
   und wird nur beim ersten Scan geladen.
 - `/api/catalog` ist **1 Tag** cachebar, versionierte CSS/JS-Dateien **1 Jahr**
-  (`immutable`), Asset-Version `4.7.0`.
+  (`immutable`), Asset-Version `4.8.0`.
 - Audio-Quellen werden **parallel** (Deezer/iTunes) aufgelöst, Timeouts 8–15 s.
 - Cache-Hits brauchen keinen Verzeichnis-Scan.
 - `scripts/serve-watchdog.sh` startet den Node-Prozess nach einem Absturz neu.
@@ -119,7 +138,7 @@ Kein Login, keine Werbung, kein externes Tracking. Open Source (MIT).
 
 ```
 .
-├── public/                 Frontend (index.html, app.js, styles.css, fonts/, vendor/)
+├── public/                 Frontend (index.html, app.js, online.js, styles.css, fonts/, vendor/)
 ├── server/                 Express-API, Katalog, Audio-Proxy
 ├── data/                   songs.source.tsv, catalog.json, Caches
 ├── scripts/                Katalog-Erweiterung, Static-Build, Watchdog
@@ -137,6 +156,7 @@ npm test               # Unit- und API-Tests
 npm run test:e2e       # Browser-E2E (Chromium, 33 Checks)
 npm run test:v4        # Scan, Kartenset, Versionen, Playlist, PWA, Druck (Chromium)
 npm run test:v5        # 51.208 Karten, Genre-Filter, anderes Lied aus demselben Jahr, 664-Track-Playlist
+npm run test:online    # Startseite, Versionen, Datenbank, Playlist-Cache, Online-Bingo
 npm run test:static    # GitHub-Pages-Build + lokale API (Chromium)
 npm run test:a11y      # Barrierefreiheit
 npm run test:small     # 320-px-Viewport

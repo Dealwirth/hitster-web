@@ -4,8 +4,8 @@
 Unofficial, ad-free, login-free HITSTER-style music party game and card expansion.
 Node/Express backend + vanilla JS/CSS frontend. No frontend build step.
 4,860 curated songs (1950–2026), 21 genres, 8 decades, 300 chart hits + 63 curated classics + 181 Songseeker rock/metal songs + 36 oldie fillers + 159 soundtrack/one-hit pool cards. Every year 1950–2026 has at least 10 songs.
-Three modes: **Freies Spiel** (classic), **Versionen** (13 broad presets such as Guilty Pleasures, Party & Dance, Rock & Metal) and **Playlist** (Spotify playlist, all tracks). Real Hitster QR scans remain available from every mode; they use the card year but draw a different song from that year. The card front is deliberately neutral (no year, title, genre, group or QR);
-the back shows only the large release year, title, artist and a solo/band icon.
+Modes: **Freies Spiel** (classic), **Versionen** (13 broad presets such as Guilty Pleasures, Party & Dance, Rock & Metal), **Playlist** (Spotify playlist, all tracks) and **Online-Bingo** (host-authoritative PeerJS/BroadcastChannel room). The app starts directly in free play; the home button opens a compact mode landing page (`?start=1` for the landing). Real Hitster QR scans remain available from every mode; they use the card year but draw a different song from that year. The card front is deliberately neutral (no year, title, genre, group or QR);
+the back shows the large release year, title, artist, solo/band icon and all matching music/Bingo category chips.
 A fixed vinyl player shows cover, progress, pause/replay and hides the title until flip. Local analytics aggregate versions, genres, modes, decades, scans and actions in `localStorage`; they are never uploaded.
 Own playlists can be saved as local categories. Genre and version chips filter the catalog and are URL-synced; there is no difficulty/Bekanntheit UI.
 
@@ -18,6 +18,8 @@ Own playlists can be saved as local categories. Genre and version chips filter t
   PWA and print; needs Chromium and network for Spotify/MusicBrainz.
 - `npm run test:v5` – all 51,208 official cards, 4,860-song catalog, genre chips,
   card/SKU deep links (different same-year song), new audio and the full 664-track playlist.
+- `npm run test:online` – landing page, version pools, database route, playlist
+  browser cache, online bingo host/player, QR and audio; server on 12000.
 - `npm run test:static` – builds and serves `docs/`, checks blind card, real QR,
   PWA and runtime errors against a local API.
 - `npm run test:a11y` – axe-core audit; server on 12000.
@@ -25,7 +27,10 @@ Own playlists can be saved as local categories. Genre and version chips filter t
 - `npm run test:small` – 320 px overflow/card/flip check; server on 12000.
 - `npm run screenshots` – write `docs/screenshot-*.png`.
 - `npm run build:static` – build `docs/` for GitHub Pages (catalog, `hitster-db.json`,
-  `hitster-cards.json`, 4,860 QR SVGs, PWA). Set `PUBLIC_API_BASE` for playlist/Spotify resolution.
+  `hitster-database.json`, `hitster-cards.json`, 4,860 QR SVGs, `online.js`, PWA).
+  Set `PUBLIC_API_BASE` for playlist/Spotify resolution and online QR.
+- `npm run build:database` – `data/hitster-database.json` with all songs, categories,
+  version/year coverage and download metadata.
 - `npm run build:catalog` – `data/songs.source.tsv` → `data/catalog.json`.
 - `npm run build:charts` – add current iTunes chart hits to `data/catalog.json`.
 - `npm run import:cards` – Songseeker CSVs → `public/hitster-cards.json`.
@@ -37,7 +42,8 @@ Own playlists can be saved as local categories. Genre and version chips filter t
 
 ## Architecture
 - `server/index.js` – Express, CSP/security headers,
-  `/api/{health,catalog,random,song,audio,art,qr,resolve,spotify/track,playlist}`;
+  `/api/{health,catalog,random,song,audio,art,qr,resolve,spotify/track,playlist,database}`;
+  `GET /api/qr?text=` for invite QR codes; playlist disk cache (`data/.cache/playlists`, 7 days);
   MusicBrainz year/group cache with retries, iTunes year fallback. Bingo API removed.
 - `server/catalog.js` – loads `data/catalog.json`, filters, random pick; precomputes `publicSongs` for `/api/catalog`.
 - `server/audio.js` – Deezer preview first, iTunes fallback, disk+LRU cache,
@@ -48,10 +54,14 @@ Own playlists can be saved as local categories. Genre and version chips filter t
   URL deep links (`?card=`, `?year=`, `?mode=versions&version=guilty`), local
   analytics and localStorage stats/prefs/round.
 - `public/styles.css` – neutral front, genre accent only after flip, vinyl/tonearm,
-  media player, playlist/categories, PWA install, 59/91 aspect, 3×3 print CSS,
-  reduced motion.
-- `public/index.html` – SVG sprite, blind card front, info back, 3-way mode switch,
-  version/genre panels, scan/print/help modals, media player, `#printRoot`.
+  media player, playlist/categories, online bingo, start screen, PWA install,
+  54/84 and 59/91 print CSS, reduced motion.
+- `public/index.html` – SVG sprite, blind card front, info back with category chips,
+  start screen, mode switch (incl. Online/Drucken), version/genre panels, scan/print/help
+  modals, media player, `#printRoot`.
+- `public/online.js` – online bingo UI, host-authoritative state, PeerJS WebRTC transport,
+  BroadcastChannel fallback (`?localonline=1`), lobby/room/vote/reveal/score, QR invite.
+- `public/vendor/peerjs.min.js` – vendored PeerJS; no CDN at runtime.
 - `public/manifest.webmanifest`, `public/sw.js`, `public/icons/` – installable PWA.
 - `public/vendor/jsqr.js` – vendored QR decoder; no external CDN.
 - `scripts/build-static.js` – GitHub Pages build in `docs/`: relative assets,

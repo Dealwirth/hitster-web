@@ -7,7 +7,7 @@ const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
 const CLIP_SECONDS = 30;
-const VERSION = '4.7.0';
+const VERSION = '4.8.0';
 const STATIC = document.documentElement.dataset.static === 'true' || location.hostname.endsWith('github.io');
 const API_BASE = (document.querySelector('meta[name="hitster-api"]')?.content || '').replace(/\/$/, '');
 const API = (path) => `${API_BASE}${path}`;
@@ -87,6 +87,7 @@ const state = {
   hitsterCards: null,
   playerHidden: false,
   lastScan: null,
+  scanVersion: null,
   returnMode: null,
   transitioning: false,
   installPrompt: null,
@@ -113,6 +114,7 @@ const el = {
   backYear: $('#backYear'),
   backTitle: $('#backTitle'),
   backArtist: $('#backArtist'),
+  backCats: $('#backCats'),
   backGroupIcon: $('#backGroupIcon'),
   backGroupTag: $('#backGroupTag'),
   modeSwitch: $('#modeSwitch'),
@@ -121,12 +123,15 @@ const el = {
   versionChips: $('#versionChips'),
   versionCount: $('#versionCount'),
   versionHint: $('#versionHint'),
+  versionScanBtn: $('#versionScanBtn'),
   scanBtn: $('#scanBtn'),
   yearHint: $('#yearHint'),
   printBtn: $('#printBtn'),
   printModal: $('#printModal'),
   printCount: $('#printCount'),
   printSides: $('#printSides'),
+  printStyle: $('#printStyle'),
+  databaseLink: $('#databaseLink'),
   printFilter: $('#printFilter'),
   printGo: $('#printGo'),
   printRoot: $('#printRoot'),
@@ -173,6 +178,10 @@ const el = {
   resetFilters: $('#resetFilters'),
   filterSummary: $('#filterSummary'),
   catalogPill: $('#catalogPill'),
+  startScreen: $('#startScreen'),
+  startBtn: $('#startBtn'),
+  fullscreenBtn: $('#fullscreenBtn'),
+  gameLayout: $('#gameLayout'),
   statPlayed: $('#statPlayed'),
   statCorrect: $('#statCorrect'),
   statRate: $('#statRate'),
@@ -263,6 +272,27 @@ function versionMatches(song, versionId = state.version) {
   return true;
 }
 
+function fameScore(song) {
+  const popularity = Number(song?.popularity) || 0;
+  const chart = song?.tags?.includes('chart') ? 5_000_000 : 0;
+  const spotify = song?.spotifyId ? 50_000 : 0;
+  return chart + popularity + spotify;
+}
+
+function versionYearPool(versionId, year) {
+  const playable = (song) => song.previewUrl || song.itunesId || song.deezerId || song.spotifyId || song.streamUrl;
+  const base = (state.songs || []).filter((song) => song.year === year
+    && playable(song)
+    && matchesFilters(song, { ignoreDecade: true })
+    && (versionId === 'all' || versionMatches(song, versionId)));
+  if (base.length >= 10 || versionId === 'all') return base;
+  const seen = new Set(base.map((song) => song.id));
+  const fallback = (state.songs || [])
+    .filter((song) => song.year === year && playable(song) && !seen.has(song.id) && matchesFilters(song, { ignoreDecade: true }))
+    .sort((a, b) => fameScore(b) - fameScore(a));
+  return [...base, ...fallback.slice(0, 10 - base.length)];
+}
+
 function matches(song, options = {}) {
   return matchesFilters(song, options) && (state.mode !== 'versions' || versionMatches(song));
 }
@@ -292,11 +322,11 @@ function sameSong(a, b) {
 }
 
 function pickYearSong(year, { exclude = [] } = {}) {
-  const pool = (state.songs || []).filter((song) => song.year === year && !exclude.some((other) => sameSong(song, other)));
+  const pool = yearPool(year).filter((song) => !exclude.some((other) => sameSong(song, other)));
   if (!pool.length) return null;
   const unseen = pool.filter((song) => !state.roundSeen.has(song.id));
   const fresh = unseen.filter((song) => !state.recent.includes(song.id));
-  const playable = (fresh.length ? fresh : unseen.length ? unseen : pool).filter((song) => song.previewUrl || song.itunesId || song.deezerId || song.spotifyId);
+  const playable = (fresh.length ? fresh : unseen.length ? unseen : pool).filter((song) => song.previewUrl || song.itunesId || song.deezerId || song.spotifyId || song.streamUrl);
   const list = playable.length ? playable : (fresh.length ? fresh : unseen.length ? unseen : pool);
   return list[Math.floor(Math.random() * list.length)];
 }
@@ -687,6 +717,10 @@ function afterFilterChange() {
 
 function syncUrl() {
   const params = new URLSearchParams();
+  const incoming = new URLSearchParams(location.search);
+  if (incoming.get('online')) params.set('online', incoming.get('online'));
+  if (incoming.get('localonline') === '1') params.set('localonline', '1');
+  if (incoming.get('start') === '1' && !document.body.classList.contains('started')) params.set('start', '1');
   if (state.filters.genres.length) params.set('genre', state.filters.genres.join(','));
   if (state.filters.decade !== 'all') params.set('decade', state.filters.decade);
   if (state.filters.oneHit) params.set('onehit', '1');
@@ -709,6 +743,7 @@ function readUrl() {
   state.extensionYear = null;
   state.blindYear = false;
   state.returnMode = null;
+  state.scanVersion = null;
   state.transitioning = false;
   state.initialCard = null;
   state.initialPlaylist = null;
@@ -765,6 +800,23 @@ function readUrl() {
    Rendering – card
    -------------------------------------------------------------------------- */
 
+function songCategories(song) {
+  const categories = [genreLabel(song.genre)];
+  if (song.tags?.includes('onehit')) categories.push('One-Hit-Wonder');
+  if (song.tags?.includes('movie')) categories.push('Film & Musical');
+  for (const [id, version] of Object.entries(VERSIONS)) {
+    if (id !== 'all' && versionMatches(song, id)) categories.push(version.label);
+  }
+  return [...new Set(categories.filter(Boolean))];
+}
+
+function renderCardCategories(song) {
+  if (!el.backCats) return;
+  const categories = songCategories(song);
+  el.backCats.innerHTML = categories.map((label) => `<span>${escapeHtml(label)}</span>`).join('');
+  el.backCats.title = categories.join(' · ');
+}
+
 function renderGroupIcon(song) {
   const icon = song.group ? '#i-users' : '#i-user';
   const label = song.group ? 'Gruppe' : 'Solo';
@@ -781,6 +833,12 @@ function renderGroupIcon(song) {
 
 
 function yearPool(year) {
+  const versionId = state.mode === 'versions'
+    ? state.version
+    : (state.mode === 'extension' ? state.scanVersion : null);
+  if (versionId && versionId !== 'all') {
+    return versionYearPool(versionId, year).filter((s) => s.year === year);
+  }
   return activeSongs().filter((s) => s.year === year && (state.mode === 'extension' || matches(s, { ignoreDecade: true })));
 }
 
@@ -928,6 +986,7 @@ function removeCategory(id) {
 
 function setMode(mode, { silent = false, reload = true, preserveYear = false } = {}) {
   if (!['classic', 'versions', 'extension', 'playlist'].includes(mode)) return;
+  if (mode !== 'extension') state.scanVersion = null;
   state.mode = mode;
   document.body.classList.remove('mode-classic', 'mode-versions', 'mode-extension', 'mode-playlist');
   document.body.classList.add(`mode-${mode}`);
@@ -997,6 +1056,7 @@ function applyYear(year, { silent = false } = {}) {
   state.extensionYear = year;
   state.blindYear = true;
   state.returnMode = null;
+  state.scanVersion = state.mode === 'versions' ? state.version : null;
   setMode('extension', { silent: true, reload: false, preserveYear: true });
   const pool = yearPool(year);
   if (!pool.length) {
@@ -1238,6 +1298,7 @@ function startCardRound(meta, result, label = 'Originalkarte') {
   }
   state.lastScan = { year: meta.year, card: meta.card, sku: meta.sku, title: meta.title, artist: meta.artist };
   const returnMode = state.mode === 'extension' ? 'classic' : state.mode;
+  state.scanVersion = state.mode === 'versions' ? state.version : null;
   state.extensionYear = meta.year;
   state.blindYear = true;
   setMode('extension', { silent: true, reload: false, preserveYear: true });
@@ -1261,6 +1322,7 @@ async function startBlindRound(result, label = 'Originalkarte') {
     state.roundSeen.add(result.song.id);
     saveRound();
   }
+  state.scanVersion = state.mode === 'versions' ? state.version : null;
   state.extensionYear = result.year;
   state.blindYear = true;
   const ok = applyYear(result.year, { silent: true });
@@ -1527,13 +1589,13 @@ function printGroupIcon(song) {
 }
 
 
-function printCardHtml(song, side) {
+function printCardHtml(song, side, style = 'compact') {
   const color = genreColor(song.genre);
   const id = song.id.slice(1);
   const isCatalog = /^s\d+$/.test(song.id);
   const qrSrc = isCatalog ? (STATIC ? `qr/${song.id}.svg` : `/api/qr/${song.id}?base=${encodeURIComponent(location.origin)}`) : null;
   if (side === 'front') {
-    return `<div class="print-card" style="--c:#8a8a92">
+    return `<div class="print-card ${style === 'compact' ? 'compact' : ''}" style="--c:#8a8a92">
       <div class="pc-band"><span class="pc-kicker">HITSTER</span><span class="pc-band-note">WEB</span></div>
       <div class="pc-qr">${qrSrc ? `<img src="${qrSrc}" alt="QR-Code Karte ${song.id}" />` : '<span class="pc-qr-icon">♪</span>'}<span>${isCatalog ? 'Scan &amp; Play' : 'Spotify'}</span></div>
       <div class="pc-center">
@@ -1544,23 +1606,24 @@ function printCardHtml(song, side) {
       <div class="pc-foot"><span>Karte #${id}</span><span>Umdrehen</span></div>
     </div>`;
   }
-  return `<div class="print-card pc-back" style="--c:${color}">
+  return `<div class="print-card pc-back ${style === 'compact' ? 'compact' : ''}" style="--c:${color}">
     <div class="pc-band"><span class="pc-kicker">AUFGELÖST</span><span class="pc-band-right">${printGroupIcon(song)}</span></div>
     <div class="pc-center">
       <div class="pc-year-label">Erschienen</div>
       <div class="pc-year">${song.year}</div>
       <div class="pc-title">${escapeHtml(song.title)}</div>
       <div class="pc-artist">${escapeHtml(song.artist)}</div>
+      <div class="pc-cats">${songCategories(song).slice(0, 4).map((label) => `<span>${escapeHtml(label)}</span>`).join('')}</div>
     </div>
     <div class="pc-foot"><span>Karte #${id}</span><span>HITSTER</span></div>
   </div>`;
 }
 
-function printSheets(cards, side) {
+function printSheets(cards, side, style = 'compact') {
   const chunks = [];
   for (let i = 0; i < cards.length; i += 9) chunks.push(cards.slice(i, i + 9));
   return chunks
-    .map((chunk) => `<section class="print-sheet ${side === 'back' ? 'backs' : 'fronts'}">${chunk.join('')}</section>`)
+    .map((chunk) => `<section class="print-sheet ${side === 'back' ? 'backs' : 'fronts'} ${style === 'compact' ? 'compact' : ''}">${chunk.join('')}</section>`)
     .join('');
 }
 
@@ -1579,11 +1642,12 @@ async function doPrint() {
   }
   const songs = shuffle(pool).slice(0, count);
   const sides = el.printSides.value;
-  const fronts = songs.map((s) => printCardHtml(s, 'front'));
-  const backs = songs.map((s) => printCardHtml(s, 'back'));
+  const style = el.printStyle?.value || 'compact';
+  const fronts = songs.map((s) => printCardHtml(s, 'front', style));
+  const backs = songs.map((s) => printCardHtml(s, 'back', style));
   let html = '';
-  if (sides === 'both' || sides === 'front') html += printSheets(fronts, 'front');
-  if (sides === 'both' || sides === 'back') html += printSheets(backs, 'back');
+  if (sides === 'both' || sides === 'front') html += printSheets(fronts, 'front', style);
+  if (sides === 'both' || sides === 'back') html += printSheets(backs, 'back', style);
   el.printRoot.innerHTML = html;
   closeModal(el.printModal);
   const images = [...el.printRoot.querySelectorAll('img')];
@@ -1615,6 +1679,7 @@ function loadCard(song) {
   el.backYear.textContent = String(song.year);
   el.backTitle.textContent = song.title;
   el.backArtist.textContent = song.artist;
+  renderCardCategories(song);
   renderGroupIcon(song);
   updateFlipButton();
   updatePlayer();
@@ -1972,6 +2037,56 @@ function resetRound() {
    Playlist
    -------------------------------------------------------------------------- */
 
+const PLAYLIST_CACHE_KEY = 'hitster-web-playlist-cache-v1';
+
+function readPlaylistCache(raw) {
+  try {
+    const all = JSON.parse(localStorage.getItem(PLAYLIST_CACHE_KEY) || '{}');
+    const entry = all[raw];
+    if (!entry || Date.now() - entry.savedAt > 7 * 24 * 60 * 60 * 1000) return null;
+    return entry.data?.songs?.length ? entry.data : null;
+  } catch { return null; }
+}
+
+function writePlaylistCache(raw, data) {
+  try {
+    const all = JSON.parse(localStorage.getItem(PLAYLIST_CACHE_KEY) || '{}');
+    all[raw] = { savedAt: Date.now(), data };
+    const keys = Object.keys(all).sort((a, b) => all[b].savedAt - all[a].savedAt);
+    for (const key of keys.slice(6)) delete all[key];
+    localStorage.setItem(PLAYLIST_CACHE_KEY, JSON.stringify(all));
+  } catch { /* private mode / quota: cache is optional */ }
+}
+
+function applyPlaylist(data, raw, { cached = false } = {}) {
+  state.playlist = data;
+  state.roundSeen = new Set([...state.roundSeen].filter((id) => !id.startsWith('p')));
+  state.filters = { genres: [], decade: 'all', oneHit: false, spotifyOnly: false };
+  if (el.oneHitToggle) el.oneHitToggle.checked = false;
+  if (el.spotifyToggle) el.spotifyToggle.checked = false;
+  state.mode = 'playlist';
+  state.blindYear = false;
+  setMode('playlist', { silent: true, reload: false });
+  renderGenreChips();
+  renderDecadeChips();
+  updateFilterSummary();
+  updatePlaylistStatus();
+  renderCategories();
+  el.playlistUrl.value = raw;
+  const song = pickSong();
+  if (song) {
+    loadCard(song);
+    state.stats.played += 1;
+    saveStats();
+    renderStats();
+  }
+  syncUrl();
+  if (!cached) saveCurrentCategory({ silent: true });
+  trackEvent('playlist');
+  el.playlistStatus.textContent = `${data.name || 'Playlist'} · ${data.songs.length} Lieder${cached ? ' · aus dem Cache' : ''}`;
+  showToast(cached ? `Playlist sofort aus dem Cache: ${data.name}` : `Playlist geladen: ${data.name}`, 3200);
+}
+
 async function loadPlaylist(input) {
   const raw = String(input || '').trim();
   if (!raw) {
@@ -1981,6 +2096,11 @@ async function loadPlaylist(input) {
   if (STATIC && !API_BASE) {
     el.playlistStatus.textContent = 'Playlist-Modus braucht die Server-Version. Bitte die Vollversion öffnen.';
     return false;
+  }
+  const cached = readPlaylistCache(raw);
+  if (cached) {
+    applyPlaylist(cached, raw, { cached: true });
+    return true;
   }
   el.playlistStatus.textContent = 'Playlist wird geladen …';
   try {
@@ -1995,36 +2115,13 @@ async function loadPlaylist(input) {
         break;
       } catch (err) {
         lastError = err;
-        if (attempt === 0) await new Promise((resolve) => setTimeout(resolve, 1500));
+        if (attempt === 0) await new Promise((resolve) => setTimeout(resolve, 1200));
       }
     }
     if (!data) throw lastError || new Error('Playlist konnte nicht geladen werden.');
     if (!data.songs?.length) throw new Error('Keine Lieder mit Jahr gefunden.');
-    state.playlist = data;
-    state.roundSeen = new Set([...state.roundSeen].filter((id) => !id.startsWith('p')));
-    state.filters = { genres: [], decade: 'all', oneHit: false, spotifyOnly: false };
-    if (el.oneHitToggle) el.oneHitToggle.checked = false;
-    if (el.spotifyToggle) el.spotifyToggle.checked = false;
-    state.mode = 'playlist';
-    state.blindYear = false;
-    setMode('playlist', { silent: true, reload: false });
-    renderGenreChips();
-    renderDecadeChips();
-    updateFilterSummary();
-    updatePlaylistStatus();
-    renderCategories();
-    el.playlistUrl.value = raw;
-    const song = pickSong();
-    if (song) {
-      loadCard(song);
-      state.stats.played += 1;
-      saveStats();
-      renderStats();
-    }
-    syncUrl();
-    saveCurrentCategory({ silent: true });
-    trackEvent('playlist');
-    showToast(`Playlist geladen und gespeichert: ${data.name}`, 3600);
+    writePlaylistCache(raw, data);
+    applyPlaylist(data, raw);
     return true;
   } catch (err) {
     el.playlistStatus.textContent = `Playlist konnte nicht geladen werden: ${err.message}`;
@@ -2203,6 +2300,75 @@ function openHelp() {
   trackEvent('help');
 }
 
+function showStart() {
+  document.body.classList.remove('started', 'is-fullscreen');
+  if (window.HitsterOnline?.close) window.HitsterOnline.close();
+  closeAllModals();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function startApp(mode = 'classic') {
+  if (mode === 'online') {
+    if (window.HitsterOnline?.open) window.HitsterOnline.open();
+    else showToast('Online-Modus lädt noch – bitte einen Moment.', 2600);
+    return;
+  }
+  if (mode === 'print') {
+    document.body.classList.add('started');
+    openPrint();
+    return;
+  }
+  if (mode === 'help') {
+    openHelp();
+    return;
+  }
+  if (!['classic', 'versions', 'playlist'].includes(mode)) return;
+  document.body.classList.add('started');
+  if (mode === 'playlist') {
+    state.mode = 'playlist';
+    setMode('playlist', { silent: true, reload: false });
+    el.playlistUrl?.focus({ preventScroll: true });
+  } else {
+    setMode(mode, { silent: true, reload: false });
+    const song = pickSong();
+    if (song) loadCard(song);
+  }
+  el.gameLayout?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+async function toggleFullscreen() {
+  const active = document.body.classList.contains('is-fullscreen');
+  if (active) {
+    document.body.classList.remove('is-fullscreen');
+    if (document.fullscreenElement) await document.exitFullscreen().catch(() => {});
+    showToast('Vollbild beendet.');
+    return;
+  }
+  document.body.classList.add('is-fullscreen');
+  try {
+    if (!document.fullscreenElement) await document.documentElement.requestFullscreen();
+  } catch { /* CSS fullscreen still works */ }
+  showToast('Vollbild aktiv – Esc beendet den Modus.');
+}
+
+function initCollapsiblePanels() {
+  for (const block of $$('.panel-block')) {
+    const head = $('.panel-head', block);
+    if (!head || $('.panel-collapse', head)) continue;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'panel-collapse';
+    button.setAttribute('aria-label', 'Bereich ein- oder ausklappen');
+    button.setAttribute('aria-expanded', 'true');
+    button.innerHTML = '<svg aria-hidden="true"><use href="#i-flip"></use></svg>';
+    button.addEventListener('click', () => {
+      const collapsed = block.classList.toggle('is-collapsed');
+      button.setAttribute('aria-expanded', String(!collapsed));
+    });
+    head.append(button);
+  }
+}
+
 function bindEvents() {
   el.cardPlay.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -2222,14 +2388,30 @@ function bindEvents() {
   el.spotifyBtn.addEventListener('click', openSpotify);
   el.judgeRight.addEventListener('click', () => judge(true));
   el.judgeWrong.addEventListener('click', () => judge(false));
+  if (el.databaseLink) el.databaseLink.href = STATIC ? 'hitster-database.json' : '/api/database';
   el.helpBtn.addEventListener('click', openHelp);
+  $('.brand')?.addEventListener('click', (event) => { event.preventDefault(); showStart(); });
   el.soundToggle.addEventListener('click', toggleSound);
 
   el.modeSwitch.addEventListener('click', (e) => {
+    const action = e.target.closest('[data-action]');
+    if (action) {
+      if (action.dataset.action === 'online') startApp('online');
+      if (action.dataset.action === 'print') openPrint();
+      return;
+    }
     const btn = e.target.closest('[data-mode]');
     if (btn) setMode(btn.dataset.mode);
   });
+  el.startBtn?.addEventListener('click', () => { if (!el.scanModal.hidden) return; showStart(); });
+  el.fullscreenBtn?.addEventListener('click', toggleFullscreen);
+  $$('[data-start]').forEach((button) => button.addEventListener('click', () => startApp(button.dataset.start)));
+  document.addEventListener('fullscreenchange', () => {
+    if (!document.fullscreenElement) document.body.classList.remove('is-fullscreen');
+  });
+  initCollapsiblePanels();
   el.scanBtn.addEventListener('click', openScan);
+  if (el.versionScanBtn) el.versionScanBtn.addEventListener('click', (event) => { event.preventDefault(); event.stopPropagation(); openScan(); });
   el.genreReset?.addEventListener('click', clearGenres);
   el.scanRetry?.addEventListener('click', startScanCamera);
   el.printBtn.addEventListener('click', openPrint);
@@ -2398,6 +2580,7 @@ function bindEvents() {
    -------------------------------------------------------------------------- */
 
 async function init() {
+  const startRequested = new URLSearchParams(location.search).get('start') === '1';
   loadStats();
   loadPrefs();
   applyPrefs();
@@ -2454,6 +2637,7 @@ async function init() {
     }
   }
 
+  if (!startRequested) document.body.classList.add('started');
   state.ready = true;
   window.HITSTER = {
     state,
@@ -2482,7 +2666,18 @@ async function init() {
     exportAnalytics,
     clearAnalytics,
     setVersion,
+    versions: VERSIONS,
+    versionMatches,
+    versionYearPool,
+    fameScore,
+    API_BASE,
+    STATIC,
+    showToast,
+    confetti,
+    startApp,
+    showStart,
   };
+  window.dispatchEvent(new Event('hitster-ready'));
 }
 
 init();

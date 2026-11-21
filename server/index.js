@@ -62,7 +62,7 @@ app.use((req, res, next) => {
       "font-src 'self'",
       "script-src 'self'",
       "worker-src 'self'",
-      "connect-src 'self' https:",
+      "connect-src 'self' https: wss:",
       "frame-src https://open.spotify.com",
       "base-uri 'none'",
       "form-action 'none'",
@@ -92,6 +92,27 @@ const api = express.Router();
 const resolveCache = new Map();
 const spotifyTrackCache = new Map();
 const playlistCache = new Map();
+const PLAYLIST_CACHE_DIR = path.resolve(__dirname, '../data/.cache/playlists');
+fs.mkdirSync(PLAYLIST_CACHE_DIR, { recursive: true });
+const PLAYLIST_DISK_TTL = 7 * 24 * 60 * 60 * 1000;
+
+function readPlaylistDisk(id) {
+  try {
+    const file = path.join(PLAYLIST_CACHE_DIR, `${id}.json`);
+    if (!fs.existsSync(file)) return null;
+    const stat = fs.statSync(file);
+    if (Date.now() - stat.mtimeMs > PLAYLIST_DISK_TTL) return null;
+    const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+    return data?.songs?.length ? data : null;
+  } catch { return null; }
+}
+
+function writePlaylistDisk(id, data) {
+  try {
+    const file = path.join(PLAYLIST_CACHE_DIR, `${id}.json`);
+    fs.writeFileSync(file, JSON.stringify(data));
+  } catch { /* cache is best effort */ }
+}
 
 api.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -910,6 +931,11 @@ function pickHitsterSet(candidates, region, sku) {
 
 async function buildPlaylist(id) {
   if (playlistCache.has(id)) return playlistCache.get(id);
+  const disk = readPlaylistDisk(id);
+  if (disk) {
+    playlistCache.set(id, disk);
+    return disk;
+  }
   let entity = null;
   try {
     entity = await fetchSpotifyEmbed('playlist', id);
@@ -989,14 +1015,15 @@ async function buildPlaylist(id) {
 
   await ensureArtistTypes(unmatched.map((item) => item.artist));
   const enriched = [];
-  for (let i = 0; i < unmatched.length; i += 8) {
-    const chunk = unmatched.slice(i, i + 8);
+  const enrichmentConcurrency = 20;
+  for (let i = 0; i < unmatched.length; i += enrichmentConcurrency) {
+    const chunk = unmatched.slice(i, i + enrichmentConcurrency);
     const results = await Promise.all(chunk.map(async (item) => {
       try {
         const override = yearOverride(item.title, item.artist);
         const releaseYear = Number(String(item._releaseDate || '').slice(0, 4));
         let year = override || (releaseYear >= 1950 && releaseYear <= 2030 ? releaseYear : null);
-        if (!override) year = await itunesYear(item.title, item.artist) || year;
+        if (!override && !year) year = await itunesYear(item.title, item.artist);
         const suffixYear = Number((String(item.title).match(/\b(19|20)\d{2}\b/) || [])[0]);
         if (!override && suffixYear && suffixYear === year && /remaster|mix|version|edit/i.test(item.title)) {
           const mb = await musicBrainzMeta(item.title, item.artist);
@@ -1065,6 +1092,7 @@ async function buildPlaylist(id) {
   };
   if (playlistCache.size > 30) playlistCache.delete(playlistCache.keys().next().value);
   playlistCache.set(id, result);
+  writePlaylistDisk(id, result);
   return result;
 }
 
@@ -1258,6 +1286,32 @@ api.get('/hitster/:region/:card', async (req, res) => {
       artistType: entry.cards[card][1],
     })),
   });
+});
+
+api.get('/database', (req, res) => {
+  const file = path.resolve(__dirname, '../data/hitster-database.json');
+  if (!fs.existsSync(file)) return res.status(404).json({ error: 'Datenbank noch nicht gebaut.' });
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename="hitster-database.json"');
+  return res.sendFile(file);
+});
+
+api.get('/qr', async (req, res) => {
+  const text = String(req.query.text || '').trim();
+  if (!text || text.length > 500) return res.status(400).json({ error: 'Ungültiger QR-Text.' });
+  try {
+    const svg = await QRCode.toString(text, {
+      type: 'svg',
+      margin: 1,
+      width: 280,
+      color: { dark: '#101010', light: '#ffffff' },
+    });
+    res.setHeader('Content-Type', 'image/svg+xml');
+    res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+    return res.send(svg);
+  } catch {
+    return res.status(500).json({ error: 'QR-Code konnte nicht erzeugt werden.' });
+  }
 });
 
 api.get('/qr/:id', async (req, res) => {

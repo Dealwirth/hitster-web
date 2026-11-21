@@ -57,6 +57,7 @@ await step('static flag, catalog and API base are wired', async () => {
   assert.equal(await page.evaluate(() => document.documentElement.dataset.static), 'true');
   assert.ok(await page.evaluate(() => window.HITSTER.state.songs.length) >= 4400);
   assert.equal(await page.evaluate(() => document.querySelector('meta[name="hitster-api"]').content), apiBase);
+  assert.match(await page.locator('#databaseLink').getAttribute('href'), /hitster-database\.json/);
 });
 
 await step('front is spoiler-free and back reveals metadata', async () => {
@@ -69,6 +70,7 @@ await step('front is spoiler-free and back reveals metadata', async () => {
   assert.ok((await page.locator('#backTitle').innerText()).length > 1);
   assert.ok((await page.locator('#backArtist').innerText()).length > 1);
   assert.match(await page.locator('#backGroupTag').getAttribute('aria-label'), /^(Solo|Gruppe)$/i);
+  assert.ok(await page.locator('#backCats span').count() >= 2);
 });
 
 await step('static page can call the API cross-origin (CORS)', async () => {
@@ -128,6 +130,21 @@ await step('PWA manifest, icons and service worker exist', async () => {
   assert.ok(sw.endsWith('/sw.js'));
   const icon = await page.evaluate(async () => (await fetch('icons/icon-192.png')).status);
   assert.equal(icon, 200);
+});
+
+await step('static build can host an online room with a local QR', async () => {
+  const online = await browser.newPage({ viewport: { width: 1280, height: 1000 } });
+  online.on('pageerror', (e) => errors.push(e.message));
+  await online.goto(`${base}/?online=1`, { waitUntil: 'networkidle' });
+  await online.waitForFunction(() => window.HITSTER?.state?.ready, { timeout: 15000 });
+  await online.waitForTimeout(400);
+  assert.equal(await online.locator('#onlineLobby').isVisible(), true);
+  await online.locator('#onlineHostName').fill('Static Host');
+  await online.locator('#onlineHostForm button[type=submit]').click();
+  await online.waitForTimeout(800);
+  assert.match(await online.locator('#onlineRoomCode').innerText(), /^[A-Z0-9]{6}$/);
+  assert.ok((await online.locator('#onlineQr').getAttribute('src')).startsWith(`${apiBase}/api/qr?text=`));
+  await online.close();
 });
 
 await step('no runtime errors', async () => {

@@ -1,7 +1,7 @@
 {
   "name": "hitster-web",
-  "version": "4.7.0",
-  "description": "Kostenlose Hitster-Karten-Erweiterung mit 4.860 Songs, echten Hitster-QR-Codes, Spotify-Playlist-Modus (alle Tracks), eigenen Kategorien, 30-Sekunden-Clips und Druckbogen. Kein Login, keine Werbung, kein Online-Mehrspieler.",
+  "version": "4.8.0",
+  "description": "Kostenlose Hitster-Karten-Erweiterung mit 4.860 Songs, echten Hitster-QR-Codes, Spotify-Playlist-Modus (alle Tracks), eigenen Kategorien, 30-Sekunden-Clips, Druckbogen und Online-Bingo. Kein Login, keine Werbung, Open Source.",
   "type": "module",
   "main": "server/index.js",
   "scripts": {
@@ -17,6 +17,7 @@
     "test:small": "node tests/small-viewport.mjs",
     "build:static": "node scripts/build-static.js",
     "build:hitster": "node scripts/build-hitster-db.js",
+    "build:database": "node scripts/build-hitster-database.js",
     "import:cards": "node scripts/import-songseeker.js",
     "add:rock": "node scripts/add-songseeker-rock.js",
     "add:years": "node scripts/add-year-fillers.js",
@@ -27,7 +28,8 @@
     "test:v4": "node tests/v4.test.js",
     "test:static": "node tests/static.test.js",
     "test:v5": "node tests/v5.test.js",
-    "test:all": "npm test && npm run test:v4 && npm run test:v5 && npm run test:static"
+    "test:online": "node tests/online.test.js",
+    "test:all": "npm test && npm run test:v4 && npm run test:v5 && npm run test:online && npm run test:static"
   },
   "keywords": [
     "hitster",
@@ -42,6 +44,7 @@
     "compression": "^1.8.2",
     "express": "^4.22.3",
     "jsqr": "^1.4.0",
+    "peerjs": "^1.5.5",
     "qrcode": "^1.5.4"
   },
   "devDependencies": {

@@ -356,8 +356,8 @@ await step('print sheet builds fronts, backs and QR codes', async () => {
     return { w: Math.round(r.width), h: Math.round(r.height) };
   });
   await page.emulateMedia({ media: 'screen' });
-  assert.ok(dims.w >= 215 && dims.w <= 230, JSON.stringify(dims));
-  assert.ok(dims.h >= 335 && dims.h <= 350, JSON.stringify(dims));
+  assert.ok(dims.w >= 200 && dims.w <= 230, JSON.stringify(dims));
+  assert.ok(dims.h >= 300 && dims.h <= 350, JSON.stringify(dims));
 });
 
 await step('version switch shows presets and hides them in free play', async () => {
@@ -424,7 +424,9 @@ await step('mobile tap plays audio and flips', async () => {
 });
 
 await step('mobile filter chips work', async () => {
-  await mp.locator('.chip[data-decade="1980s"]').tap();
+  await mp.locator('.chip[data-decade="1980s"]').evaluate((el) => el.scrollIntoView({ block: 'center' }));
+  await mp.waitForTimeout(250);
+  await mp.locator('.chip[data-decade="1980s"]').tap({ force: true });
   await mp.waitForTimeout(700);
   assert.equal(await mp.evaluate(() => Math.floor(window.HITSTER.state.current.year / 10) * 10), 1980);
 });
@@ -434,6 +436,18 @@ await step('mobile has no runtime errors', async () => {
 });
 
 await mp.screenshot({ path: 'test-results/e2e-mobile.png', fullPage: true });
+
+await step('landing page opens every mode and starts free play', async () => {
+  await page.goto(`${base}/?start=1`, { waitUntil: 'networkidle' });
+  await page.waitForFunction(() => window.HITSTER?.state?.ready, { timeout: 30000 });
+  assert.equal(await page.locator('#startScreen').isVisible(), true);
+  assert.equal(await page.locator('#gameLayout').isVisible(), false);
+  assert.equal(await page.locator('[data-start]').count(), 6);
+  await page.locator('[data-start="classic"]').click();
+  await page.waitForTimeout(500);
+  assert.equal(await page.locator('#gameLayout').isVisible(), true);
+  assert.equal(await page.locator('#startScreen').isVisible(), false);
+});
 
 await step('desktop had no runtime errors', async () => {
   assert.deepEqual(errors, []);

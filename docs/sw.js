@@ -1,11 +1,13 @@
-const VERSION = 'hitster-web-v4.7.0';
+const VERSION = 'hitster-web-v4.8.0';
 const BASE = self.registration.scope;
 const SHELL = [
   '',
   'index.html',
   'styles.css',
   'app.js',
+  'online.js',
   'vendor/jsqr.js',
+  'vendor/peerjs.min.js',
   'fonts/anton.woff2',
   'fonts/archivo-black.woff2',
   'fonts/inter.woff2',

@@ -46,13 +46,18 @@ html = html
   .replace('<meta name="hitster-api" content="" />', `<meta name="hitster-api" content="${API_BASE}" />`)
   .replaceAll('href="/styles.css', 'href="styles.css')
   .replaceAll('src="/vendor/jsqr.js', 'src="vendor/jsqr.js')
+  .replaceAll('src="/vendor/peerjs.min.js', 'src="vendor/peerjs.min.js')
   .replaceAll('src="/app.js', 'src="app.js')
+  .replaceAll('src="/online.js', 'src="online.js')
   .replace('class="brand" href="/"', 'class="brand" href="./"');
 fs.writeFileSync(path.join(OUT, 'index.html'), html);
 
 const css = fs.readFileSync(path.join(PUBLIC, 'styles.css'), 'utf8').replaceAll("url('/fonts/", "url('fonts/");
 fs.writeFileSync(path.join(OUT, 'styles.css'), css);
 fs.copyFileSync(path.join(PUBLIC, 'app.js'), path.join(OUT, 'app.js'));
+fs.copyFileSync(path.join(PUBLIC, 'online.js'), path.join(OUT, 'online.js'));
+const databasePath = path.join(ROOT, 'data/hitster-database.json');
+if (fs.existsSync(databasePath)) fs.copyFileSync(databasePath, path.join(OUT, 'hitster-database.json'));
 fs.writeFileSync(path.join(OUT, 'catalog.json'), JSON.stringify({
   generatedAt: catalog.generatedAt,
   count: songs.length,
