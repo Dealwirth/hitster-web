@@ -67,7 +67,10 @@ test('publicSong exposes a lean, safe payload', () => {
   assert.equal(s.spotifyId, songs[0].spotifyId);
   assert.equal(s.year, songs[0].year);
   assert.equal(s.group, songs[0].group);
-  assert.ok(!('artUrl' in s));
+  assert.ok('artUrl' in s);
+  assert.ok('popularity' in s);
+  assert.ok('deezerId' in s);
+  assert.ok('source' in s);
   assert.ok(!('album' in s));
   assert.ok(!('duration' in s));
 });

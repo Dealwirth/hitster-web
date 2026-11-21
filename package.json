@@ -1,20 +1,26 @@
 {
   "name": "hitster-web",
-  "version": "3.0.0",
-  "description": "Kostenlose Hitster-Karten-Erweiterung mit 4.121 Songs, 30-Sekunden-Clips, QR-Scanner, Druckbogen und allen Hitster-Bingo-Kategorien. Kein Login, keine Werbung, kein Online-Mehrspieler.",
+  "version": "4.1.0",
+  "description": "Kostenlose Hitster-Karten-Erweiterung mit 4.421 Songs, echten Hitster-QR-Codes, Spotify-Playlist-Modus (alle Tracks), eigenen Kategorien, 30-Sekunden-Clips und Druckbogen. Kein Login, keine Werbung, kein Online-Mehrspieler.",
   "type": "module",
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",
     "dev": "node --watch server/index.js",
     "build:catalog": "node scripts/build-catalog.js",
+    "build:charts": "node scripts/add-chart-songs.js",
     "test": "node --test tests/catalog.test.js tests/api.test.js tests/range.test.js",
     "test:e2e": "node tests/e2e.test.js",
     "test:a11y": "node tests/a11y.mjs",
     "test:audio": "node tests/sample-audio.mjs && node tests/fallback-audio.mjs",
     "screenshots": "node tests/screenshots.mjs",
     "test:small": "node tests/small-viewport.mjs",
-    "build:static": "node scripts/build-static.js"
+    "build:static": "node scripts/build-static.js",
+    "build:hitster": "node scripts/build-hitster-db.js",
+    "build:icons": "node scripts/build-icons.js",
+    "enrich:popularity": "node scripts/enrich-popularity-slow.js",
+    "test:v4": "node tests/v4.test.js",
+    "test:static": "node tests/static.test.js"
   },
   "keywords": [
     "hitster",

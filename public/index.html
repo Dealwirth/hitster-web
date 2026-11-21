@@ -4,14 +4,26 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#0b0b0d" />
-    <meta name="description" content="HITSTER Web – kostenlose Karten-Erweiterung für Hitster. 4.121 Songs, 30-Sekunden-Clips, QR-Scanner, Karten drucken. Kein Login, keine Werbung." />
+    <meta name="description" content="HITSTER Web – kostenlose Karten-Erweiterung für Hitster. 4.421 Songs, 30-Sekunden-Clips, echte Hitster-QR-Codes, Playlist-Modus, Karten drucken. Kein Login, keine Werbung." />
     <meta property="og:title" content="HITSTER Web – Karten-Erweiterung" />
-    <meta property="og:description" content="4.121 Songs, 30-Sekunden-Clips, QR-Scanner, Karten drucken. Kostenlos, ohne Login." />
+    <meta property="og:description" content="4.421 Songs, 30-Sekunden-Clips, echte Hitster-QR-Codes, Playlist-Modus, Karten drucken. Kostenlos, ohne Login." />
     <meta property="og:type" content="website" />
-    <meta name="twitter:card" content="summary" />
+    <meta property="og:image" content="https://dealwirth.github.io/hitster-web/screenshot-front.png" />
+    <meta property="og:image:alt" content="HITSTER Web Spielkarte" />
+    <meta property="og:url" content="https://dealwirth.github.io/hitster-web/" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content="https://dealwirth.github.io/hitster-web/screenshot-front.png" />
+    <meta name="hitster-api" content="" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="HITSTER Web" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="HITSTER Web" />
     <title>HITSTER Web – Karten-Erweiterung</title>
-    <link rel="stylesheet" href="/styles.css?v=3.0.0" />
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23101010'/%3E%3Ctext x='32' y='45' font-family='Arial Black,Arial' font-size='36' font-weight='900' fill='%23f5efe3' text-anchor='middle'%3EH%3C/text%3E%3C/svg%3E" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" type="image/svg+xml" href="icons/icon.svg" />
+    <link rel="apple-touch-icon" href="icons/icon-180.png" />
+    <link rel="stylesheet" href="/styles.css?v=4.1.0" />
   </head>
   <body>
     <noscript><div class="noscript">HITSTER Web braucht JavaScript. Bitte aktiviere JavaScript in deinem Browser.</div></noscript>
@@ -36,6 +48,9 @@
       <symbol id="i-shuffle" viewBox="0 0 24 24"><path d="M3 7h3.5c5 0 6 10 11 10H21M3 17h3.5c1.6 0 2.8-1 3.8-2.4M14 8.5C15 7.6 16 7 17.5 7H21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="m18 4 3 3-3 3M18 14l3 3-3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
       <symbol id="i-reset" viewBox="0 0 24 24"><path d="M4 11a8 8 0 1 1 2.3 6.4M4 5v6h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
       <symbol id="i-scan" viewBox="0 0 24 24"><path d="M4 8V5.5A1.5 1.5 0 0 1 5.5 4H8M16 4h2.5A1.5 1.5 0 0 1 20 5.5V8M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16M8 20H5.5A1.5 1.5 0 0 1 4 18.5V16M7 12h10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+      <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 20h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="i-list" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+      <symbol id="i-image" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="9" cy="10" r="1.6" fill="currentColor"/><path d="m5 17 4.5-4.5 3.2 3.2 2.1-2.1L20 17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
       <symbol id="i-print" viewBox="0 0 24 24"><path d="M7 9V4h10v5M7 17H5.5A1.5 1.5 0 0 1 4 15.5v-5A1.5 1.5 0 0 1 5.5 9h13A1.5 1.5 0 0 1 20 10.5v5a1.5 1.5 0 0 1-1.5 1.5H17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><rect x="7" y="14" width="10" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="17" cy="12" r=".8" fill="currentColor"/></symbol>
       <symbol id="i-qr" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="6" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="2"/><rect x="14.5" y="3.5" width="6" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="2"/><rect x="3.5" y="14.5" width="6" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="2"/><path d="M14.5 14.5h2.5v2.5h-2.5zM19 14.5h1.5M19 19h1.5M14.5 19h2.5M14.5 21.5h6" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
     </svg>
@@ -44,11 +59,12 @@
 
     <header class="topbar">
       <a class="brand" href="/">
-        <span class="brand-mark">H</span>
+        <span class="brand-mark"><img src="icons/icon.svg" alt="" width="36" height="36" /></span>
         <span class="brand-text">HITSTER<span class="brand-web">ERWEITERUNG</span></span>
       </a>
       <div class="topbar-right">
         <span class="pill pill-count" id="catalogPill">… Karten</span>
+        <button class="icon-btn" id="installBtn" hidden aria-label="App installieren" title="App installieren"><svg><use href="#i-download"></use></svg></button>
         <button class="icon-btn" id="soundToggle" aria-label="Ton an oder aus" title="Ton an/aus"><svg><use href="#i-volume"></use></svg></button>
         <button class="icon-btn" id="helpBtn" aria-label="Hilfe und Spielregeln" title="Hilfe"><svg><use href="#i-help"></use></svg></button>
       </div>
@@ -64,31 +80,33 @@
         <div class="mode-switch" id="modeSwitch" role="tablist" aria-label="Spielmodus">
           <button type="button" class="mode-btn active" data-mode="classic" role="tab" aria-selected="true">Freies Spiel</button>
           <button type="button" class="mode-btn" data-mode="extension" role="tab" aria-selected="false">Mit Original</button>
+          <button type="button" class="mode-btn" data-mode="playlist" role="tab" aria-selected="false">Playlist</button>
         </div>
 
         <div class="extension-bar" id="extensionBar" hidden>
-          <div class="extension-row">
-            <label for="yearInput">Jahr der Originalkarte</label>
-            <input id="yearInput" type="number" inputmode="numeric" min="1950" max="2024" placeholder="1984" aria-label="Jahr der Originalkarte" />
-            <button class="btn btn-primary btn-small" id="yearGo">Lied ziehen</button>
-            <button class="btn btn-ghost btn-small" id="yearRandom">Zufällig</button>
-            <button class="btn btn-ghost btn-small" id="scanBtn"><svg><use href="#i-scan"></use></svg> QR scannen</button>
+          <p class="extension-hint" id="yearHint">Scanne eine echte Hitster-Karte – das Jahr bleibt verborgen und wir ziehen ein anderes Lied aus demselben Jahr.</p>
+        </div>
+
+        <div class="playlist-bar" id="playlistBar" hidden>
+          <div class="playlist-row">
+            <label for="playlistUrl">Spotify-Playlist</label>
+            <input id="playlistUrl" type="url" autocomplete="off" placeholder="https://open.spotify.com/playlist/…" aria-label="Spotify-Playlist-Link" />
+            <button class="btn btn-primary btn-small" id="playlistLoad">Laden</button>
+            <button class="btn btn-ghost btn-small" id="playlistClear">Leeren</button>
           </div>
-          <p class="extension-hint" id="yearHint">Jahr eingeben – wir ziehen ein anderes Lied aus demselben Jahr.</p>
+          <p class="playlist-hint" id="playlistStatus">Playlist-Link einfügen – gespielt werden nur Lieder aus dieser Playlist.</p>
         </div>
 
         <div class="card-wrap" id="cardWrap">
           <div class="card" id="card" data-flipped="false">
-            <article class="card-face card-front" id="cardFront" aria-label="Vorderseite der Karte">
+            <article class="card-face card-front" id="cardFront" aria-label="Vorderseite der Karte: Song raten">
               <header class="card-band">
                 <span class="card-kicker">HITSTER</span>
-                <span class="band-right">
-                  <svg class="group-icon" id="frontGroupIcon" role="img" aria-label="Gruppe"><use href="#i-users"></use></svg>
-                </span>
+                <span class="card-band-note">WEB</span>
               </header>
               <div class="card-center">
-                <div class="year-badge" id="frontYearBadge" hidden>1984</div>
                 <div class="vinyl" id="vinyl">
+                  <div class="tonearm" aria-hidden="true"></div>
                   <div class="vinyl-disc">
                     <div class="vinyl-grooves"></div>
                     <div class="vinyl-label"><span class="vinyl-hole"></span></div>
@@ -96,10 +114,6 @@
                   <button class="play-orb" id="cardPlay" aria-label="Clip abspielen" aria-pressed="false">
                     <svg class="icon-play"><use href="#i-play"></use></svg>
                     <svg class="icon-pause"><use href="#i-pause"></use></svg>
-                    <svg class="progress-ring" viewBox="0 0 100 100" aria-hidden="true">
-                      <circle class="ring-bg" cx="50" cy="50" r="46"></circle>
-                      <circle class="ring-fg" id="ringFg" cx="50" cy="50" r="46"></circle>
-                    </svg>
                   </button>
                 </div>
                 <div class="timer-row"><span class="timer" id="timer">25</span><span class="timer-label">Sekunden</span></div>
@@ -112,10 +126,12 @@
             <article class="card-face card-back" id="cardBack" aria-label="Rückseite der Karte mit Auflösung">
               <header class="card-band">
                 <span class="card-kicker">AUFGELÖST</span>
-                <span class="band-right">
-                  <svg class="group-icon" id="backGroupIcon" role="img" aria-label="Gruppe"><use href="#i-users"></use></svg>
+                <span class="back-tags">
+                  <span class="back-tag" id="backGroupTag"><svg class="group-icon" id="backGroupIcon" role="img" aria-label="Gruppe"><use href="#i-users"></use></svg><span id="backGroupLabel">Gruppe</span></span>
+                  <span class="back-tag back-tag-genre" id="backGenreTag"><span class="tag-dot"></span><span id="backGenre">Pop</span></span>
                 </span>
               </header>
+              <div class="back-art" aria-hidden="true"><span class="back-disc"></span></div>
               <div class="back-hero">
                 <span class="back-year-label">Erschienen</span>
                 <span class="back-year" id="backYear">1976</span>
@@ -125,10 +141,12 @@
                 <h2 class="back-title" id="backTitle">Dancing Queen</h2>
                 <p class="back-artist" id="backArtist">ABBA</p>
               </div>
-              <div class="qr-panel">
-                <img id="backQrImg" alt="QR-Code zur Karte" />
-                <span>Scan &amp; Play</span>
+              <div class="back-facts">
+                <div><small>Jahrzehnt</small><strong id="backDecadeFact">1970er</strong></div>
+                <div><small>Besetzung</small><strong id="backGroupFact">Gruppe</strong></div>
+                <div><small>Genre</small><strong id="backGenreFact">Pop</strong></div>
               </div>
+              <p class="back-source" id="backSource">Spotify · HITSTER</p>
               <div class="back-actions">
                 <button class="btn btn-spotify" id="spotifyBtn"><svg><use href="#i-spotify"></use></svg><span>Spotify</span></button>
                 <button class="btn btn-ghost btn-small" id="judgeRight"><svg><use href="#i-check"></use></svg> Richtig</button>
@@ -142,6 +160,7 @@
         <div class="stage-actions">
           <button class="btn btn-primary" id="playBtn"><svg class="icon-play"><use href="#i-play"></use></svg><svg class="icon-pause"><use href="#i-pause"></use></svg><span id="playLabel">Clip abspielen</span></button>
           <button class="btn btn-accent" id="flipBtn"><svg><use href="#i-flip"></use></svg> Karte umdrehen</button>
+          <button class="btn btn-scan" id="scanBtn"><svg><use href="#i-scan"></use></svg> Karte scannen</button>
           <button class="btn btn-ghost" id="nextBtn"><svg><use href="#i-next"></use></svg> Nächste Karte</button>
         </div>
 
@@ -150,8 +169,10 @@
 
       <aside class="panel" aria-label="Einstellungen">
         <section class="panel-block">
-          <div class="panel-head"><h2><svg><use href="#i-music"></use></svg> Musik-Kategorie</h2><span class="panel-count" id="genreCount">20</span></div>
-          <div class="chips" id="genreChips" role="group" aria-label="Musik-Kategorie wählen"></div>
+          <div class="panel-head"><h2><svg><use href="#i-list"></use></svg> Meine Kategorien</h2><span class="panel-count" id="categoryCount">0</span></div>
+          <div class="category-list" id="customCategories"></div>
+          <p class="panel-sub panel-hint">Lade eine Spotify-Playlist und speichere sie als eigene Kategorie. Deine Kategorien bleiben lokal im Browser.</p>
+          <button class="btn btn-ghost btn-wide btn-small" id="saveCategory" disabled><svg><use href="#i-download"></use></svg> Aktuelle Playlist speichern</button>
         </section>
         <section class="panel-block">
           <div class="panel-head"><h2><svg><use href="#i-calendar"></use></svg> Jahrzehnt</h2><span class="panel-count" id="decadeCount">8</span></div>
@@ -162,6 +183,7 @@
           </div>
           <div class="panel-actions"><button class="btn btn-tiny btn-ghost" id="resetFilters"><svg><use href="#i-reset"></use></svg> Filter zurücksetzen</button></div>
         </section>
+
         <section class="panel-block stats-panel">
           <div class="panel-head"><h2><svg><use href="#i-clock"></use></svg> Deine Runde</h2><button class="btn btn-tiny btn-ghost" id="resetStats" title="Runde zurücksetzen"><svg><use href="#i-reset"></use></svg></button></div>
           <div class="stats-grid">
@@ -181,9 +203,25 @@
       </aside>
     </main>
 
+    <div class="media-player" id="mediaPlayer" hidden aria-label="Media Player">
+      <div class="mp-art"><img id="mpArt" alt="" hidden /><span class="mp-vinyl" id="mpVinyl"><i></i></span></div>
+      <div class="mp-main">
+        <div class="mp-head"><span class="mp-kicker" id="mpKicker">HITSTER CLIP</span><button class="mp-close" id="mpClose" aria-label="Player schließen"><svg><use href="#i-close"></use></svg></button></div>
+        <div class="mp-title" id="mpTitle">Geheimnisvoller Song</div>
+        <div class="mp-artist" id="mpArtist">Hör gut zu und rate mit</div>
+        <div class="mp-progress"><div class="mp-bar" id="mpBar"></div></div>
+        <div class="mp-meta"><span id="mpTime">0:00</span><span id="mpDuration">0:25</span></div>
+      </div>
+      <div class="mp-controls">
+        <button class="mp-btn" id="mpPlay" aria-label="Clip abspielen"><svg class="mp-icon-play"><use href="#i-play"></use></svg><svg class="mp-icon-pause"><use href="#i-pause"></use></svg></button>
+        <button class="mp-btn" id="mpRestart" aria-label="Clip wiederholen"><svg><use href="#i-replay"></use></svg></button>
+        <div class="mp-eq" id="mpEq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+      </div>
+    </div>
+
     <footer class="site-footer">
-      <p><strong>HITSTER Web</strong> ist ein inoffizielles Open-Source-Fanprojekt und eine Karten-Erweiterung für Hitster. Kein Login, keine Werbung, kein Tracking, kein Online-Mehrspieler. Song-Clips sind 30-Sekunden-Vorschauen von Deezer bzw. iTunes.</p>
-      <p class="footer-meta"><span>MIT-Lizenz</span><span>·</span><span><span id="footerCount">4.121</span> Karten</span><span>·</span><span>Made for Hitster</span></p>
+      <p><strong>HITSTER Web</strong> ist ein inoffizielles Open-Source-Fanprojekt und eine Karten-Erweiterung für Hitster. Kein Login, keine Werbung, kein Tracking, kein Online-Mehrspieler. Song-Clips sind 30-Sekunden-Vorschauen von Spotify, Deezer bzw. iTunes. Kartendaten: offizielle HITSTER-Spieldatenbank (Jumbo) · Musik/Metadaten: Spotify · Jahre: MusicBrainz.</p>
+      <p class="footer-meta"><span>MIT-Lizenz</span><span>·</span><span><span id="footerCount">4.421</span> Karten</span><span>·</span><span>Made for Hitster</span></p>
     </footer>
 
     <div class="modal" id="helpModal" hidden>
@@ -195,16 +233,21 @@
           <p class="panel-sub">Zufällige Karte, Clip hören, Jahr raten, umdrehen. Fertig.</p>
           <h3>Mit Original</h3>
           <ol class="steps">
-            <li>Ziehe eine Karte aus deinem Hitster.</li>
-            <li>Gib ihr Jahr ein – oder scanne den QR-Code.</li>
-            <li>Wir ziehen ein <strong>anderes</strong> Lied aus demselben Jahr. Clip abspielen, raten, umdrehen.</li>
+            <li>Ziehe eine Karte aus deinem Hitster – QR-Code nach oben, ohne sie umzudrehen.</li>
+            <li>Drücke <strong>Karte scannen</strong> und halte die Kamera auf den QR-Code. Du kannst auch ein Foto wählen.</li>
+            <li>Wir erkennen das Jahr im Hintergrund und ziehen ein <strong>anderes</strong> Lied aus demselben Jahr. Das Jahr bleibt bis zum Umdrehen verborgen.</li>
           </ol>
-          <h3>QR scannen</h3>
-          <p class="panel-sub">Der Scanner erkennt Spotify-Track-Links, Jahreszahlen und unsere Karten-QR-Codes. Wird ein Lied erkannt, ziehen wir ein anderes Lied aus seinem Jahr. Klappt ein Code nicht, gib das Jahr einfach manuell ein.</p>
+          <h3>Echte Hitster-Karten</h3>
+          <p class="panel-sub">Der Scanner liest die Rückseite echter HITSTER-Karten (z. B. <code>hitstergame.com/de/00008</code>) und die offizielle Kartendatenbank. Wähle im Scanner dein Kartenset (Original, Bingo, Rock …), falls du nicht das Standard-Original hast. Das Jahr wird vor dem Umdrehen nirgends angezeigt. Die Jahres-Auflösung nutzt zuerst den eigenen Katalog, sonst MusicBrainz (Erstveröffentlichung) und Spotify.</p>
+
+          <h3>Eigene Kategorien &amp; Playlist</h3>
+          <p class="panel-sub">Spotify-Playlist-Link einfügen. Wir übernehmen <strong>alle</strong> Lieder der Playlist. Mit <strong>Aktuelle Playlist speichern</strong> wird daraus deine eigene Kategorie – lokal, ohne Login.</p>
           <h3>Runde ohne Doppel</h3>
           <p class="panel-sub">Jede Karte kommt in einer Runde nur einmal. Mit <strong>Neue Runde</strong> startest du frisch – auch die Statistik wird zurückgesetzt.</p>
           <h3>Karten drucken</h3>
-          <p class="panel-sub">9 Karten pro A4-Seite, 59 × 91 mm. Beidseitig drucken, an der langen Kante spiegeln, ausschneiden – fertig.</p>
+          <p class="panel-sub">9 Karten pro A4-Seite, 59 × 91 mm. Beidseitig drucken, an der langen Kante spiegeln, ausschneiden – fertig. Die Auflösung braucht keinen QR-Code.</p>
+          <h3>Installieren</h3>
+          <p class="panel-sub">Über den Installieren-Button im Kopfbereich (oder „Zum Home-Bildschirm“ auf dem iPhone) läuft HITSTER Web als App – ohne Store, ohne Login.</p>
           <h3>Gut zu wissen</h3>
           <ul class="help-list">
             <li><strong>Kein Online-Spiel.</strong> Alles läuft am Tisch in deinem Browser; Statistiken bleiben lokal.</li>
@@ -232,11 +275,18 @@
     <div class="modal" id="scanModal" hidden>
       <div class="modal-backdrop" data-close="1"></div>
       <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="scanTitle">
-        <header class="modal-head"><h2 id="scanTitle"><svg><use href="#i-scan"></use></svg> QR-Code scannen</h2><button class="icon-btn" data-close="1" aria-label="Schließen"><svg><use href="#i-close"></use></svg></button></header>
+        <header class="modal-head"><h2 id="scanTitle"><svg><use href="#i-scan"></use></svg> Karte scannen</h2><button class="icon-btn" data-close="1" aria-label="Schließen"><svg><use href="#i-close"></use></svg></button></header>
         <div class="modal-body">
           <div class="scan-frame"><video id="scanVideo" playsinline muted></video><canvas id="scanCanvas" hidden></canvas></div>
           <p class="panel-sub" id="scanStatus" aria-live="polite">Richte die Kamera auf den QR-Code deiner Hitster-Karte.</p>
-          <p class="panel-sub">Spotify-Link, Jahr oder unsere Karten-QR-Codes werden erkannt. Sonst Jahr oben eingeben.</p>
+          <label class="scan-option">Kartenset
+            <select id="deckSelect"><option value="auto">Automatisch (Original)</option></select>
+          </label>
+          <div class="scan-actions">
+            <label class="btn btn-ghost btn-small" for="scanFile"><svg><use href="#i-image"></use></svg> Bild scannen</label>
+            <input id="scanFile" type="file" accept="image/*" hidden />
+          </div>
+          <p class="panel-sub">Echte Hitster-Rückseiten, Spotify-Links, Jahre und unsere Karten. Das Jahr wird vor dem Umdrehen nicht angezeigt.</p>
         </div>
       </div>
     </div>
@@ -273,7 +323,7 @@
     <div id="printRoot" aria-hidden="true"></div>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
     <audio id="audio" preload="none"></audio>
-    <script src="/vendor/jsqr.js?v=3.0.0"></script>
-    <script src="/app.js?v=3.0.0" type="module"></script>
+    <script src="/vendor/jsqr.js?v=4.1.0"></script>
+    <script src="/app.js?v=4.1.0" type="module"></script>
   </body>
 </html>

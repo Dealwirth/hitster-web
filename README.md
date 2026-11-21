@@ -1,7 +1,7 @@
 # HITSTER Web – Karten-Erweiterung
 
 **Die kostenlose, werbefreie Karten-Erweiterung für Hitster – direkt im Browser.**
-4.121 Songs · 20 Musik-Kategorien · 30-Sekunden-Clips · QR-Scanner · Karten zum Ausdrucken.
+4.421 Songs · 30-Sekunden-Clips · echte Hitster-QR-Codes · Spotify-Playlists · eigene Kategorien · PWA · Karten zum Ausdrucken.
 Kein Login, kein Tracking, keine Werbung. Open Source (MIT).
 
 ![HITSTER Web – Kartenvorderseite](docs/screenshot-front.png)
@@ -15,20 +15,27 @@ Kein Login, kein Tracking, keine Werbung. Open Source (MIT).
 
 ## Was die App kann
 
-- **Freies Spiel:** Zufällige Karte ziehen, 25-Sekunden-Clip hören, Jahr raten, umdrehen.
-- **Mit Original:** Jahr deiner Hitster-Karte eingeben oder QR-Code scannen. Wir ziehen
-  ein **anderes** Lied aus demselben Jahr – perfekt für das Sortierspiel.
-- **QR-Scanner:** Erkennt Spotify-Track-Links, Jahreszahlen und die QR-Codes unserer
-  gedruckten Karten. Bei Spotify-Links wird das Lied erkannt und das Jahr ermittelt.
+- **Freies Spiel:** Zufällige Karte ziehen, 30-Sekunden-Clip hören, Jahr raten, umdrehen.
+- **Mit Original:** **echten Hitster-QR-Code scannen** – kein Jahr eintippen. Die App findet das Jahr im Hintergrund und zieht ein **anderes** Lied aus demselben Jahr. Das Jahr bleibt vor dem Umdrehen unsichtbar.
+- **Kartenset wählen:** Original, Bingo, 100 % Deutsch, Rock, Schlager, Hip-Hop usw.
+  Der QR-Code enthält nur Region + Kartennummer; das Kartenset wählst du im Scanner.
+- **QR-Scanner:** Erkennt echte Hitster-Rückseiten (`hitstergame.com/de/00008`),
+  Spotify-Track-Links, Jahreszahlen und die QR-Codes unserer gedruckten Karten.
+- **Spotify-Playlist:** Link einfügen – **alle** Lieder der Playlist werden übernommen, nicht nur die ersten 50/100. Titel, Jahr, Vorschau und Cover kommen direkt von Spotify; kein Login/API-Key nötig.
+- **Eigene Kategorien:** Jede geladene Playlist lässt sich lokal als eigene Kategorie speichern, wieder laden und löschen. Keine falschen Auto-Genres nötig.
 - **Runde ohne Doppel:** Jede Karte kommt in einer Runde nur einmal. „Neue Runde“
   setzt Karten, Statistik und Fortschritt zurück.
-- **Hitster-Optik:** Schwarze Karten mit kräftiger Genre-Farbe, Vinyl, Gruppe/Solo-Symbol,
-  großem Jahr, Titel, Interpret und QR-Code. Keine Bingo-Scorecard, keine
-  Anfänger/Experten-Tabellen – die physischen Bingo-Karten reichen.
+- **Hitster-Optik:** Vorderseite neutral (kein Jahr, kein Genre, kein Titel), Rückseite
+  mit großem Jahr, Titel, Interpret, Genre, Gruppe/Solo und Quelle – jede Information
+  genau einmal, ohne doppelte Bingo-Tabellen. Dazu ein Vinyl-Player mit Cover,
+  Fortschritt, Pause/Replay und Tonarm.
+- **Bekannte Songs:** 300 zusätzliche Chart-Hits aus iTunes-Charts, gemischt mit dem
+  bestehenden Katalog – dadurch ist etwa die Hälfte der Lieder allgemein bekannt.
 - **Druckbogen:** 9 Karten pro A4-Seite, **59 × 91 mm**, Vorder- und Rückseite,
   duplexfähig (lange Kante spiegeln). Vorderseite mit QR, Rückseite mit Auflösung.
-- **Spotify:** Direkter Track-Link bzw. Einbettung, wenn eine Spotify-ID vorhanden ist.
-- **Filter:** 20 Genres, 8 Jahrzehnte, One-Hit-Wonder, nur Karten mit Spotify-Link.
+- **PWA:** Installierbar, offlinefähige Shell, Manifest, Icons, Service Worker.
+- **Filter:** 8 Jahrzehnte, One-Hit-Wonder, nur Karten mit Spotify-Link. Musikrichtungen
+  stehen nur noch als Karteninfo auf der Rückseite, nicht als fehleranfälliger Filter.
 
 ## So spielst du
 
@@ -38,9 +45,9 @@ Kein Login, kein Tracking, keine Werbung. Open Source (MIT).
 3. Karte umdrehen – Jahr, Titel und Interpret stehen auf der Rückseite.
 
 ### Mit Original-Hitster-Karte
-1. Modus **Mit Original** wählen.
-2. Jahr der Originalkarte eingeben – oder QR-Code scannen.
-3. Die App zieht ein **anderes** Lied aus demselben Jahr.
+1. **Karte scannen** drücken – der Button ist immer sichtbar.
+2. QR-Code der Originalkarte mit Kamera oder Foto scannen. Kein Jahr eintippen.
+3. Die App erkennt das Jahr im Hintergrund und zieht ein **anderes** Lied aus demselben Jahr.
 4. Clip hören, im Zeitstrahl einsortieren, umdrehen, auflösen.
 
 ### Karten drucken
@@ -55,9 +62,11 @@ Kein Login, kein Tracking, keine Werbung. Open Source (MIT).
 
 | QR-Inhalt | Verhalten |
 |---|---|
+| `hitstergame.com/de/00008` | Echte Hitster-Karte: Kartenset im Scanner wählen, Jahr ermitteln, anderes Lied aus demselben Jahr ziehen. |
 | `…/?card=s0042` | Öffnet genau diese Karte. |
-| `1984` oder `…/?year=1984` | Zieht ein Lied aus 1984. |
+| `1984` oder `…/?year=1984` | Interner Deep-Link: zieht ein Lied aus 1984. |
 | `https://open.spotify.com/track/…` | Erkennt das Lied, ermittelt das Jahr und zieht ein anderes Lied aus diesem Jahr. |
+| `https://open.spotify.com/playlist/…` | Lädt die Playlist als Kartenrunde. |
 | `spotify:track:…` | Wie Spotify-Link. |
 | Unbekannt | Jahr manuell eingeben. |
 
@@ -65,23 +74,27 @@ Kein Login, kein Tracking, keine Werbung. Open Source (MIT).
 
 - **Frontend:** Vanilla JS, CSS, keine Build-Pflicht, keine Frameworks.
 - **Backend (lokal/Server):** Node.js + Express.
-  - `/api/catalog` – Katalog (gzip, 1 Tag cachebar)
+- `/api/catalog` – Katalog (gzip, 1 Tag cachebar)
   - `/api/song/:id` – eine Karte
   - `/api/audio/:id` – 30-Sekunden-Clip über Deezer/iTunes-Proxy (RAM-/Disk-Cache)
   - `/api/qr/:id` – QR-Code als SVG
+  - `/api/art/:id` – Cover-Proxy mit Cache
   - `/api/resolve?spotify=…` – Spotify-Link → Titel/Künstler/Jahr (Katalog + Spotify-Metadaten)
-- **Daten:** `data/songs.source.tsv` (Quelle) → `data/catalog.json` (4.121 Songs, 1950–2024).
+  - `/api/spotify/track/:id` – Spotify-Embed-Metadaten + MusicBrainz-Erstveröffentlichung
+- `/api/playlist?url=…` – Spotify-Playlist → **alle** Karten mit Jahr, Vorschau und Cover
+- **Daten:** `data/songs.source.tsv` (Quelle) → `data/catalog.json` (4.421 Songs, 1950–2026), ergänzt um Chart-Hits über `scripts/add-chart-songs.js`.
 - **Statische Version:** `docs/` ist ein GitHub-Pages-Build. Sie nutzt `catalog.json`,
-  vorgenerierte QR-Codes und iTunes-Vorschauen direkt im Browser. Der Spotify-Scanner
-  matcht bekannte Spotify-IDs und nutzt Spotify-oEmbed für unbekannte Titel; sonst
-  Jahr manuell eingeben.
+  `hitster-db.json`, vorgenerierte QR-Codes und iTunes-Vorschauen direkt im Browser.
+  Für Playlist/Spotify-Auflösung wird die Server-API über `PUBLIC_API_BASE` eingebunden
+  (Standard: die Work-URL). Ohne API funktionieren Katalog, QR-Scan, Audio und Druck weiter.
+- **PWA:** `public/manifest.webmanifest`, `public/sw.js`, Icons in `public/icons/`.
 
 ### Performance
 
 - Katalog wird einmal aufbereitet und gzip ausgeliefert: **~708 KB roh / ~144 KB gzip**
   statt ~1,37 MB / ~247 KB.
 - `/api/catalog` ist **1 Tag** cachebar, versionierte CSS/JS-Dateien **1 Jahr**
-  (`immutable`), Asset-Version `3.0.0`.
+  (`immutable`), Asset-Version `4.0.0`.
 - Audio-Quellen werden **parallel** (Deezer/iTunes) aufgelöst, Timeouts 8–15 s.
 - Cache-Hits brauchen keinen Verzeichnis-Scan.
 - `scripts/serve-watchdog.sh` startet den Node-Prozess nach einem Absturz neu.
@@ -105,7 +118,9 @@ Kein Login, kein Tracking, keine Werbung. Open Source (MIT).
 npm install
 npm start              # http://localhost:12000
 npm test               # Unit- und API-Tests
-npm run test:e2e       # Browser-E2E (Chromium)
+npm run test:e2e       # Browser-E2E (Chromium, 32 Checks)
+npm run test:v4        # Scan, Kartenset, Playlist, eigene Kategorien, PWA, Druck (Chromium)
+npm run test:static    # GitHub-Pages-Build + lokale API (Chromium)
 npm run test:a11y      # Barrierefreiheit
 npm run test:small     # 320-px-Viewport
 npm run test:audio     # echte Audio-Clips
@@ -115,7 +130,8 @@ npm run screenshots    # docs/screenshot-*.png
 ### GitHub-Pages-Build
 
 ```bash
-npm run build:static   # schreibt docs/ (Katalog, QR-Codes, Assets)
+PUBLIC_API_BASE=https://dein-server.example npm run build:static
+# schreibt docs/ (Katalog, hitster-db.json, QR-Codes, PWA-Assets)
 ```
 
 GitHub Pages wird aus `main` / `/docs` veröffentlicht:
@@ -131,8 +147,10 @@ Logs: `server.log`. Für Dauerbetrieb eignen sich auch systemd, PM2 oder Docker.
 
 ## Daten & Lizenz
 
-- 4.121 Songs, 1950–2024, 20 Genres, 2.618 Spotify-IDs.
-- Song-Clips sind offizielle 30-Sekunden-Vorschauen von Deezer bzw. iTunes.
+- 4.421 Songs, 1950–2026, 20 Genres, 2.618 Spotify-IDs, 300 Chart-Hits.
+- Song-Clips sind offizielle 30-Sekunden-Vorschauen von Deezer, Spotify bzw. iTunes.
+- Jahres-Auflösung: kuratierter Katalog, sonst MusicBrainz-Erstveröffentlichung, sonst Spotify.
+- Echte Kartendaten: `public/hitster-db.json` (176 Spieldatenbanken, Karten → Spotify-ID + Gruppe/Solo).
 - Kein Login, keine Werbung, kein Tracking, kein Online-Mehrspieler.
 - Code: **MIT-Lizenz**. HITSTER-Marke und Originalkarten gehören den jeweiligen
   Rechteinhabern.

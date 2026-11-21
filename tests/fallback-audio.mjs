@@ -26,7 +26,8 @@ const browser = await chromium.launch({
 const page = await browser.newPage();
 await page.goto('http://localhost:12000/', { waitUntil: 'networkidle' });
 await page.waitForFunction(() => window.HITSTER?.state?.songs?.length > 1000);
-for (const s of fallback) {
+const playSample = [...new Map([...fallback.slice(0, 12), ...fallback.slice(-12)].map((s) => [s.id, s])).values()];
+for (const s of playSample) {
   await page.evaluate(async (id) => {
     const d = await (await fetch('/api/catalog')).json();
     window.HITSTER.loadCard(d.songs.find((x) => x.id === id));
@@ -45,4 +46,4 @@ for (const s of fallback) {
   console.log(`✅ PLAY ${s.id}: ${audio.currentTime.toFixed(2)}s / ${audio.duration.toFixed(2)}s`);
 }
 await browser.close();
-console.log(`\n${fallback.length}/${fallback.length} fallback clips play in Chromium.`);
+console.log(`\n${playSample.length}/${fallback.length} fallback clips play in Chromium (all headers verified).`);

@@ -1,0 +1,98 @@
+/**
+ * Static GitHub-Pages build test: build docs/, serve it, verify blind card,
+ * real Hitster scan against a local API, PWA assets and no runtime errors.
+ */
+import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
+import fs from 'node:fs';
+import http from 'node:http';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { chromium } from 'playwright-core';
+import { app } from '../server/index.js';
+
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const DOCS = path.join(ROOT, 'docs');
+const CHROMIUM = process.env.CHROMIUM_PATH || '/usr/bin/chromium';
+let failures = 0;
+async function step(name, fn) {
+  try { await fn(); console.log(`✅ ${name}`); }
+  catch (err) { failures++; console.error(`❌ ${name}\n   ${err.stack?.split('\n').slice(0, 5).join('\n   ')}`); }
+}
+
+const api = app.listen(0, '127.0.0.1');
+await new Promise((resolve) => api.once('listening', resolve));
+const apiBase = `http://127.0.0.1:${api.address().port}`;
+execFileSync(process.execPath, ['scripts/build-static.js'], {
+  cwd: ROOT,
+  env: { ...process.env, PUBLIC_API_BASE: apiBase },
+  stdio: 'ignore',
+});
+
+const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.woff2': 'font/woff2' };
+const staticServer = http.createServer((req, res) => {
+  const urlPath = decodeURIComponent(new URL(req.url, 'http://x').pathname);
+  const file = path.join(DOCS, urlPath === '/' ? 'index.html' : urlPath.replace(/^\//, ''));
+  if (!file.startsWith(DOCS) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
+    res.writeHead(404); res.end('not found'); return;
+  }
+  res.writeHead(200, { 'content-type': types[path.extname(file)] || 'application/octet-stream' });
+  fs.createReadStream(file).pipe(res);
+});
+await new Promise((resolve) => staticServer.listen(0, '127.0.0.1', resolve));
+const base = `http://127.0.0.1:${staticServer.address().port}`;
+console.log(`\nStatic build: ${base} (API ${apiBase})\n`);
+
+const browser = await chromium.launch({ executablePath: CHROMIUM, args: ['--no-sandbox', '--disable-dev-shm-usage'] });
+const page = await browser.newPage({ viewport: { width: 1280, height: 1000 } });
+const errors = [];
+page.on('pageerror', (e) => errors.push(e.message));
+page.on('console', (m) => { if (m.type() === 'error' && !m.text().toLowerCase().includes('spotify')) errors.push(m.text()); });
+await page.goto(base, { waitUntil: 'networkidle' });
+await page.waitForFunction(() => window.HITSTER?.state?.ready, { timeout: 15000 });
+
+await step('static flag, catalog and API base are wired', async () => {
+  assert.equal(await page.evaluate(() => document.documentElement.dataset.static), 'true');
+  assert.ok(await page.evaluate(() => window.HITSTER.state.songs.length) >= 4400);
+  assert.equal(await page.evaluate(() => document.querySelector('meta[name="hitster-api"]').content), apiBase);
+});
+
+await step('front is spoiler-free and back reveals metadata', async () => {
+  const front = await page.locator('#cardFront').innerText();
+  assert.doesNotMatch(front, /19\d\d|20\d\d/);
+  await page.locator('#flipBtn').click();
+  await page.waitForTimeout(700);
+  assert.match(await page.locator('#backYear').innerText(), /^\d{4}$/);
+  assert.ok((await page.locator('#backGenre').innerText()).length > 1);
+  assert.equal(await page.locator('.back-bingo').count(), 0);
+});
+
+await step('real Hitster card resolves against local API without showing year', async () => {
+  const result = await page.evaluate(async () => {
+    const ok = await window.HITSTER.handleHitster({ region: 'de', card: '00008' });
+    return { ok, year: window.HITSTER.state.extensionYear, currentYear: window.HITSTER.state.current?.year, hasYearInput: !!document.querySelector('#yearInput') };
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.currentYear, result.year);
+  assert.equal(result.hasYearInput, false);
+  const visible = await page.locator('#cardFront').innerText() + await page.locator('#yearHint').innerText();
+  assert.doesNotMatch(visible, new RegExp(String(result.year)));
+});
+
+await step('PWA manifest, icons and service worker exist', async () => {
+  assert.equal(await page.locator('link[rel="manifest"]').count(), 1);
+  const sw = await page.evaluate(async () => (await navigator.serviceWorker.ready).active?.scriptURL);
+  assert.ok(sw.endsWith('/sw.js'));
+  const icon = await page.evaluate(async () => (await fetch('icons/icon-192.png')).status);
+  assert.equal(icon, 200);
+});
+
+await step('no runtime errors', async () => {
+  assert.deepEqual(errors, []);
+});
+
+await browser.close();
+staticServer.close();
+api.close();
+console.log(`\n${failures ? '❌' : '✅'} Static checks: ${failures} failure(s)\n`);
+process.exit(failures ? 1 : 0);

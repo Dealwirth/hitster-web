@@ -27,8 +27,7 @@ await page.keyboard.press('Escape');
 
 await page.locator('.mode-btn[data-mode="extension"]').click();
 await page.waitForTimeout(300);
-await page.locator('#yearInput').fill('1984');
-await page.locator('#yearGo').click();
+await page.evaluate(() => window.HITSTER.applyYear(1984));
 await page.waitForTimeout(900);
 await page.screenshot({ path:'docs/screenshot-extension.png', fullPage:false });
 

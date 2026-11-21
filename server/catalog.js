@@ -40,6 +40,10 @@ export function publicSong(song) {
     group: song.group,
     tags: song.tags,
     spotifyId: song.spotifyId,
+    deezerId: song.deezerId || null,
+    popularity: song.popularity ?? null,
+    artUrl: song.art || null,
+    source: song.source || null,
     streamUrl: `/api/audio/${song.id}`,
   };
 }
