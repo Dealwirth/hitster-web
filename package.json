@@ -1,6 +1,6 @@
 {
   "name": "hitster-web",
-  "version": "4.3.0",
+  "version": "4.4.0",
   "description": "Kostenlose Hitster-Karten-Erweiterung mit 4.484 Songs, echten Hitster-QR-Codes, Spotify-Playlist-Modus (alle Tracks), eigenen Kategorien, 30-Sekunden-Clips und Druckbogen. Kein Login, keine Werbung, kein Online-Mehrspieler.",
   "type": "module",
   "main": "server/index.js",

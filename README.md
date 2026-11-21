@@ -19,8 +19,10 @@ Kein Login, kein Tracking, keine Werbung. Open Source (MIT).
 - **Mit Original:** **echten Hitster-QR-Code scannen** – kein Jahr eintippen. Die App findet das Jahr im Hintergrund und zieht ein **anderes** Lied aus demselben Jahr. Das Jahr bleibt vor dem Umdrehen unsichtbar.
 - **Kartenset wählen:** Original, Bingo, 100 % Deutsch, Rock, Schlager, Hip-Hop usw.
   Der QR-Code enthält nur Region + Kartennummer; das Kartenset wählst du im Scanner.
-- **QR-Scanner:** Erkennt echte Hitster-Rückseiten (`hitstergame.com/de/00008`),
-  Spotify-Track-Links, Jahreszahlen und die QR-Codes unserer gedruckten Karten.
+- **QR-Scanner:** Kamera oder Foto auf die Rückseite halten – erkennt echte
+  Hitster-URLs wie `hitstergame.com/de/00052` oder `.../00128` automatisch.
+  Kein Link eintippen, kein Jahr ablesen. Zusätzlich werden Spotify-Track-Links,
+  Jahreszahlen und die QR-Codes unserer gedruckten Karten erkannt.
 - **Spotify-Playlist:** Link einfügen – **alle** Lieder der Playlist werden übernommen, nicht nur die ersten 50/100. Titel, Jahr, Vorschau und Cover kommen direkt von Spotify; kein Login/API-Key nötig.
 - **Eigene Kategorien:** Jede geladene Playlist lässt sich lokal als eigene Kategorie speichern, wieder laden und löschen. Keine falschen Auto-Genres nötig.
 - **Runde ohne Doppel:** Jede Karte kommt in einer Runde nur einmal. „Neue Runde“
@@ -38,10 +40,10 @@ Kein Login, kein Tracking, keine Werbung. Open Source (MIT).
 - **Filter:** 8 Jahrzehnte, **21 Musikrichtungen mit Live-Trefferzahlen**, One-Hit-Wonder
   und „nur mit Spotify-Link“. Die Auswahl steht in der URL (`?genre=rock`) und lässt
   sich mit einem Klick zurücksetzen.
-- **Karten-Link statt Kamera:** Im Scanner kann jede echte Hitster-Karte auch als
-  Link eingefügt werden, z. B. `hitstergame.com/de/00052`; die App erkennt Region,
-  Kartennummer und Kartenset. Zusätzlich funktionieren Deep-Links wie
-  `?hitster=de/00052`.
+- **Scan ohne Tippen:** Ein großer Sucher mit animiertem Rahmen zeigt sofort, ob
+  die Kamera aktiv ist. Alternativ lässt sich ein Foto der Karte wählen. Die App
+  erkennt Region, Kartennummer und Kartenset automatisch. Deep-Links wie
+  `?hitster=de/00052` funktionieren weiterhin.
 
 ## So spielst du
 
@@ -100,7 +102,7 @@ Kein Login, kein Tracking, keine Werbung. Open Source (MIT).
 - Katalog wird einmal aufbereitet und gzip ausgeliefert: **~708 KB roh / ~144 KB gzip**
   statt ~1,37 MB / ~247 KB.
 - `/api/catalog` ist **1 Tag** cachebar, versionierte CSS/JS-Dateien **1 Jahr**
-  (`immutable`), Asset-Version `4.3.0`.
+  (`immutable`), Asset-Version `4.4.0`.
 - Audio-Quellen werden **parallel** (Deezer/iTunes) aufgelöst, Timeouts 8–15 s.
 - Cache-Hits brauchen keinen Verzeichnis-Scan.
 - `scripts/serve-watchdog.sh` startet den Node-Prozess nach einem Absturz neu.

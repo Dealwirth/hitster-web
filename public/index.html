@@ -23,7 +23,7 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" type="image/svg+xml" href="icons/icon.svg" />
     <link rel="apple-touch-icon" href="icons/icon-180.png" />
-    <link rel="stylesheet" href="/styles.css?v=4.2.0" />
+    <link rel="stylesheet" href="/styles.css?v=4.4.0" />
   </head>
   <body>
     <noscript><div class="noscript">HITSTER Web braucht JavaScript. Bitte aktiviere JavaScript in deinem Browser.</div></noscript>
@@ -290,28 +290,48 @@
 
     <div class="modal" id="scanModal" hidden>
       <div class="modal-backdrop" data-close="1"></div>
-      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="scanTitle">
-        <header class="modal-head"><h2 id="scanTitle"><svg><use href="#i-scan"></use></svg> Karte scannen</h2><button class="icon-btn" data-close="1" aria-label="Schließen"><svg><use href="#i-close"></use></svg></button></header>
-        <div class="modal-body">
-          <form class="scan-link" id="scanLinkForm">
-            <label for="scanLinkInput">Kartenlink oder Spotify-Link einfügen</label>
-            <div class="scan-link-row">
-              <input id="scanLinkInput" type="text" inputmode="url" autocomplete="off" placeholder="https://www.hitstergame.com/de/00052" />
-              <button class="btn btn-primary btn-small" type="submit"><svg><use href="#i-next"></use></svg> Öffnen</button>
+      <div class="modal-card modal-scan" role="dialog" aria-modal="true" aria-labelledby="scanTitle">
+        <header class="modal-head">
+          <h2 id="scanTitle"><svg><use href="#i-scan"></use></svg> Karte scannen</h2>
+          <span class="scan-live"><i></i> Live</span>
+          <button class="icon-btn" data-close="1" aria-label="Schließen"><svg><use href="#i-close"></use></svg></button>
+        </header>
+        <div class="modal-body scan-body">
+          <div class="scan-stage" id="scanStage" data-state="idle">
+            <video id="scanVideo" playsinline muted></video>
+            <canvas id="scanCanvas" hidden></canvas>
+            <div class="scan-veil" aria-hidden="true"></div>
+            <div class="scan-target" aria-hidden="true">
+              <span class="scan-corner tl"></span><span class="scan-corner tr"></span>
+              <span class="scan-corner bl"></span><span class="scan-corner br"></span>
+              <span class="scan-line"></span>
             </div>
-            <p class="scan-link-hint">Link aus dem QR-Code einfügen oder direkt mit der Kamera scannen. Das Jahr bleibt bis zum Umdrehen verborgen.</p>
-          </form>
-          <div class="scan-frame"><video id="scanVideo" playsinline muted></video><canvas id="scanCanvas" hidden></canvas></div>
-          <p class="panel-sub" id="scanStatus" aria-live="polite">Richte die Kamera auf den QR-Code deiner Hitster-Karte.</p>
+            <div class="scan-stage-top">
+              <span class="scan-chip"><svg><use href="#i-qr"></use></svg> QR-Code</span>
+              <span class="scan-chip scan-camera-chip" id="scanCameraState">Kamera</span>
+            </div>
+            <div class="scan-stage-bottom">
+              <p id="scanStatus" aria-live="polite">Richte die Kamera auf den QR-Code deiner Hitster-Karte.</p>
+              <p class="scan-example">hitstergame.com/de/00052</p>
+            </div>
+          </div>
+
+          <div class="scan-steps" aria-label="So funktioniert es">
+            <span><b>1</b> Karte mit QR-Code</span>
+            <span><b>2</b> Kamera draufhalten</span>
+            <span><b>3</b> Lied wird vorgeschlagen</span>
+          </div>
+
           <label class="scan-option">Kartenset
             <select id="deckSelect"><option value="auto">Automatisch (Original)</option></select>
           </label>
+
           <div class="scan-actions">
-            <button class="btn btn-ghost btn-small" id="scanPaste" type="button"><svg><use href="#i-copy"></use></svg> Aus Zwischenablage</button>
-            <label class="btn btn-ghost btn-small" for="scanFile"><svg><use href="#i-image"></use></svg> Bild scannen</label>
+            <label class="btn btn-primary btn-wide scan-file-btn" for="scanFile"><svg><use href="#i-image"></use></svg> Bild scannen</label>
             <input id="scanFile" type="file" accept="image/*" hidden />
+            <button class="btn btn-ghost btn-small" id="scanRetry" type="button"><svg><use href="#i-replay"></use></svg> Kamera erneut starten</button>
           </div>
-          <p class="panel-sub">Echte Hitster-Rückseiten, Spotify-Links, Jahre und unsere Karten. Das Jahr wird vor dem Umdrehen nicht angezeigt.</p>
+          <p class="scan-footnote">Der QR-Code wird automatisch erkannt. Du musst keinen Link eintippen.</p>
         </div>
       </div>
     </div>
@@ -348,7 +368,7 @@
     <div id="printRoot" aria-hidden="true"></div>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
     <audio id="audio" preload="none"></audio>
-    <script src="/vendor/jsqr.js?v=4.2.0"></script>
-    <script src="/app.js?v=4.2.0" type="module"></script>
+    <script src="/vendor/jsqr.js?v=4.4.0"></script>
+    <script src="/app.js?v=4.4.0" type="module"></script>
   </body>
 </html>

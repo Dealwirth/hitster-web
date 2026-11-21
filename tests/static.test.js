@@ -10,6 +10,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright-core';
+import QRCode from 'qrcode';
 import { app } from '../server/index.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -80,12 +81,20 @@ await step('static page can call the API cross-origin (CORS)', async () => {
   assert.equal(result.data.track.year, 2018);
 });
 
-await step('real Hitster card resolves against local API without showing year', async () => {
-  const result = await page.evaluate(async () => {
-    const ok = await window.HITSTER.handleHitster({ region: 'de', card: '00008' });
-    return { ok, year: window.HITSTER.state.extensionYear, currentYear: window.HITSTER.state.current?.year, hasYearInput: !!document.querySelector('#yearInput') };
-  });
-  assert.equal(result.ok, true);
+await step('real Hitster QR resolves against local API without showing year', async () => {
+  assert.equal(await page.locator('#scanLinkInput').count(), 0);
+  assert.equal(await page.locator('#scanStage').count(), 1);
+  const qrFile = '/tmp/hitster-static-00052.png';
+  await QRCode.toFile(qrFile, 'http://www.hitstergame.com/de/00052', { width: 420, margin: 2 });
+  await page.locator('#scanBtn').click();
+  await page.waitForTimeout(300);
+  await page.locator('#scanFile').setInputFiles(qrFile);
+  await page.waitForFunction(() => window.HITSTER?.state?.extensionYear === 2018, { timeout: 30000 });
+  const result = await page.evaluate(() => ({
+    year: window.HITSTER.state.extensionYear,
+    currentYear: window.HITSTER.state.current?.year,
+    hasYearInput: !!document.querySelector('#yearInput'),
+  }));
   assert.equal(result.currentYear, result.year);
   assert.equal(result.hasYearInput, false);
   const visible = await page.locator('#cardFront').innerText() + await page.locator('#yearHint').innerText();

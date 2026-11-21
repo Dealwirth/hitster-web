@@ -5,6 +5,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { chromium } from 'playwright-core';
+import QRCode from 'qrcode';
 import { app } from '../server/index.js';
 
 const CHROMIUM = process.env.CHROMIUM_PATH || '/usr/bin/chromium';
@@ -71,10 +72,15 @@ await step('genre filter is visible, counted and URL-synced', async () => {
   assert.match(await page.locator('#filterSummary').innerText(), /^Alle Karten · \d+$/);
 });
 
-await step('card link resolves 00052 and reveals all Bingo categories', async () => {
+await step('QR code 00052 resolves and reveals all Bingo categories', async () => {
+  assert.equal(await page.locator('#scanLinkInput').count(), 0);
+  assert.equal(await page.locator('#scanStage').count(), 1);
+  assert.equal(await page.locator('#scanFile').count(), 1);
+  const qrFile = '/tmp/hitster-card-00052.png';
+  await QRCode.toFile(qrFile, 'http://www.hitstergame.com/de/00052', { width: 420, margin: 2 });
   await page.locator('#scanBtn').click();
-  await page.locator('#scanLinkInput').fill('http://www.hitstergame.com/de/00052');
-  await page.locator('#scanLinkForm button[type="submit"]').click();
+  await page.waitForTimeout(300);
+  await page.locator('#scanFile').setInputFiles(qrFile);
   await page.waitForFunction(() => window.HITSTER?.state?.extensionYear > 0, { timeout: 30000 });
   const state = await page.evaluate(() => ({
     year: window.HITSTER.state.extensionYear,
@@ -97,6 +103,37 @@ await step('card link resolves 00052 and reveals all Bingo categories', async ()
   assert.equal(await page.locator('#bingoTitle').textContent().then((t) => t.length > 1), true);
   assert.equal(await page.locator('#bingoArtist').textContent().then((t) => t.length > 1), true);
   assert.equal(await page.locator('#backGroupTag').getAttribute('aria-label'), await page.locator('#bingoGroup').textContent());
+});
+
+await step('camera video frame resolves arbitrary card 00128', async () => {
+  const qr = await QRCode.toDataURL('http://www.hitstergame.com/de/00128', { width: 480, margin: 2 });
+  await page.evaluate(async (url) => {
+    const img = new Image();
+    img.src = url;
+    await img.decode();
+    const canvas = document.createElement('canvas');
+    canvas.width = img.width;
+    canvas.height = img.height;
+    canvas.getContext('2d').drawImage(img, 0, 0);
+    const video = document.querySelector('#scanVideo');
+    video.srcObject = canvas.captureStream(10);
+    await video.play();
+    document.querySelector('#scanModal').hidden = false;
+    window.HITSTER.state.scan.active = true;
+    window.HITSTER.state.scan.detected = false;
+    window.HITSTER.scanFrame(performance.now() + 1000);
+  }, qr);
+  await page.waitForFunction(() => window.HITSTER?.state?.extensionYear === 1967, { timeout: 15000 });
+  assert.equal(await page.evaluate(() => window.HITSTER.state.extensionYear), 1967);
+});
+
+await step('arbitrary QR card number 00128 resolves to a year', async () => {
+  const res = await fetch(`${base}/api/hitster/de/00128`);
+  assert.equal(res.status, 200);
+  const data = await res.json();
+  assert.equal(data.card, '00128');
+  assert.ok(data.track?.year >= 1950 && data.track?.year <= 2030);
+  assert.ok(data.track?.title);
 });
 
 await step('deep link ?hitster=de/00052 opens the card', async () => {

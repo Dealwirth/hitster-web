@@ -7,7 +7,7 @@ const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
 const CLIP_SECONDS = 30;
-const VERSION = '4.2.0';
+const VERSION = '4.4.0';
 const STATIC = document.documentElement.dataset.static === 'true' || location.hostname.endsWith('github.io');
 const API_BASE = (document.querySelector('meta[name="hitster-api"]')?.content || '').replace(/\/$/, '');
 const API = (path) => `${API_BASE}${path}`;
@@ -67,7 +67,7 @@ const state = {
   hitsterDb: null,
   playerHidden: false,
   installPrompt: null,
-  scan: { stream: null, raf: null, active: false, deckSku: 'auto' },
+  scan: { stream: null, raf: null, active: false, detected: false, last: 0, deckSku: 'auto' },
   toastTimer: null,
   ready: false,
 };
@@ -118,10 +118,10 @@ const el = {
   scanModal: $('#scanModal'),
   scanVideo: $('#scanVideo'),
   scanCanvas: $('#scanCanvas'),
+  scanStage: $('#scanStage'),
+  scanCameraState: $('#scanCameraState'),
   scanStatus: $('#scanStatus'),
-  scanLinkForm: $('#scanLinkForm'),
-  scanLinkInput: $('#scanLinkInput'),
-  scanPaste: $('#scanPaste'),
+  scanRetry: $('#scanRetry'),
   footerCount: $('#footerCount'),
   decadeChips: $('#decadeChips'),
   decadeCount: $('#decadeCount'),
@@ -977,24 +977,41 @@ async function handleHitster(parsed) {
     return false;
   }
   const count = mapping.candidates?.length || 1;
-  el.scanStatus.textContent = `Kartenset: ${mapping.gameset.region} – ${mapping.gameset.name}${count > 1 ? ` · ${count} Sets passen zur Kartennummer` : ''}. Lied wird geladen …`;
-  const known = state.hitsterDb?.tracks?.[mapping[0]];
+  const setName = mapping.gameset.name || 'Originalkarte';
+  el.scanStatus.textContent = `Kartenset: ${mapping.gameset.region} – ${setName}${count > 1 ? ` · ${count} Sets passen zur Kartennummer` : ''}. Lied wird geladen …`;
   let result = null;
-  if (known?.year) {
+  if (API_BASE || !STATIC) {
+    try {
+      const sku = state.prefs.deckSku && state.prefs.deckSku !== 'auto' ? `?sku=${encodeURIComponent(state.prefs.deckSku)}` : '';
+      const res = await fetch(API(`/api/hitster/${parsed.region}/${parsed.card}${sku}`), { headers: { accept: 'application/json' } });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.track?.year) {
+          result = {
+            ...data.track,
+            spotifyId: data.spotifyId,
+            song: state.songs.find((song) => song.spotifyId === data.spotifyId) || null,
+            source: data.track.songId ? 'catalog' : 'spotify',
+          };
+        }
+      }
+    } catch { /* local database + Spotify fallback below */ }
+  }
+  const known = state.hitsterDb?.tracks?.[mapping[0]];
+  if (!result && known?.year) {
     result = {
       ...known,
       spotifyId: mapping[0],
       song: state.songs.find((song) => song.spotifyId === mapping[0]) || null,
       source: 'catalog',
     };
-  } else {
-    result = await resolveSpotify(mapping[0]);
   }
+  if (!result) result = await resolveSpotify(mapping[0]);
   if (!result?.year) {
     el.scanStatus.textContent = 'Originalkarte erkannt, aber kein Jahr gefunden. Bitte anderes Kartenset wählen oder erneut scannen.';
     return false;
   }
-  return startBlindRound(result, mapping.gameset.name || 'Originalkarte');
+  return startBlindRound(result, setName);
 }
 
 async function handleScan(parsed) {
@@ -1022,30 +1039,65 @@ async function handleScan(parsed) {
   return false;
 }
 
+function scanLabel(parsed, raw = '') {
+  if (parsed?.hitster) return `Hitster-Karte ${parsed.hitster.card}`;
+  if (parsed?.card) return `Karte ${parsed.card}`;
+  if (parsed?.spotifyId) return 'Spotify-Lied';
+  if (parsed?.year) return `Jahr ${parsed.year}`;
+  return 'QR-Code';
+}
+
+function setScanStatus(text, state = 'scanning') {
+  if (el.scanStatus) el.scanStatus.textContent = text;
+  if (el.scanStage) el.scanStage.dataset.state = state;
+}
+
+function finishScan(parsed, raw = '') {
+  if (!parsed || state.scan.detected) return false;
+  state.scan.detected = true;
+  stopScan();
+  const label = scanLabel(parsed, raw);
+  setScanStatus(`${label} erkannt – Lied wird geladen …`, 'detected');
+  if (navigator.vibrate) navigator.vibrate(35);
+  setTimeout(async () => {
+    closeModal(el.scanModal);
+    await handleScan(parsed);
+  }, 420);
+  return true;
+}
+
 async function scanImageFile(file) {
   if (!file || !window.jsQR) return false;
+  state.scan.detected = false;
+  el.scanStage.dataset.camera = 'off';
+  setScanStatus('Bild wird nach dem QR-Code durchsucht …');
   try {
     const bitmap = await createImageBitmap(file);
-    const sizes = [[bitmap.width, bitmap.height], [Math.round(bitmap.width * 0.8), Math.round(bitmap.height * 0.8)]];
-    for (const [w, h] of sizes) {
+    const maxSide = 1800;
+    const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
+    const baseW = Math.max(1, Math.round(bitmap.width * scale));
+    const baseH = Math.max(1, Math.round(bitmap.height * scale));
+    const variants = [
+      [baseW, baseH],
+      [Math.round(baseW * 0.8), Math.round(baseH * 0.8)],
+      [Math.round(baseW * 1.25), Math.round(baseH * 1.25)],
+    ];
+    for (const [w, h] of variants) {
       const canvas = document.createElement('canvas');
-      canvas.width = w * 2;
-      canvas.height = h * 2;
+      canvas.width = Math.min(2200, w);
+      canvas.height = Math.min(2200, h);
       const ctx = canvas.getContext('2d', { willReadFrequently: true });
-      ctx.drawImage(bitmap, (bitmap.width - w) / 2, (bitmap.height - h) / 2, w, h, 0, 0, canvas.width, canvas.height);
+      ctx.drawImage(bitmap, 0, 0, bitmap.width, bitmap.height, 0, 0, canvas.width, canvas.height);
       const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const code = window.jsQR(img.data, canvas.width, canvas.height, { inversionAttempts: 'attemptBoth' });
       if (code?.data) {
         const parsed = parseScan(code.data);
-        if (parsed) {
-          closeModal(el.scanModal);
-          return handleScan(parsed);
-        }
+        if (parsed) return finishScan(parsed, code.data);
       }
     }
-    el.scanStatus.textContent = 'Kein lesbarer QR-Code im Bild gefunden.';
+    setScanStatus('Kein lesbarer QR-Code im Bild gefunden. Bitte schärfer fotografieren.', 'error');
   } catch {
-    el.scanStatus.textContent = 'Bild konnte nicht gelesen werden.';
+    setScanStatus('Bild konnte nicht gelesen werden. Bitte erneut versuchen.', 'error');
   }
   return false;
 }
@@ -1058,33 +1110,77 @@ function stopScan() {
     for (const track of state.scan.stream.getTracks()) track.stop();
     state.scan.stream = null;
   }
-  el.scanVideo.srcObject = null;
+  if (el.scanVideo) el.scanVideo.srcObject = null;
+  if (el.scanStage) el.scanStage.dataset.camera = 'off';
+  if (el.scanCameraState) el.scanCameraState.textContent = 'Kamera';
 }
 
-function scanFrame() {
+function scanFrame(now = 0) {
   if (!state.scan.active) return;
   const video = el.scanVideo;
-  if (video.readyState >= 2 && video.videoWidth) {
+  if (video.readyState >= 2 && video.videoWidth && now - state.scan.last >= 90) {
+    state.scan.last = now;
     const w = video.videoWidth;
     const h = video.videoHeight;
-    el.scanCanvas.width = w;
-    el.scanCanvas.height = h;
+    const size = Math.min(w, h, 760);
+    const sx = (w - size) / 2;
+    const sy = (h - size) / 2;
+    el.scanCanvas.width = size;
+    el.scanCanvas.height = size;
     const ctx = el.scanCanvas.getContext('2d', { willReadFrequently: true });
-    ctx.drawImage(video, 0, 0, w, h);
-    const img = ctx.getImageData(0, 0, w, h);
-    const code = window.jsQR ? window.jsQR(img.data, w, h, { inversionAttempts: 'attemptBoth' }) : null;
+    ctx.drawImage(video, sx, sy, size, size, 0, 0, size, size);
+    const img = ctx.getImageData(0, 0, size, size);
+    const code = window.jsQR ? window.jsQR(img.data, size, size, { inversionAttempts: 'attemptBoth' }) : null;
     if (code?.data) {
       const parsed = parseScan(code.data);
       if (parsed) {
-        stopScan();
-        closeModal(el.scanModal);
-        handleScan(parsed);
+        finishScan(parsed, code.data);
         return;
       }
-      el.scanStatus.textContent = 'QR-Code erkannt, aber kein Spotify-Link/Jahr. Bitte erneut scannen.';
+      setScanStatus('QR-Code erkannt, aber keine gültige Hitster-Karte. Bitte erneut scannen.', 'error');
     }
   }
   state.scan.raf = requestAnimationFrame(scanFrame);
+}
+
+async function startScanCamera() {
+  if (!window.jsQR) {
+    showToast('QR-Scanner konnte nicht geladen werden. Bitte Seite neu laden.');
+    return;
+  }
+  stopScan();
+  state.scan.detected = false;
+  el.scanStage.dataset.state = 'scanning';
+  setScanStatus('Kamera wird gestartet …');
+  if (!navigator.mediaDevices?.getUserMedia) {
+    setScanStatus('Kamera nicht verfügbar – nutze „Bild scannen“.', 'error');
+    return;
+  }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 1280 } },
+      audio: false,
+    });
+    if (state.scan.detected) {
+      for (const track of stream.getTracks()) track.stop();
+      return;
+    }
+    state.scan.stream = stream;
+    el.scanVideo.srcObject = stream;
+    await el.scanVideo.play();
+    if (state.scan.detected) {
+      stopScan();
+      return;
+    }
+    el.scanStage.dataset.camera = 'on';
+    if (el.scanCameraState) el.scanCameraState.textContent = 'Kamera aktiv';
+    setScanStatus('Richte die Kamera auf den QR-Code deiner Hitster-Karte.');
+    state.scan.active = true;
+    state.scan.last = 0;
+    state.scan.raf = requestAnimationFrame(scanFrame);
+  } catch {
+    if (!state.scan.detected) setScanStatus('Kamera nicht verfügbar oder Zugriff verweigert. Nutze „Bild scannen“.', 'error');
+  }
 }
 
 async function openScan() {
@@ -1092,27 +1188,15 @@ async function openScan() {
     showToast('QR-Scanner konnte nicht geladen werden. Bitte Seite neu laden.');
     return;
   }
+  state.scan.detected = false;
+  el.scanStage.dataset.state = 'idle';
+  el.scanStage.dataset.camera = 'off';
   openModal(el.scanModal);
   loadHitsterDb().then(() => {
     populateDeckSelect();
     if (el.deckSelect) el.deckSelect.value = state.prefs.deckSku || 'auto';
   }).catch(() => {});
-  if (!navigator.mediaDevices?.getUserMedia) {
-    el.scanStatus.textContent = 'Kamera nicht verfügbar – nutze „Bild scannen“.';
-    return;
-  }
-  el.scanStatus.textContent = 'Kamera wird gestartet …';
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
-    state.scan.stream = stream;
-    el.scanVideo.srcObject = stream;
-    await el.scanVideo.play();
-    el.scanStatus.textContent = 'Richte die Kamera auf den QR-Code deiner Hitster-Karte.';
-    state.scan.active = true;
-    scanFrame();
-  } catch {
-    el.scanStatus.textContent = 'Kamera nicht verfügbar oder Zugriff verweigert. Nutze „Bild scannen“.';
-  }
+  await startScanCamera();
 }
 
 function escapeHtml(value) {
@@ -1816,37 +1900,7 @@ function bindEvents() {
   });
   el.scanBtn.addEventListener('click', openScan);
   el.genreReset?.addEventListener('click', clearGenres);
-  el.scanPaste?.addEventListener('click', async () => {
-    try {
-      const text = await navigator.clipboard.readText();
-      if (!text) {
-        el.scanStatus.textContent = 'Die Zwischenablage ist leer.';
-        return;
-      }
-      const parsed = parseScan(text);
-      if (!parsed) {
-        el.scanStatus.textContent = 'Kein Kartenlink in der Zwischenablage gefunden.';
-        el.scanLinkInput.value = text;
-        return;
-      }
-      closeModal(el.scanModal);
-      await handleScan(parsed);
-    } catch {
-      el.scanStatus.textContent = 'Zwischenablage nicht erlaubt. Bitte Link einfügen.';
-      el.scanLinkInput.focus();
-    }
-  });
-  el.scanLinkForm?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const raw = el.scanLinkInput?.value?.trim();
-    const parsed = parseScan(raw);
-    if (!parsed) {
-      el.scanStatus.textContent = 'Bitte einen Hitster-Kartenlink, Spotify-Link oder eine Karten-URL einfügen.';
-      return;
-    }
-    closeModal(el.scanModal);
-    await handleScan(parsed);
-  });
+  el.scanRetry?.addEventListener('click', startScanCamera);
   el.printBtn.addEventListener('click', openPrint);
   el.printGo.addEventListener('click', doPrint);
 
@@ -2089,6 +2143,7 @@ async function init() {
     loadHitsterDb,
     loadPlaylist,
     scanImageFile,
+    scanFrame,
   };
 }
 
