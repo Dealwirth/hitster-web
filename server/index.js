@@ -1,6 +1,7 @@
 import express from 'express';
 import compression from 'compression';
 import QRCode from 'qrcode';
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -354,7 +355,16 @@ async function musicBrainzMeta(title, artist) {
   if (mbCache.has(key)) return mbCache.get(key);
   const query = `recording:"${cleanTitle}"${cleanArtist ? ` AND artist:"${cleanArtist}"` : ''}`;
   try {
-    const data = await mbFetchJson(`https://musicbrainz.org/ws/2/recording/?query=${encodeURIComponent(query)}&fmt=json&limit=25`);
+    let data = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        data = await mbFetchJson(`https://musicbrainz.org/ws/2/recording/?query=${encodeURIComponent(query)}&fmt=json&limit=25`);
+        break;
+      } catch (err) {
+        if (attempt === 2) throw err;
+        await new Promise((resolve) => setTimeout(resolve, 1200 * (attempt + 1)));
+      }
+    }
     let best = null;
     for (const recording of data.recordings || []) {
       const dates = [recording['first-release-date'], ...(recording.releases || []).map((release) => release.date)]
@@ -374,15 +384,36 @@ async function musicBrainzMeta(title, artist) {
     mbCache.set(key, result);
     return result;
   } catch {
-    mbCache.set(key, null);
+    mbCache.delete(key);
     return null;
   }
 }
 
-function pickReleaseYear(mbYear, releaseDate) {
-  const spotifyYear = Number(String(releaseDate || '').slice(0, 4)) || null;
-  if (mbYear && spotifyYear) return Math.min(mbYear, spotifyYear);
-  return mbYear || spotifyYear || null;
+
+const yearCache = new Map();
+async function itunesYear(title, artist) {
+  const key = `${normalizeText(title)}|${normalizeText(artist)}`;
+  if (yearCache.has(key)) return yearCache.get(key);
+  try {
+    const data = await fetchJsonTimed(`https://itunes.apple.com/search?term=${encodeURIComponent(`${title} ${artist}`)}&entity=song&limit=8&country=DE`);
+    const nt = normalizeText(title);
+    const na = normalizeText(artist);
+    let best = null;
+    for (const item of data?.results || []) {
+      const tTitle = normalizeText(item.trackName);
+      const tArtist = normalizeText(item.artistName);
+      if (!(tTitle === nt || tTitle.includes(nt) || nt.includes(tTitle))) continue;
+      if (na && !(tArtist.includes(na) || na.includes(tArtist))) continue;
+      const year = Number(String(item.releaseDate || '').slice(0, 4));
+      if (year >= 1950 && year <= 2030 && (!best || year < best)) best = year;
+    }
+    if (yearCache.size > 1500) yearCache.delete(yearCache.keys().next().value);
+    yearCache.set(key, best);
+    return best;
+  } catch {
+    yearCache.set(key, null);
+    return null;
+  }
 }
 
 async function getSpotifyTrack(id, { mb = true } = {}) {
@@ -390,9 +421,11 @@ async function getSpotifyTrack(id, { mb = true } = {}) {
     const cached = spotifyTrackCache.get(id);
     if (mb && !cached.yearSource) {
       const mbm = await musicBrainzMeta(cached.title, cached.artist);
-      cached.year = pickReleaseYear(mbm?.year, cached.releaseDate) || cached.year;
+      const itYear = mbm?.year ? null : await itunesYear(cached.title, cached.artist);
+      const years = [mbm?.year, itYear, Number(String(cached.releaseDate || '').slice(0, 4))].filter((y) => y >= 1950 && y <= 2030);
+      cached.year = years.length ? Math.min(...years) : cached.year;
       if (mbm?.group != null) cached.group = mbm.group;
-      cached.yearSource = mbm?.year ? 'musicbrainz' : 'spotify';
+      cached.yearSource = mbm?.year ? 'musicbrainz' : (itYear ? 'itunes' : 'spotify');
     }
     return cached;
   }
@@ -402,9 +435,11 @@ async function getSpotifyTrack(id, { mb = true } = {}) {
     if (!track.title) throw new Error('spotify track without title');
     if (mb) {
       const mbm = await musicBrainzMeta(track.title, track.artist);
-      track.year = pickReleaseYear(mbm?.year, track.releaseDate) || track.year;
+      const itYear = mbm?.year ? null : await itunesYear(track.title, track.artist);
+      const years = [mbm?.year, itYear, Number(String(track.releaseDate || '').slice(0, 4))].filter((y) => y >= 1950 && y <= 2030);
+      track.year = years.length ? Math.min(...years) : track.year;
       if (mbm?.group != null) track.group = mbm.group;
-      track.yearSource = mbm?.year ? 'musicbrainz' : 'spotify';
+      track.yearSource = mbm?.year ? 'musicbrainz' : (itYear ? 'itunes' : 'spotify');
     }
     if (spotifyTrackCache.size > 1000) spotifyTrackCache.delete(spotifyTrackCache.keys().next().value);
     spotifyTrackCache.set(id, track);
@@ -447,6 +482,162 @@ function inferGroup(artist) {
   return /(?:\s(?:&|and|x|vs\.?|feat\.?|ft\.?|with)\s|,|\/|\+)/i.test(String(artist || ''));
 }
 
+
+const GENRE_RULES = [
+  [/deutschrap|german rap|rap.*deutsch/i, 'deutschrap'],
+  [/neue deutsche welle|\bndw\b/i, 'ndw'],
+  [/deutschpop|german pop/i, 'deutschpop'],
+  [/schlager|volksmusik/i, 'schlager'],
+  [/metal|hardcore|metalcore/i, 'metal'],
+  [/punk|emo|grunge/i, 'punk'],
+  [/hip.?hop|rap|trap/i, 'hiphop'],
+  [/r&b|rnb|soul/i, 'rnb'],
+  [/funk|disco/i, 'funk'],
+  [/electronic|dance|house|techno|edm|electro/i, 'electronic'],
+  [/indie|alternative/i, 'indie'],
+  [/rock|grunge|britpop/i, 'rock'],
+  [/pop/i, 'pop'],
+  [/country|americana/i, 'country'],
+  [/folk|singer.?songwriter|acoustic/i, 'folk'],
+  [/jazz|blues/i, 'jazz'],
+  [/latin|salsa|bachata|reggaeton|world/i, 'latin'],
+  [/reggae|dancehall/i, 'reggae'],
+  [/ska/i, 'ska'],
+  [/soundtrack|film|musical|score/i, 'film'],
+  [/classical|klassik|opera/i, 'klassik'],
+];
+const genreCache = new Map();
+const artistGenreMap = new Map();
+for (const song of songs) {
+  const key = normalizeText(song.artist);
+  if (!key) continue;
+  const bucket = artistGenreMap.get(key) || new Map();
+  bucket.set(song.genre, (bucket.get(song.genre) || 0) + 1);
+  artistGenreMap.set(key, bucket);
+}
+function artistGenreFor(artist) {
+  const full = normalizeText(artist);
+  const first = normalizeText(String(artist || '').split(/\s*(?:,|&|\bfeat\.?|\bft\.?|\bwith\b|\bx\b|\/)\s*/i)[0]);
+  for (const key of [full, first]) {
+    const bucket = artistGenreMap.get(key);
+    if (!bucket) continue;
+    return [...bucket.entries()].sort((a, b) => b[1] - a[1])[0][0];
+  }
+  return null;
+}
+function inferPlaylistGenre(name) {
+  const text = String(name || '');
+  for (const [re, genre] of GENRE_RULES) if (re.test(text)) return genre;
+  return null;
+}
+
+function mapGenre(raw) {
+  const value = String(raw || '').trim();
+  if (!value) return null;
+  for (const [re, genre] of GENRE_RULES) if (re.test(value)) return genre;
+  return null;
+}
+
+function mapGenres(list) {
+  const out = [];
+  for (const raw of list || []) {
+    const genre = mapGenre(raw);
+    if (genre && !out.includes(genre)) out.push(genre);
+  }
+  return out;
+}
+
+async function fetchJsonTimed(url, timeout = 8000) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeout);
+  try {
+    const res = await fetch(url, {
+      signal: ctrl.signal,
+      headers: { 'user-agent': 'HITSTER-Web/4.2 (https://github.com/Dealwirth/hitster-web)' },
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function deezerGenre(title, artist) {
+  const data = await fetchJsonTimed(`https://api.deezer.com/2.0/search?q=${encodeURIComponent(`${title} ${artist}`)}&limit=8`);
+  const nt = normalizeText(title);
+  const na = normalizeText(artist);
+  const candidates = data?.data || [];
+  const track = candidates.find((t) => {
+    const tTitle = normalizeText(t.title);
+    const tArtist = normalizeText(t.artist?.name);
+    return t.album?.id && (tTitle === nt || tTitle.includes(nt) || nt.includes(tTitle))
+      && (!na || tArtist.includes(na) || na.includes(tArtist));
+  }) || candidates.find((t) => t.album?.id);
+  if (!track?.album?.id) return null;
+  const album = await fetchJsonTimed(`https://api.deezer.com/2.0/album/${track.album.id}`);
+  const genres = mapGenres((album.genres?.data || []).map((g) => g.name));
+  return genres.length ? { genre: genres[0], genres } : null;
+}
+
+async function itunesGenre(title, artist) {
+  const data = await fetchJsonTimed(`https://itunes.apple.com/search?term=${encodeURIComponent(`${title} ${artist}`)}&entity=song&limit=8&country=DE`);
+  const nt = normalizeText(title);
+  const na = normalizeText(artist);
+  const track = (data?.results || []).find((t) => {
+    const tTitle = normalizeText(t.trackName);
+    const tArtist = normalizeText(t.artistName);
+    return (tTitle === nt || tTitle.includes(nt) || nt.includes(tTitle))
+      && (!na || tArtist.includes(na) || na.includes(tArtist));
+  });
+  const genre = mapGenre(track?.primaryGenreName);
+  return genre ? { genre, genres: [genre] } : null;
+}
+
+async function trackGenre(title, artist) {
+  const key = `${normalizeText(title)}|${normalizeText(artist)}`;
+  if (genreCache.has(key)) return genreCache.get(key);
+  let result = null;
+  try { result = await deezerGenre(title, artist); } catch { /* try iTunes */ }
+  if (!result) {
+    try { result = await itunesGenre(title, artist); } catch { /* unknown */ }
+  }
+  if (!result) result = { genre: 'unbekannt', genres: [] };
+  if (genreCache.size > 3000) genreCache.delete(genreCache.keys().next().value);
+  genreCache.set(key, result);
+  return result;
+}
+
+
+const REGION_LANG = {
+  de: 'Germany', at: 'Germany', ch: 'Switzerland', nl: 'Netherlands', be: 'Belgium',
+  fr: 'France', es: 'Spain', it: 'Italy', uk: 'United Kingdom', gb: 'United Kingdom',
+  us: 'United States of America', ca: 'Canada', au: 'Australia', nz: 'New Zealand',
+  se: 'Sweden', no: 'Nordics', dk: 'Nordics', fi: 'Nordics', is: 'Iceland',
+  pl: 'Poland', pt: 'Portugal', br: 'Brazil', mx: 'Mexico', ar: 'Argentina',
+  cl: 'Chile', pe: 'Peru', il: 'Israel', jp: 'Japan', kr: 'Korea', tw: 'Taiwan',
+  hk: 'Hong Kong', hu: 'Hungary', cz: 'Czechia/Slovakia', sk: 'Czechia/Slovakia',
+  ro: 'Romania', hr: 'Croatia', gr: 'Greece', lt: 'Baltics', lv: 'Baltics', ee: 'Baltics',
+};
+let hitsterDb = null;
+function loadHitsterDb() {
+  if (hitsterDb) return hitsterDb;
+  hitsterDb = JSON.parse(fs.readFileSync(path.join(PUBLIC_DIR, 'hitster-db.json'), 'utf8'));
+  return hitsterDb;
+}
+function pickHitsterSet(candidates, region, sku) {
+  if (sku && sku !== 'auto') {
+    const selected = candidates.find((set) => set.sku === sku);
+    if (selected) return selected;
+  }
+  const lang = REGION_LANG[region] || '';
+  const regional = candidates.filter((set) => set.region === lang);
+  const pool = regional.length ? regional : candidates;
+  return pool.find((set) => /^Hitster Original$/i.test(set.name))
+    || pool.find((set) => /Original/i.test(set.name))
+    || pool.find((set) => /Bingo/i.test(set.name))
+    || pool[0];
+}
+
 async function buildPlaylist(id) {
   if (playlistCache.has(id)) return playlistCache.get(id);
   let entity = null;
@@ -478,6 +669,7 @@ async function buildPlaylist(id) {
 
   const playlistSongs = [];
   const unmatched = [];
+  const skippedTracks = [];
   let matched = 0;
   rawItems.forEach((item, index) => {
     const track = spotifyItemTrack(item);
@@ -491,6 +683,7 @@ async function buildPlaylist(id) {
         spotifyId: track.spotifyId,
         previewUrl: item._previewUrl || null,
         artUrl: match.art || track.artUrl || cover,
+        genres: [match.genre],
         source: 'catalog',
       });
     } else {
@@ -503,23 +696,33 @@ async function buildPlaylist(id) {
     const chunk = unmatched.slice(i, i + 8);
     const results = await Promise.all(chunk.map(async (item) => {
       try {
-        const track = await getSpotifyTrack(item.spotifyId, { mb: false });
-        return { ...item, track };
+        let track = await getSpotifyTrack(item.spotifyId, { mb: false });
+        if (!track?.year) track = await getSpotifyTrack(item.spotifyId, { mb: true });
+        const artistGenre = artistGenreFor(item.artist);
+        const genre = artistGenre
+          ? { genre: artistGenre, genres: [artistGenre] }
+          : await trackGenre(item.title, item.artist);
+        return { ...item, track, genre };
       } catch {
-        return { ...item, track: null };
+        return { ...item, track: null, genre: null };
       }
     }));
     enriched.push(...results);
   }
+  const playlistGenre = inferPlaylistGenre(entity?.name || entity?.title || '');
   for (const item of enriched) {
     const track = item.track;
-    if (!track || !track.year) continue;
+    if (!track || !track.year) {
+      skippedTracks.push({ title: item.title, artist: item.artist, reason: 'kein Jahr' });
+      continue;
+    }
     playlistSongs.push({
       id: `p${item.index + 1}`,
       title: track.title || item.title,
       artist: track.artist || item.artist,
       year: track.year,
-      genre: 'unbekannt',
+      genre: (item.genre?.genre && item.genre.genre !== 'unbekannt') ? item.genre.genre : (playlistGenre || 'unbekannt'),
+      genres: (item.genre?.genres?.length ? item.genre.genres : (playlistGenre ? [playlistGenre] : [])),
       group: track.group ?? inferGroup(track.artist || item.artist),
       tags: [],
       spotifyId: item.spotifyId,
@@ -537,6 +740,7 @@ async function buildPlaylist(id) {
     count: total,
     matched,
     skipped: Math.max(0, total - playlistSongs.length),
+    skippedTracks,
     songs: playlistSongs,
   };
   if (playlistCache.size > 30) playlistCache.delete(playlistCache.keys().next().value);
@@ -667,6 +871,52 @@ api.get('/resolve', async (req, res) => {
     console.warn(`[resolve] ${id}:`, err.message);
     return res.status(502).json({ error: 'Spotify-Lied konnte nicht erkannt werden.' });
   }
+});
+
+
+api.get('/hitster/:region/:card', async (req, res) => {
+  const region = String(req.params.region || '').toLowerCase();
+  const card = String(req.params.card || '').padStart(5, '0');
+  if (!/^[a-z]{2}$/.test(region) || !/^\d{1,5}$/.test(card)) {
+    return res.status(400).json({ error: 'Ungültige Hitster-Karte.' });
+  }
+  const db = loadHitsterDb();
+  const candidates = (db.gamesets || []).filter((set) => set.cards?.[card]);
+  if (!candidates.length) return res.status(404).json({ error: 'Karte nicht gefunden.' });
+  const set = pickHitsterSet(candidates, region, String(req.query.sku || 'auto'));
+  const [spotifyId, artistType] = set.cards[card];
+  const local = db.tracks?.[spotifyId] || null;
+  const direct = songs.find((song) => song.spotifyId === spotifyId) || null;
+  let track = local || (direct ? {
+    title: direct.title, artist: direct.artist, year: direct.year,
+    genre: direct.genre, group: direct.group, art: direct.art, songId: direct.id,
+  } : null);
+  if (!track) {
+    try {
+      const resolved = await getSpotifyTrack(spotifyId);
+      track = {
+        title: resolved.title, artist: resolved.artist, year: resolved.year,
+        genre: resolved.genre || 'unbekannt', group: resolved.group, art: resolved.artUrl,
+      };
+    } catch { /* keep candidates usable even without metadata */ }
+  }
+  res.setHeader('Cache-Control', 'public, max-age=3600');
+  return res.json({
+    region,
+    card,
+    candidateCount: candidates.length,
+    set: { sku: set.sku, region: set.region, name: set.name },
+    spotifyId,
+    artistType,
+    track,
+    candidates: candidates.map((entry) => ({
+      sku: entry.sku,
+      region: entry.region,
+      name: entry.name,
+      spotifyId: entry.cards[card][0],
+      artistType: entry.cards[card][1],
+    })),
+  });
 });
 
 api.get('/qr/:id', async (req, res) => {

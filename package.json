@@ -1,7 +1,7 @@
 {
   "name": "hitster-web",
-  "version": "4.1.0",
-  "description": "Kostenlose Hitster-Karten-Erweiterung mit 4.421 Songs, echten Hitster-QR-Codes, Spotify-Playlist-Modus (alle Tracks), eigenen Kategorien, 30-Sekunden-Clips und Druckbogen. Kein Login, keine Werbung, kein Online-Mehrspieler.",
+  "version": "4.2.0",
+  "description": "Kostenlose Hitster-Karten-Erweiterung mit 4.484 Songs, echten Hitster-QR-Codes, Spotify-Playlist-Modus (alle Tracks), eigenen Kategorien, 30-Sekunden-Clips und Druckbogen. Kein Login, keine Werbung, kein Online-Mehrspieler.",
   "type": "module",
   "main": "server/index.js",
   "scripts": {
@@ -20,7 +20,9 @@
     "build:icons": "node scripts/build-icons.js",
     "enrich:popularity": "node scripts/enrich-popularity-slow.js",
     "test:v4": "node tests/v4.test.js",
-    "test:static": "node tests/static.test.js"
+    "test:static": "node tests/static.test.js",
+    "test:v5": "node tests/v5.test.js",
+    "test:all": "npm test && npm run test:v4 && npm run test:v5 && npm run test:static"
   },
   "keywords": [
     "hitster",

@@ -1,28 +1,36 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="HITSTER Web">
   <defs>
-    <radialGradient id="disc" cx="36%" cy="28%" r="78%">
-      <stop offset="0" stop-color="#2d2d34"/>
-      <stop offset="0.62" stop-color="#101013"/>
-      <stop offset="1" stop-color="#050506"/>
-    </radialGradient>
-    <linearGradient id="shine" x1="0" y1="0" x2="1" y2="1">
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#17171b"/>
+      <stop offset="0.55" stop-color="#0d0d10"/>
+      <stop offset="1" stop-color="#070708"/>
+    </linearGradient>
+    <linearGradient id="ring" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#ff2d95"/>
-      <stop offset="0.48" stop-color="#29e6ff"/>
+      <stop offset="0.48" stop-color="#ff6a4d"/>
       <stop offset="1" stop-color="#ffd23f"/>
     </linearGradient>
+    <linearGradient id="edge" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fffaf0"/>
+      <stop offset="1" stop-color="#d8cfbd"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="42%" r="62%">
+      <stop offset="0" stop-color="#ff2d95" stop-opacity=".22"/>
+      <stop offset="1" stop-color="#ff2d95" stop-opacity="0"/>
+    </radialGradient>
   </defs>
-  <rect width="512" height="512" rx="112" fill="#0b0b0d"/>
-  <circle cx="256" cy="256" r="198" fill="none" stroke="url(#shine)" stroke-width="9" opacity=".92"/>
-  <circle cx="256" cy="256" r="178" fill="url(#disc)" stroke="#f6f0e4" stroke-width="5" opacity=".95"/>
-  <g fill="none" stroke="#f6f0e4" stroke-width="3" opacity=".16">
-    <circle cx="256" cy="256" r="154"/>
-    <circle cx="256" cy="256" r="138"/>
-    <circle cx="256" cy="256" r="122"/>
-    <circle cx="256" cy="256" r="106"/>
+  <rect width="512" height="512" rx="124" fill="url(#bg)"/>
+  <circle cx="256" cy="246" r="214" fill="url(#glow)"/>
+  <circle cx="256" cy="256" r="204" fill="none" stroke="#f6f0e4" stroke-opacity=".13" stroke-width="3"/>
+  <path d="M256 52a204 204 0 0 1 144 60" fill="none" stroke="url(#ring)" stroke-width="9" stroke-linecap="round"/>
+  <path d="M256 460a204 204 0 0 1-144-60" fill="none" stroke="url(#ring)" stroke-width="9" stroke-linecap="round" opacity=".38"/>
+  <g fill="url(#edge)">
+    <rect x="146" y="142" width="58" height="228" rx="29"/>
+    <rect x="308" y="142" width="58" height="228" rx="29"/>
+    <rect x="204" y="229" width="104" height="54" rx="27"/>
   </g>
-  <circle cx="256" cy="256" r="86" fill="#f6f0e4"/>
-  <path d="M190 196h34v54h64v-54h34v120h-34v-40h-64v40h-34z" fill="#0b0b0d"/>
-  <path d="M330 158l70 98-70 98z" fill="#ff2d95"/>
-  <circle cx="256" cy="256" r="8" fill="#0b0b0d"/>
-  <path d="M96 402c48 34 104 50 160 50s112-16 160-50" fill="none" stroke="#f6f0e4" stroke-width="6" stroke-linecap="round" opacity=".42"/>
+  <circle cx="204" cy="256" r="17" fill="#ff2d95"/>
+  <circle cx="308" cy="256" r="17" fill="#29e6ff"/>
+  <path d="M247 237l30 19-30 19z" fill="#0b0b0d"/>
+  <circle cx="371" cy="141" r="9" fill="#ffd23f"/>
 </svg>

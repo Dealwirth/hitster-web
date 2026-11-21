@@ -61,7 +61,8 @@ await step('catalog loads with more than 1000 cards', async () => {
 
 await step('cards are clean: no Bingo scorecard or Anfänger/Experten clutter', async () => {
   assert.equal(await page.locator('#card .mini-chip, #card .bingo-panel, #card .bingo-scorecard').count(), 0);
-  assert.equal(await page.locator('#card .back-bingo').count(), 0);
+  assert.equal(await page.locator('#card .back-bingo').count(), 1);
+  assert.equal(await page.locator('#card .back-bingo .bingo-cell').count(), 10);
   assert.equal(await page.locator('#card').innerText().then((t) => /Anfänger|Experten/i.test(t)), false);
 });
 
@@ -325,7 +326,7 @@ await step('print sheet builds fronts, backs and QR codes', async () => {
   assert.equal(print.fronts, 9);
   assert.equal(print.backs, 9);
   assert.equal(print.qrs, 9);
-  assert.equal(print.bingo, 0);
+  assert.equal(print.bingo, 9);
   await page.emulateMedia({ media: 'print' });
   const dims = await page.locator('#printRoot .print-card').first().evaluate((el) => {
     const r = el.getBoundingClientRect();

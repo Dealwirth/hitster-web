@@ -7,7 +7,7 @@ const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
 const CLIP_SECONDS = 30;
-const VERSION = '4.1.0';
+const VERSION = '4.2.0';
 const STATIC = document.documentElement.dataset.static === 'true' || location.hostname.endsWith('github.io');
 const API_BASE = (document.querySelector('meta[name="hitster-api"]')?.content || '').replace(/\/$/, '');
 const API = (path) => `${API_BASE}${path}`;
@@ -61,6 +61,7 @@ const state = {
   blindYear: false,
   initialCard: null,
   initialPlaylist: null,
+  initialHitster: null,
   playlist: null,
   categories: [],
   hitsterDb: null,
@@ -99,6 +100,16 @@ const el = {
   backDecadeFact: $('#backDecadeFact'),
   backGroupFact: $('#backGroupFact'),
   backGenreFact: $('#backGenreFact'),
+  bingoGroup: $('#bingoGroup'),
+  bingoBefore: $('#bingoBefore'),
+  bingoDecade: $('#bingoDecade'),
+  bingoYear: $('#bingoYear'),
+  bingoPlus2: $('#bingoPlus2'),
+  bingoPlus3: $('#bingoPlus3'),
+  bingoPlus4: $('#bingoPlus4'),
+  bingoTitle: $('#bingoTitle'),
+  bingoArtist: $('#bingoArtist'),
+  bingoDecade2: $('#bingoDecade2'),
   backSource: $('#backSource'),
   modeSwitch: $('#modeSwitch'),
   extensionBar: $('#extensionBar'),
@@ -115,9 +126,14 @@ const el = {
   scanVideo: $('#scanVideo'),
   scanCanvas: $('#scanCanvas'),
   scanStatus: $('#scanStatus'),
+  scanLinkForm: $('#scanLinkForm'),
+  scanLinkInput: $('#scanLinkInput'),
   footerCount: $('#footerCount'),
   decadeChips: $('#decadeChips'),
   decadeCount: $('#decadeCount'),
+  genreChips: $('#genreChips'),
+  genreCount: $('#genreCount'),
+  genreReset: $('#genreReset'),
   playlistBar: $('#playlistBar'),
   playlistUrl: $('#playlistUrl'),
   playlistLoad: $('#playlistLoad'),
@@ -207,9 +223,14 @@ function activeSongs() {
   return state.mode === 'playlist' ? (state.playlist?.songs || []) : state.songs;
 }
 
+function songGenres(song) {
+  const list = Array.isArray(song?.genres) && song.genres.length ? song.genres : [song?.genre];
+  return [...new Set(list.filter(Boolean))];
+}
+
 function matches(song, { ignoreGenres = false, ignoreDecade = false } = {}) {
   const f = state.filters;
-  if (!ignoreGenres && f.genres.length && !f.genres.includes(song.genre)) return false;
+  if (!ignoreGenres && f.genres.length && !songGenres(song).some((g) => f.genres.includes(g))) return false;
   if (!ignoreDecade && f.decade !== 'all' && `${Math.floor(song.year / 10) * 10}s` !== f.decade) return false;
   if (f.oneHit && !song.tags?.includes('onehit')) return false;
   if (f.spotifyOnly && !song.spotifyId) return false;
@@ -284,7 +305,47 @@ function saveRound() {
    -------------------------------------------------------------------------- */
 
 function renderGenreChips() {
-  // Musikrichtungen sind nur noch Karteninfo; gefiltert wird über eigene Kategorien.
+  if (!el.genreChips) return;
+  const base = activeSongs();
+  const counts = new Map();
+  for (const song of base) {
+    if (!matches(song, { ignoreGenres: true })) continue;
+    for (const genre of songGenres(song)) counts.set(genre, (counts.get(genre) || 0) + 1);
+  }
+  const frag = document.createDocumentFragment();
+  const all = document.createElement('button');
+  all.type = 'button';
+  all.className = 'chip' + (state.filters.genres.length ? '' : ' active');
+  all.style.setProperty('--c', '#ff2d95');
+  all.setAttribute('aria-pressed', state.filters.genres.length ? 'false' : 'true');
+  all.textContent = 'Alle';
+  all.addEventListener('click', () => clearGenres());
+  frag.append(all);
+  const order = Object.keys(GENRES).filter((g) => g !== 'all' && counts.get(g));
+  order.sort((a, b) => counts.get(b) - counts.get(a) || genreLabel(a).localeCompare(genreLabel(b), 'de'));
+  for (const genre of order) {
+    const count = counts.get(genre);
+    const active = state.filters.genres.includes(genre);
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'chip' + (active ? ' active' : '');
+    btn.dataset.genre = genre;
+    btn.style.setProperty('--c', genreColor(genre));
+    btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+    btn.title = `${genreLabel(genre)} – ${count} Karten`;
+    const dot = document.createElement('span');
+    dot.className = 'dot';
+    const label = document.createElement('span');
+    label.textContent = genreLabel(genre);
+    const n = document.createElement('span');
+    n.className = 'n';
+    n.textContent = count;
+    btn.append(dot, label, n);
+    btn.addEventListener('click', () => toggleGenre(genre));
+    frag.append(btn);
+  }
+  el.genreChips.replaceChildren(frag);
+  if (el.genreCount) el.genreCount.textContent = state.filters.genres.length ? `${state.filters.genres.length} gewählt` : 'Alle';
 }
 
 function renderDecadeChips() {
@@ -335,7 +396,34 @@ function updateFilterSummary() {
   el.filterSummary.textContent = `${parts.length ? parts.join(' · ') : 'Alle Karten'} · ${count}`;
 }
 
-function toggleGenre() {}
+function toggleGenre(genre) {
+  const before = [...state.filters.genres];
+  const set = new Set(before);
+  if (set.has(genre)) set.delete(genre); else set.add(genre);
+  state.filters.genres = [...set];
+  if (!activeSongs().some((song) => matches(song))) {
+    state.filters.genres = before;
+    renderGenreChips();
+    return showToast('Keine Karten mit dieser Kombination.');
+  }
+  if (state.mode === 'extension') {
+    state.extensionYear = null;
+    state.blindYear = false;
+    setMode('classic', { silent: true, reload: false });
+  }
+  afterFilterChange();
+}
+
+function clearGenres() {
+  if (!state.filters.genres.length) return;
+  state.filters.genres = [];
+  if (state.mode === 'extension') {
+    state.extensionYear = null;
+    state.blindYear = false;
+    setMode('classic', { silent: true, reload: false });
+  }
+  afterFilterChange();
+}
 
 function selectDecade(decade) {
   const before = state.filters.decade;
@@ -371,6 +459,7 @@ function afterFilterChange() {
 
 function syncUrl() {
   const params = new URLSearchParams();
+  if (state.filters.genres.length) params.set('genre', state.filters.genres.join(','));
   if (state.filters.decade !== 'all') params.set('decade', state.filters.decade);
   if (state.filters.oneHit) params.set('onehit', '1');
   if (state.filters.spotifyOnly) params.set('spotify', '1');
@@ -391,6 +480,9 @@ function readUrl() {
   state.blindYear = false;
   state.initialCard = null;
   state.initialPlaylist = null;
+  state.initialHitster = null;
+  const genreParam = p.get('genre') || p.get('genres') || '';
+  state.filters.genres = genreParam.split(',').map((g) => g.trim()).filter((g) => GENRES[g] && g !== 'all');
   const decade = p.get('decade');
   if (decade && /^\d{4}s$/.test(decade)) state.filters.decade = decade;
   state.filters.oneHit = p.get('onehit') === '1';
@@ -405,6 +497,11 @@ function readUrl() {
   }
   const card = p.get('card');
   if (card && /^s\d{4}$/.test(card)) state.initialCard = card;
+  const hitster = p.get('hitster');
+  if (hitster && /^[a-z]{2}\/\d{1,5}$/i.test(hitster)) {
+    const [region, number] = hitster.toLowerCase().split('/');
+    state.initialHitster = { region, card: number.padStart(5, '0') };
+  }
   const playlist = p.get('playlist');
   if (playlist && /^[A-Za-z0-9]{22}$/.test(playlist)) {
     state.initialPlaylist = playlist;
@@ -702,7 +799,7 @@ function parseScan(text) {
   let t = raw;
   try { t = decodeURIComponent(raw); } catch { /* keep raw */ }
 
-  const hit = t.match(/(?:https?:\/\/)?(?:www\.)?hitstergame\.com\/([a-z]{2})\/(\d{3,5})/i);
+  const hit = t.match(/(?:https?:\/\/)?(?:www\.)?hitstergame\.com\/([a-z]{2})(?:-[a-z]{2})?\/(\d{1,5})/i);
   if (hit) return { hitster: { region: hit[1].toLowerCase(), card: hit[2].padStart(5, '0') } };
 
   const uri = t.match(/^spotify:track:([A-Za-z0-9]{22})$/i);
@@ -844,7 +941,7 @@ function resolveHitsterCard(region, card) {
     || pool.find((s) => /Original/i.test(s.name))
     || pool.find((s) => /Bingo/i.test(s.name))
     || pool[0];
-  return { ...set.cards[card], gameset: set };
+  return { ...set.cards[card], gameset: set, candidates: pool.map((entry) => ({ sku: entry.sku, region: entry.region, name: entry.name })) };
 }
 
 async function startBlindRound(result, label = 'Originalkarte') {
@@ -876,13 +973,25 @@ async function handleHitster(parsed) {
     el.scanStatus.textContent = 'Karte nicht im gewählten Set. Bitte anderes Kartenset wählen.';
     return false;
   }
-  el.scanStatus.textContent = `Kartenset: ${mapping.gameset.region} – ${mapping.gameset.name}. Lied wird geladen …`;
-  const result = await resolveSpotify(mapping[0]);
+  const count = mapping.candidates?.length || 1;
+  el.scanStatus.textContent = `Kartenset: ${mapping.gameset.region} – ${mapping.gameset.name}${count > 1 ? ` · ${count} Sets passen zur Kartennummer` : ''}. Lied wird geladen …`;
+  const known = state.hitsterDb?.tracks?.[mapping[0]];
+  let result = null;
+  if (known?.year) {
+    result = {
+      ...known,
+      spotifyId: mapping[0],
+      song: state.songs.find((song) => song.spotifyId === mapping[0]) || null,
+      source: 'catalog',
+    };
+  } else {
+    result = await resolveSpotify(mapping[0]);
+  }
   if (!result?.year) {
     el.scanStatus.textContent = 'Originalkarte erkannt, aber kein Jahr gefunden. Bitte anderes Kartenset wählen oder erneut scannen.';
     return false;
   }
-  return startBlindRound(result, 'Originalkarte');
+  return startBlindRound(result, mapping.gameset.name || 'Originalkarte');
 }
 
 async function handleScan(parsed) {
@@ -1038,6 +1147,18 @@ function printCardHtml(song, side) {
       <div class="pc-title">${escapeHtml(song.title)}</div>
       <div class="pc-artist">${escapeHtml(song.artist)}</div>
       <div class="pc-meta">${song.group ? 'Gruppe' : 'Solo'} · ${escapeHtml(genreLabel(song.genre))}</div>
+      <div class="pc-bingo">
+        <div class="pc-bingo-cell"><small>Solo/Gruppe</small><strong>${song.group ? 'Gruppe' : 'Solo'}</strong></div>
+        <div class="pc-bingo-cell"><small>Vor 2000?</small><strong>${song.year < 2000 ? 'Ja' : 'Nein'}</strong></div>
+        <div class="pc-bingo-cell"><small>±4 Jahre</small><strong>${song.year}</strong></div>
+        <div class="pc-bingo-cell"><small>Dekade</small><strong>${decadeLabel(song.year)}</strong></div>
+        <div class="pc-bingo-cell"><small>±2 Jahre</small><strong>${song.year}</strong></div>
+        <div class="pc-bingo-cell"><small>Titel</small><strong>${escapeHtml(song.title)}</strong></div>
+        <div class="pc-bingo-cell"><small>Exaktes Jahr</small><strong>${song.year}</strong></div>
+        <div class="pc-bingo-cell"><small>Interpret</small><strong>${escapeHtml(song.artist)}</strong></div>
+        <div class="pc-bingo-cell"><small>Dekade</small><strong>${decadeLabel(song.year)}</strong></div>
+        <div class="pc-bingo-cell"><small>±3 Jahre</small><strong>${song.year}</strong></div>
+      </div>
     </div>
     <div class="pc-foot"><span>Karte #${id}</span><span>HITSTER</span></div>
   </div>`;
@@ -1052,7 +1173,7 @@ function printSheets(cards, side) {
 }
 
 function openPrint() {
-  el.printFilter.checked = state.filters.decade !== 'all' || state.filters.oneHit || state.filters.spotifyOnly;
+  el.printFilter.checked = state.filters.decade !== 'all' || state.filters.genres.length || state.filters.oneHit || state.filters.spotifyOnly;
   openModal(el.printModal);
 }
 
@@ -1090,7 +1211,7 @@ function loadCard(song) {
 
   stopAudio();
   if (song.previewUrl) el.audio.src = song.previewUrl;
-  else if (!STATIC && song.streamUrl && /^s\d+$/.test(song.id)) el.audio.src = song.streamUrl;
+  else if (!STATIC && song.streamUrl) el.audio.src = song.streamUrl;
   resetTimer();
 
   setCardAccent(false);
@@ -1106,7 +1227,18 @@ function loadCard(song) {
   el.backArtist.textContent = song.artist;
   el.backGenre.textContent = genreLabel(song.genre);
   el.backGenreFact.textContent = genreLabel(song.genre);
+  el.backGroupFact.textContent = song.group ? 'Gruppe' : 'Solo';
   el.backGenreTag.style.setProperty('--c', genreColor(song.genre));
+  if (el.bingoGroup) el.bingoGroup.textContent = song.group ? 'Gruppe' : 'Solo';
+  if (el.bingoBefore) el.bingoBefore.textContent = song.year < 2000 ? 'Ja' : 'Nein';
+  if (el.bingoDecade) el.bingoDecade.textContent = decadeLabel(song.year);
+  if (el.bingoYear) el.bingoYear.textContent = String(song.year);
+  if (el.bingoPlus2) el.bingoPlus2.textContent = String(song.year);
+  if (el.bingoPlus3) el.bingoPlus3.textContent = String(song.year);
+  if (el.bingoPlus4) el.bingoPlus4.textContent = String(song.year);
+  if (el.bingoTitle) el.bingoTitle.textContent = song.title;
+  if (el.bingoArtist) el.bingoArtist.textContent = song.artist;
+  if (el.bingoDecade2) el.bingoDecade2.textContent = decadeLabel(song.year);
   el.backSource.textContent = song.source === 'spotify' ? 'Spotify' : 'Spotify · HITSTER';
   renderGroupIcon(song);
   updateFlipButton();
@@ -1673,6 +1805,18 @@ function bindEvents() {
     if (btn) setMode(btn.dataset.mode);
   });
   el.scanBtn.addEventListener('click', openScan);
+  el.genreReset?.addEventListener('click', clearGenres);
+  el.scanLinkForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const raw = el.scanLinkInput?.value?.trim();
+    const parsed = parseScan(raw);
+    if (!parsed?.hitster) {
+      el.scanStatus.textContent = 'Bitte einen Hitster-Kartenlink wie hitstergame.com/de/00052 einfügen.';
+      return;
+    }
+    closeModal(el.scanModal);
+    await handleScan(parsed);
+  });
   el.printBtn.addEventListener('click', openPrint);
   el.printGo.addEventListener('click', doPrint);
 
@@ -1876,6 +2020,8 @@ async function init() {
 
   if (state.initialPlaylist) {
     await loadPlaylist(state.initialPlaylist);
+  } else if (state.initialHitster) {
+    await handleScan({ hitster: state.initialHitster });
   } else if (state.initialCard) {
     await loadCardById(state.initialCard);
   } else if (state.mode === 'extension' && state.extensionYear) {

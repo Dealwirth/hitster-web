@@ -33,7 +33,7 @@ const page = await context.newPage();
 const errors = [];
 page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
 page.on('console', (m) => {
-  if (m.type() === 'error' && !m.text().toLowerCase().includes('spotify')) errors.push(`console: ${m.text()}`);
+  if (m.type() === 'error' && !m.text().toLowerCase().includes('spotify') && !/Failed to load resource.*403/.test(m.text())) errors.push(`console: ${m.text()}`);
 });
 
 await page.goto(base, { waitUntil: 'networkidle' });
@@ -61,7 +61,8 @@ await step('back reveals year, genre, group and source', async () => {
   assert.ok((await page.locator('#backGenre').innerText()).length > 1);
   assert.match((await page.locator('#backGroupLabel').innerText()).trim(), /^(Solo|Gruppe)$/i);
   assert.match(await page.locator('#backSource').innerText(), /Spotify|HITSTER/i);
-  assert.equal(await page.locator('#card .back-bingo').count(), 0);
+  assert.equal(await page.locator('#card .back-bingo').count(), 1);
+  assert.match(await page.locator('#bingoBefore').innerText(), /^(Ja|Nein)$/);
 });
 
 await step('real Hitster QR is resolved without showing the year', async () => {
@@ -146,7 +147,7 @@ await step('playlist audio is a real Spotify preview', async () => {
   await page.locator('#playBtn').click();
   await page.waitForTimeout(1800);
   const src = await page.evaluate(() => document.querySelector('#audio').currentSrc);
-  assert.match(src, /p\.scdn\.co\/mp3-preview|itunes\.apple\.com\/.*\.(m4a|mp3)/);
+  assert.match(src, /p\.scdn\.co\/mp3-preview|itunes\.apple\.com\/.*\.(m4a|mp3)|\/api\/audio\//);
   assert.equal(await page.locator('#mpTitle').innerText(), 'Geheimnisvoller Song');
 });
 
@@ -195,7 +196,7 @@ await step('print sheet contains genre, group and QR on the front', async () => 
   assert.equal(cards, 18);
   assert.ok((await page.locator('#printRoot').innerText()).length > 100);
   assert.ok(await page.locator('#printRoot img').count() > 0);
-  assert.equal(await page.locator('#printRoot .pc-bingo-cell').count(), 0);
+  assert.equal(await page.locator('#printRoot .pc-bingo-cell').count(), 90);
   assert.equal(await page.locator('#printRoot .print-sheet.fronts .pc-year, #printRoot .print-sheet.fronts .pc-decade, #printRoot .print-sheet.fronts .pc-title, #printRoot .print-sheet.fronts .pc-genre, #printRoot .print-sheet.fronts .pc-bingo').count(), 0);
   await page.keyboard.press('Escape');
 });

@@ -1,7 +1,7 @@
 # HITSTER Web – Karten-Erweiterung
 
 **Die kostenlose, werbefreie Karten-Erweiterung für Hitster – direkt im Browser.**
-4.421 Songs · 30-Sekunden-Clips · echte Hitster-QR-Codes · Spotify-Playlists · eigene Kategorien · PWA · Karten zum Ausdrucken.
+4.484 Songs · 30-Sekunden-Clips · echte Hitster-QR-Codes · Spotify-Playlists · eigene Kategorien · PWA · Karten zum Ausdrucken.
 Kein Login, kein Tracking, keine Werbung. Open Source (MIT).
 
 ![HITSTER Web – Kartenvorderseite](docs/screenshot-front.png)
@@ -26,16 +26,22 @@ Kein Login, kein Tracking, keine Werbung. Open Source (MIT).
 - **Runde ohne Doppel:** Jede Karte kommt in einer Runde nur einmal. „Neue Runde“
   setzt Karten, Statistik und Fortschritt zurück.
 - **Hitster-Optik:** Vorderseite neutral (kein Jahr, kein Genre, kein Titel), Rückseite
-  mit großem Jahr, Titel, Interpret, Genre, Gruppe/Solo und Quelle – jede Information
-  genau einmal, ohne doppelte Bingo-Tabellen. Dazu ein Vinyl-Player mit Cover,
-  Fortschritt, Pause/Replay und Tonarm.
-- **Bekannte Songs:** 300 zusätzliche Chart-Hits aus iTunes-Charts, gemischt mit dem
-  bestehenden Katalog – dadurch ist etwa die Hälfte der Lieder allgemein bekannt.
+  mit großem Jahr, Titel, Interpret, Genre, Gruppe/Solo, Quelle und **allen zehn
+  Hitster-Bingo-Kategorien** (Solo/Gruppe, Vor 2000?, ±2/±3/±4 Jahre, Dekade,
+  exaktes Jahr, Titel, Interpret). Dazu ein Vinyl-Player mit Cover, Fortschritt,
+  Pause/Replay und Tonarm.
+- **Bekannte Songs:** 300 zusätzliche Chart-Hits aus iTunes-Charts plus 63 kuratierte
+  Rock-/Pop-/Schlager-Klassiker, gemischt mit dem bestehenden Katalog.
 - **Druckbogen:** 9 Karten pro A4-Seite, **59 × 91 mm**, Vorder- und Rückseite,
   duplexfähig (lange Kante spiegeln). Vorderseite mit QR, Rückseite mit Auflösung.
 - **PWA:** Installierbar, offlinefähige Shell, Manifest, Icons, Service Worker.
-- **Filter:** 8 Jahrzehnte, One-Hit-Wonder, nur Karten mit Spotify-Link. Musikrichtungen
-  stehen nur noch als Karteninfo auf der Rückseite, nicht als fehleranfälliger Filter.
+- **Filter:** 8 Jahrzehnte, **21 Musikrichtungen mit Live-Trefferzahlen**, One-Hit-Wonder
+  und „nur mit Spotify-Link“. Die Auswahl steht in der URL (`?genre=rock`) und lässt
+  sich mit einem Klick zurücksetzen.
+- **Karten-Link statt Kamera:** Im Scanner kann jede echte Hitster-Karte auch als
+  Link eingefügt werden, z. B. `hitstergame.com/de/00052`; die App erkennt Region,
+  Kartennummer und Kartenset. Zusätzlich funktionieren Deep-Links wie
+  `?hitster=de/00052`.
 
 ## So spielst du
 
@@ -82,7 +88,7 @@ Kein Login, kein Tracking, keine Werbung. Open Source (MIT).
   - `/api/resolve?spotify=…` – Spotify-Link → Titel/Künstler/Jahr (Katalog + Spotify-Metadaten)
   - `/api/spotify/track/:id` – Spotify-Embed-Metadaten + MusicBrainz-Erstveröffentlichung
 - `/api/playlist?url=…` – Spotify-Playlist → **alle** Karten mit Jahr, Vorschau und Cover
-- **Daten:** `data/songs.source.tsv` (Quelle) → `data/catalog.json` (4.421 Songs, 1950–2026), ergänzt um Chart-Hits über `scripts/add-chart-songs.js`.
+- **Daten:** `data/songs.source.tsv` (Quelle) → `data/catalog.json` (4.484 Songs, 1950–2026), ergänzt um Chart-Hits über `scripts/add-chart-songs.js` und kuratierte Klassiker.
 - **Statische Version:** `docs/` ist ein GitHub-Pages-Build. Sie nutzt `catalog.json`,
   `hitster-db.json`, vorgenerierte QR-Codes und iTunes-Vorschauen direkt im Browser.
   Für Playlist/Spotify-Auflösung wird die Server-API über `PUBLIC_API_BASE` eingebunden
@@ -94,7 +100,7 @@ Kein Login, kein Tracking, keine Werbung. Open Source (MIT).
 - Katalog wird einmal aufbereitet und gzip ausgeliefert: **~708 KB roh / ~144 KB gzip**
   statt ~1,37 MB / ~247 KB.
 - `/api/catalog` ist **1 Tag** cachebar, versionierte CSS/JS-Dateien **1 Jahr**
-  (`immutable`), Asset-Version `4.0.0`.
+  (`immutable`), Asset-Version `4.2.0`.
 - Audio-Quellen werden **parallel** (Deezer/iTunes) aufgelöst, Timeouts 8–15 s.
 - Cache-Hits brauchen keinen Verzeichnis-Scan.
 - `scripts/serve-watchdog.sh` startet den Node-Prozess nach einem Absturz neu.
@@ -120,6 +126,7 @@ npm start              # http://localhost:12000
 npm test               # Unit- und API-Tests
 npm run test:e2e       # Browser-E2E (Chromium, 32 Checks)
 npm run test:v4        # Scan, Kartenset, Playlist, eigene Kategorien, PWA, Druck (Chromium)
+npm run test:v5        # 51.208 Karten, Genre-Filter, Karten-Link, Bingo, 664-Track-Playlist
 npm run test:static    # GitHub-Pages-Build + lokale API (Chromium)
 npm run test:a11y      # Barrierefreiheit
 npm run test:small     # 320-px-Viewport
@@ -147,9 +154,9 @@ Logs: `server.log`. Für Dauerbetrieb eignen sich auch systemd, PM2 oder Docker.
 
 ## Daten & Lizenz
 
-- 4.421 Songs, 1950–2026, 20 Genres, 2.618 Spotify-IDs, 300 Chart-Hits.
+- 4.484 Songs, 1950–2026, 21 Genres, 2.618 Spotify-IDs, 300 Chart-Hits, 63 neue Klassiker.
 - Song-Clips sind offizielle 30-Sekunden-Vorschauen von Deezer, Spotify bzw. iTunes.
-- Jahres-Auflösung: kuratierter Katalog, sonst MusicBrainz-Erstveröffentlichung, sonst Spotify.
+- Jahres-Auflösung: kuratierter Katalog, sonst MusicBrainz-Erstveröffentlichung, sonst iTunes/Spotify.
 - Echte Kartendaten: `public/hitster-db.json` (176 Spieldatenbanken, Karten → Spotify-ID + Gruppe/Solo).
 - Kein Login, keine Werbung, kein Tracking, kein Online-Mehrspieler.
 - Code: **MIT-Lizenz**. HITSTER-Marke und Originalkarten gehören den jeweiligen

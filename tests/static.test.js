@@ -64,7 +64,9 @@ await step('front is spoiler-free and back reveals metadata', async () => {
   await page.waitForTimeout(700);
   assert.match(await page.locator('#backYear').innerText(), /^\d{4}$/);
   assert.ok((await page.locator('#backGenre').innerText()).length > 1);
-  assert.equal(await page.locator('.back-bingo').count(), 0);
+  assert.equal(await page.locator('.back-bingo').count(), 1);
+  assert.match(await page.locator('#bingoBefore').innerText(), /^(Ja|Nein)$/);
+  assert.equal(await page.locator('#bingoYear').innerText(), await page.locator('#backYear').innerText());
 });
 
 await step('real Hitster card resolves against local API without showing year', async () => {

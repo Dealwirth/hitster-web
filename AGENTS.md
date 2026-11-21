@@ -3,13 +3,14 @@
 ## What this is
 Unofficial, ad-free, login-free HITSTER-style music party game and card expansion.
 Node/Express backend + vanilla JS/CSS frontend. No frontend build step.
-4,421 curated songs (1950–2026), 20 genres, 8 decades, 2,618 Spotify IDs + 300 chart hits.
+4,484 curated songs (1950–2026), 21 genres, 8 decades, 2,618 Spotify IDs + 300 chart hits + 63 curated classics.
 Three modes: **Freies Spiel** (classic), **Mit Original** (real Hitster QR scan only,
 blind draw from the same year) and **Playlist** (Spotify playlist, all tracks). The card
 front is deliberately neutral (no year, title, genre, group or QR); the back
-reveals year, title, artist, genre, group/solo and source, each exactly once.
+reveals year, title, artist, genre, group/solo, source and all ten Bingo answers.
 A fixed vinyl player shows cover, progress, pause/replay and hides the title until flip.
-Own playlists can be saved as local categories; no auto genre filter and no
+The back also lists all ten Hitster Bingo answers. Own playlists can be saved as local
+categories. Genre chips filter the catalog and are URL-synced; there is no
 difficulty/Bekanntheit UI.
 
 ## Commands
@@ -19,6 +20,8 @@ difficulty/Bekanntheit UI.
   or `CHROMIUM_PATH`.
 - `npm run test:v4` – blind scan, deck selection, full playlist, own categories,
   PWA and print; needs Chromium and network for Spotify/MusicBrainz.
+- `npm run test:v5` – all 51,208 official cards, 4,484-song catalog, genre chips,
+  card-link/deep-link scan, ten Bingo answers, new audio and the full 664-track playlist.
 - `npm run test:static` – builds and serves `docs/`, checks blind card, real QR,
   PWA and runtime errors against a local API.
 - `npm run test:a11y` – axe-core audit; server on 12000.
@@ -26,7 +29,7 @@ difficulty/Bekanntheit UI.
 - `npm run test:small` – 320 px overflow/card/flip check; server on 12000.
 - `npm run screenshots` – write `docs/screenshot-*.png`.
 - `npm run build:static` – build `docs/` for GitHub Pages (catalog, `hitster-db.json`,
-  4,421 QR SVGs, PWA). Set `PUBLIC_API_BASE` for playlist/Spotify resolution.
+  4,484 QR SVGs, PWA). Set `PUBLIC_API_BASE` for playlist/Spotify resolution.
 - `npm run build:catalog` – `data/songs.source.tsv` → `data/catalog.json`.
 - `npm run build:charts` – add current iTunes chart hits to `data/catalog.json`.
 - `scripts/serve-watchdog.sh` – restart loop for production; logs to `server.log`.
@@ -34,13 +37,14 @@ difficulty/Bekanntheit UI.
 ## Architecture
 - `server/index.js` – Express, CSP/security headers,
   `/api/{health,catalog,random,song,bingo,audio,art,qr,resolve,spotify/track,playlist}`;
-  MusicBrainz year/group cache.
+  MusicBrainz year/group cache with retries, iTunes year fallback.
 - `server/catalog.js` – loads `data/catalog.json`, filters, random pick, Bingo
   answers (API compatibility only); precomputes `publicSongs` for `/api/catalog`.
 - `server/audio.js` – Deezer preview first, iTunes fallback, disk+LRU cache,
   HTTP Range, 800 MB prune. Direct sources and search APIs run in parallel.
-- `public/app.js` – state, audio, 30 s timer, 3D flip, decade/one-hit/Spotify
-  filters, blind extension mode, real Hitster QR scanner with deck selector,
+- `public/app.js` – state, audio, 30 s timer, 3D flip, decade/one-hit/Spotify and
+  genre filters, blind extension mode, real Hitster QR scanner with deck selector and
+  card-link form,
   Spotify playlist mode, fixed media player, PWA install, print builder, URL deep
   links (`?card=`, `?year=`, `?mode=playlist&playlist=`), localStorage
   stats/prefs/round.
@@ -74,8 +78,8 @@ difficulty/Bekanntheit UI.
   `?card=`, `?year=`, bare years, Spotify track/playlist URLs/URIs and bare
   22-char Spotify ids. `/api/resolve` matches the catalog by Spotify id, then
   Spotify embed, then oEmbed. MusicBrainz `first-release-date` corrects
-  compilation reissue years. The app excludes the scanned song and draws a
-  different song from the same year.
+  compilation reissue years; iTunes is a fallback when MusicBrainz is rate-limited.
+  The app excludes the scanned song and draws a different song from the same year.
 - **Blind rule:** the UI must never expose the year/title/genre/group before flip:
   no front badge, no hint, no toast, no URL `year=`, and no year input. Print is
   the exception (backs contain the answer).
@@ -106,6 +110,6 @@ difficulty/Bekanntheit UI.
 
 ## Style
 German UI copy, informal “du”. No ads, no tracking, no login. Keep the card the
-visual center: neutral black front; genre color, year, title/artist, genre and
-group/solo only on the back. No Bingo scorecard or Anfänger/Experten tables.
+visual center: neutral black front; genre color, year, title/artist, genre,
+group/solo and the ten Bingo answers only on the back. No full Bingo scorecard.
 Front must stay spoiler-free.
