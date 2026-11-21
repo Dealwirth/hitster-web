@@ -73,7 +73,8 @@ Kein Login, kein Tracking, keine Werbung. Open Source (MIT).
 - **Daten:** `data/songs.source.tsv` (Quelle) → `data/catalog.json` (4.121 Songs, 1950–2024).
 - **Statische Version:** `docs/` ist ein GitHub-Pages-Build. Sie nutzt `catalog.json`,
   vorgenerierte QR-Codes und iTunes-Vorschauen direkt im Browser. Der Spotify-Scanner
-  matcht dort bekannte Spotify-IDs aus dem Katalog; sonst Jahr manuell eingeben.
+  matcht bekannte Spotify-IDs und nutzt Spotify-oEmbed für unbekannte Titel; sonst
+  Jahr manuell eingeben.
 
 ### Performance
 

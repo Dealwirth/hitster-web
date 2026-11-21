@@ -74,7 +74,8 @@ Bingo cards are used instead).
 - No online multiplayer, accounts, or server-side game state. Stats/round are local.
 - `window.HITSTER` exposes state/actions for tests; keep it harmless (no secrets).
 - The static build has no `/api/*`; it uses `catalog.json`, `qr/`, iTunes previews
-  and local Spotify-id matching. Unknown Spotify ids require manual year entry.
+  and local Spotify-id matching plus a Spotify oEmbed title fallback. Truly unknown
+  titles require manual year entry.
 
 ## Style
 German UI copy, informal “du”. No ads, no tracking, no login. Keep the card the

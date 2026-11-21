@@ -574,10 +574,23 @@ function parseScan(text) {
 
 async function resolveSpotify(id) {
   if (STATIC) {
-    const song = state.songs.find((s) => s.spotifyId === id);
-    return song
-      ? { year: song.year, title: song.title, artist: song.artist, song, source: 'catalog' }
-      : { year: null, title: '', artist: '', song: null, source: 'spotify' };
+    const direct = state.songs.find((s) => s.spotifyId === id);
+    if (direct) return { year: direct.year, title: direct.title, artist: direct.artist, song: direct, source: 'catalog' };
+    try {
+      const target = encodeURIComponent(`https://open.spotify.com/track/${id}`);
+      const res = await fetch(`https://open.spotify.com/oembed?url=${target}`, { headers: { accept: 'application/json' } });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const title = data.title || '';
+      const nt = normText(title);
+      const song = state.songs.find((s) => normText(s.title) === nt)
+        || (nt.length > 4 ? state.songs.find((s) => normText(s.title).includes(nt)) : null);
+      return song
+        ? { year: song.year, title: song.title, artist: song.artist, song, source: 'catalog' }
+        : { year: null, title, artist: '', song: null, source: 'spotify' };
+    } catch {
+      return { year: null, title: '', artist: '', song: null, source: 'spotify' };
+    }
   }
   try {
     const res = await fetch(`/api/resolve?spotify=${encodeURIComponent(id)}`, { headers: { accept: 'application/json' } });
