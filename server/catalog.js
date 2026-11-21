@@ -80,22 +80,3 @@ export function randomSong(filters = {}, exclude = []) {
   return list[Math.floor(Math.random() * list.length)];
 }
 
-export function bingoAnswers(song) {
-  const decade = `${Math.floor(song.year / 10) * 10}er`;
-  return {
-    beginner: [
-      { key: 'group', label: 'Gruppe oder Solo', answer: song.group ? 'Gruppe' : 'Solo' },
-      { key: 'before2000', label: 'Vor 2000?', answer: song.year < 2000 ? 'Ja' : 'Nein' },
-      { key: 'plusminus4', label: '± 4 Jahre', answer: String(song.year) },
-      { key: 'decade', label: 'Dekade', answer: decade },
-      { key: 'plusminus2', label: '± 2 Jahre', answer: String(song.year) },
-    ],
-    expert: [
-      { key: 'title', label: 'Songtitel', answer: song.title },
-      { key: 'exactYear', label: 'Exaktes Jahr', answer: String(song.year) },
-      { key: 'artist', label: 'Interpret', answer: song.artist },
-      { key: 'decadeExpert', label: 'Dekade', answer: decade },
-      { key: 'plusminus3', label: '± 3 Jahre', answer: String(song.year) },
-    ],
-  };
-}

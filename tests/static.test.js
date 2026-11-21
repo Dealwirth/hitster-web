@@ -93,12 +93,33 @@ await step('real Hitster QR resolves against local API without showing year', as
   const result = await page.evaluate(() => ({
     year: window.HITSTER.state.extensionYear,
     currentYear: window.HITSTER.state.current?.year,
+    currentTitle: window.HITSTER.state.current?.title,
     hasYearInput: !!document.querySelector('#yearInput'),
   }));
   assert.equal(result.currentYear, result.year);
+  assert.notEqual(result.currentTitle, 'La Cintura');
   assert.equal(result.hasYearInput, false);
   const visible = await page.locator('#cardFront').innerText() + await page.locator('#yearHint').innerText();
   assert.doesNotMatch(visible, new RegExp(String(result.year)));
+});
+
+await step('static build exposes version presets', async () => {
+  await page.locator('.mode-btn[data-mode="versions"]').click();
+  await page.waitForTimeout(300);
+  assert.equal(await page.locator('#versionPanel').isVisible(), true);
+  assert.equal(await page.locator('#versionChips .version-card').count(), 13);
+  await page.locator('#versionChips [data-version="guilty"]').click();
+  await page.waitForTimeout(350);
+  const result = await page.evaluate(() => ({
+    version: window.HITSTER.state.version,
+    mode: window.HITSTER.state.mode,
+    genre: window.HITSTER.state.current?.genre,
+    analytics: window.HITSTER.state.analytics.versions.guilty || 0,
+  }));
+  assert.equal(result.version, 'guilty');
+  assert.equal(result.mode, 'versions');
+  assert.ok(['pop', 'schlager', 'film', 'rnb', 'latin'].includes(result.genre));
+  assert.ok(result.analytics > 0);
 });
 
 await step('PWA manifest, icons and service worker exist', async () => {

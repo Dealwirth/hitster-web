@@ -25,11 +25,11 @@ await page.waitForTimeout(700);
 await page.screenshot({ path:'docs/screenshot-spotify.png', fullPage:false });
 await page.keyboard.press('Escape');
 
-await page.locator('.mode-btn[data-mode="extension"]').click();
+await page.locator('.mode-btn[data-mode="versions"]').click();
 await page.waitForTimeout(300);
-await page.evaluate(() => window.HITSTER.applyYear(1984));
+await page.locator('#versionChips [data-version="guilty"]').click();
 await page.waitForTimeout(900);
-await page.screenshot({ path:'docs/screenshot-extension.png', fullPage:false });
+await page.screenshot({ path:'docs/screenshot-versions.png', fullPage:false });
 
 await page.evaluate(() => { window.print = () => {}; window.HITSTER.openPrint(); });
 await page.waitForTimeout(300);

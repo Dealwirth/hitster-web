@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { songs, byId, genres, decades, stats, publicSong, bingoAnswers, randomSong, filterSongs } from '../server/catalog.js';
+import { songs, byId, genres, decades, stats, publicSong, randomSong, filterSongs } from '../server/catalog.js';
 
 const ALLOWED_GENRES = new Set([
   'pop', 'rock', 'indie', 'electronic', 'hiphop', 'rnb', 'funk', 'metal',
@@ -54,6 +54,16 @@ test('catalog covers all decades and many genres', () => {
   assert.ok(stats.lastYear >= 2020);
 });
 
+test('every playable year has at least ten songs with an audio source', () => {
+  const counts = new Map();
+  for (const song of songs) {
+    if (song.previewUrl || song.itunesId || song.deezerId) counts.set(song.year, (counts.get(song.year) || 0) + 1);
+  }
+  for (let year = 1950; year <= 2026; year++) {
+    assert.ok((counts.get(year) || 0) >= 10, `${year} has only ${counts.get(year) || 0} playable songs`);
+  }
+});
+
 test('spotify ids are well formed when present', () => {
   for (const s of songs) {
     if (s.spotifyId) assert.match(s.spotifyId, /^[A-Za-z0-9]{22}$/, `bad spotify id ${s.id}`);
@@ -73,20 +83,6 @@ test('publicSong exposes a lean, safe payload', () => {
   assert.ok('source' in s);
   assert.ok(!('album' in s));
   assert.ok(!('duration' in s));
-});
-
-test('bingo answers cover all ten Hitster Bingo categories', () => {
-  const sample = songs.find((s) => s.year === 1976 && s.group);
-  const b = bingoAnswers(sample);
-  assert.equal(b.beginner.length, 5);
-  assert.equal(b.expert.length, 5);
-  assert.deepEqual(b.beginner.map((x) => x.key), ['group', 'before2000', 'plusminus4', 'decade', 'plusminus2']);
-  assert.deepEqual(b.expert.map((x) => x.key), ['title', 'exactYear', 'artist', 'decadeExpert', 'plusminus3']);
-  assert.equal(b.beginner[0].answer, 'Gruppe');
-  assert.equal(b.beginner[1].answer, 'Ja');
-  assert.equal(b.beginner[3].answer, '1970er');
-  assert.equal(b.expert[0].answer, sample.title);
-  assert.equal(b.expert[2].answer, sample.artist);
 });
 
 test('randomSong respects genre, decade, tag and group filters', () => {

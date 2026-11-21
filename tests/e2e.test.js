@@ -224,7 +224,8 @@ await step('keyboard shortcuts control the game', async () => {
   assert.equal(await page.locator('#card').getAttribute('data-flipped'), 'false');
 });
 
-await step('extension mode draws a song from the chosen year', async () => {
+await step('year focus draws a song from the chosen year', async () => {
+  assert.equal(await page.locator('.mode-btn[data-mode="extension"]').count(), 0);
   await page.evaluate(() => window.HITSTER.applyYear(1984));
   await page.waitForTimeout(700);
   assert.equal(await page.locator('#extensionBar').isVisible(), true);
@@ -324,7 +325,7 @@ await step('print sheet builds fronts, backs and QR codes', async () => {
   assert.equal(print.fronts, 9);
   assert.equal(print.backs, 9);
   assert.equal(print.qrs, 9);
-  assert.equal(print.bingo, 9);
+  assert.equal(print.bingo, 0);
   await page.emulateMedia({ media: 'print' });
   const dims = await page.locator('#printRoot .print-card').first().evaluate((el) => {
     const r = el.getBoundingClientRect();
@@ -335,17 +336,21 @@ await step('print sheet builds fronts, backs and QR codes', async () => {
   assert.ok(dims.h >= 335 && dims.h <= 350, JSON.stringify(dims));
 });
 
-await step('mode switch shows and hides the extension bar', async () => {
-  await page.locator('.mode-btn[data-mode="extension"]').click();
+await step('version switch shows presets and hides them in free play', async () => {
+  assert.equal(await page.locator('.mode-btn[data-mode="extension"]').count(), 0);
+  await page.locator('.mode-btn[data-mode="versions"]').click();
   await page.waitForTimeout(300);
-  assert.equal(await page.evaluate(() => window.HITSTER.state.mode), 'extension');
-  assert.equal(await page.locator('#extensionBar').isVisible(), true);
-  assert.equal(await page.locator('#frontYearBadge').count(), 0);
-  assert.equal(await page.locator('#cardFront').innerText().then((t) => /19\d\d|20\d\d/.test(t.replace(/KARTE #[^\n]*/i, ''))), false);
+  assert.equal(await page.evaluate(() => window.HITSTER.state.mode), 'versions');
+  assert.equal(await page.locator('#versionPanel').isVisible(), true);
+  assert.ok(await page.locator('#versionChips .version-card').count() >= 10);
+  await page.locator('#versionChips [data-version="guilty"]').click();
+  await page.waitForTimeout(400);
+  assert.equal(await page.evaluate(() => window.HITSTER.state.version), 'guilty');
+  assert.match(page.url(), /version=guilty/);
   await page.locator('.mode-btn[data-mode="classic"]').click();
   await page.waitForTimeout(300);
   assert.equal(await page.evaluate(() => window.HITSTER.state.mode), 'classic');
-  assert.equal(await page.locator('#extensionBar').isVisible(), false);
+  assert.equal(await page.locator('#versionPanel').isVisible(), false);
 });
 
 await step('no horizontal overflow on desktop', async () => {

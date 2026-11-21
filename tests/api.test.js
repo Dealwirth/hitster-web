@@ -57,12 +57,11 @@ test('GET /api/random honours exclude ids', async () => {
   assert.ok(!pool.slice(0, 19).some((s) => s.id === res.body.song.id));
 });
 
-test('GET /api/song/:id returns song and all Bingo answers', async () => {
+test('GET /api/song/:id returns song metadata', async () => {
   const song = songs[0];
   const res = await request(app).get(`/api/song/${song.id}`).expect(200);
   assert.equal(res.body.song.id, song.id);
-  assert.equal(res.body.bingo.beginner.length, 5);
-  assert.equal(res.body.bingo.expert.length, 5);
+  assert.equal(res.body.bingo, undefined);
   await request(app).get('/api/song/nope').expect(404);
 });
 
@@ -77,12 +76,6 @@ test('GET /api/resolve recognizes a catalog Spotify id', async () => {
 
 test('GET /api/resolve rejects malformed Spotify ids', async () => {
   await request(app).get('/api/resolve?spotify=bad').expect(400);
-});
-
-test('GET /api/bingo/:id returns the ten answers', async () => {
-  const res = await request(app).get(`/api/bingo/${songs[10].id}`).expect(200);
-  assert.equal(res.body.bingo.beginner.length, 5);
-  assert.equal(res.body.bingo.expert.length, 5);
 });
 
 test('GET /api/audio/:id serves a playable 30 second clip with Range support', async () => {

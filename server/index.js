@@ -15,7 +15,6 @@ import {
   publicSongs,
   randomSong,
   filterSongs,
-  bingoAnswers,
 } from './catalog.js';
 import { getAudio, getArt, parseRange } from './audio.js';
 
@@ -1115,7 +1114,7 @@ api.get('/song/:id', (req, res) => {
   const song = byId.get(req.params.id);
   if (!song) return res.status(404).json({ error: 'Karte nicht gefunden.' });
   res.setHeader('Cache-Control', 'public, max-age=86400');
-  res.json({ song: publicSong(song), bingo: bingoAnswers(song) });
+  res.json({ song: publicSong(song) });
 });
 
 api.get('/spotify/track/:id', async (req, res) => {
@@ -1279,13 +1278,6 @@ api.get('/qr/:id', async (req, res) => {
   } catch {
     return res.status(500).json({ error: 'QR-Code konnte nicht erzeugt werden.' });
   }
-});
-
-api.get('/bingo/:id', (req, res) => {
-  const song = byId.get(req.params.id);
-  if (!song) return res.status(404).json({ error: 'Karte nicht gefunden.' });
-  res.setHeader('Cache-Control', 'public, max-age=86400');
-  res.json({ bingo: bingoAnswers(song) });
 });
 
 api.get('/audio/:id', async (req, res) => {

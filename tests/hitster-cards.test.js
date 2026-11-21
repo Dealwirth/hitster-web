@@ -38,7 +38,7 @@ test('Songseeker anchors use the printed card year, not Spotify reissues', () =>
 });
 
 test('catalog has the Songseeker rock/metal expansion and unique ids', () => {
-  assert.equal(catalog.songs.length, 4665);
+  assert.equal(catalog.songs.length, 4701);
   assert.equal(new Set(catalog.songs.map((song) => song.id)).size, catalog.songs.length);
   assert.ok(catalog.songs.filter((song) => song.tags?.includes('songseeker')).length >= 180);
   assert.ok(catalog.songs.some((song) => song.title === 'Master Of Puppets' && song.artist === 'Metallica'));

@@ -7,7 +7,7 @@ const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
 const CLIP_SECONDS = 30;
-const VERSION = '4.5.0';
+const VERSION = '4.6.0';
 const STATIC = document.documentElement.dataset.static === 'true' || location.hostname.endsWith('github.io');
 const API_BASE = (document.querySelector('meta[name="hitster-api"]')?.content || '').replace(/\/$/, '');
 const API = (path) => `${API_BASE}${path}`;
@@ -16,6 +16,23 @@ const STATS_KEY = 'hitster-web-stats-v1';
 const ROUND_KEY = 'hitster-web-round-v1';
 const PREFS_KEY = 'hitster-web-prefs-v1';
 const CATEGORIES_KEY = 'hitster-web-categories-v1';
+const ANALYTICS_KEY = 'hitster-web-analytics-v1';
+
+const VERSIONS = {
+  all: { label: 'Alle Hits', short: 'Alles', desc: 'Der komplette Katalog', color: '#ff2d95', icon: '∞' },
+  guilty: { label: 'Guilty Pleasures', short: 'Guilty', desc: 'Schlager, Pop, Film & Soul', color: '#ff5a3c', icon: '💅', genres: ['pop', 'schlager', 'film', 'rnb', 'latin'] },
+  party: { label: 'Party & Dance', short: 'Party', desc: 'Dance, Hip-Hop, Funk, Latin', color: '#29e6ff', icon: '🪩', genres: ['electronic', 'pop', 'funk', 'hiphop', 'latin'] },
+  rock: { label: 'Rock & Metal', short: 'Rock', desc: 'Gitarren, Punk und Metal', color: '#ff5a3c', icon: '🎸', genres: ['rock', 'metal', 'punk', 'indie'] },
+  deutsch: { label: 'Deutsch', short: 'Deutsch', desc: 'Deutschpop, Rap, Schlager, NDW', color: '#c6ff3d', icon: '🇩🇪', genres: ['deutschpop', 'deutschrap', 'schlager', 'ndw'] },
+  onehit: { label: 'One-Hit-Wonder', short: 'One-Hit', desc: 'Ein Hit, nie vergessen', color: '#ffd23f', icon: '💥', tags: ['onehit'] },
+  oldies: { label: 'Oldies', short: 'Oldies', desc: '50er, 60er und 70er', color: '#e8e2d0', icon: '📻', decades: ['1950s', '1960s', '1970s'] },
+  nineties: { label: '90s Party', short: '90s', desc: 'Der Sound der 1990er', color: '#c084fc', icon: '💿', decades: ['1990s'] },
+  love: { label: 'Love & Heartbreak', short: 'Love', desc: 'Soul, Pop, Folk, Schlager', color: '#ff2d95', icon: '💔', genres: ['rnb', 'pop', 'folk', 'schlager'] },
+  movie: { label: 'Film & Musical', short: 'Film', desc: 'Kino, Musical und Klassik', color: '#ffd23f', icon: '🎬', genres: ['film', 'klassik', 'jazz'] },
+  summer: { label: 'Summer Hits', short: 'Summer', desc: 'Latin, Reggae, Dance, Pop', color: '#ff9f1c', icon: '🌴', genres: ['latin', 'reggae', 'electronic', 'pop'] },
+  charts: { label: 'Charts & Neu', short: 'Charts', desc: '2010er und 2020er', color: '#29e6ff', icon: '📈', decades: ['2010s', '2020s'] },
+  bangers: { label: 'Bangers', short: 'Bangers', desc: 'Laut, schnell, Party', color: '#ff3b5c', icon: '🔥', genres: ['metal', 'rock', 'electronic', 'hiphop'] },
+};
 
 const GENRES = {
   all: { label: 'Alle', color: '#ff2d95', icon: 'grid' },
@@ -46,7 +63,6 @@ const GENRES = {
 
 const state = {
   songs: [],
-  catalog: null,
   filters: { genres: [], decade: 'all', oneHit: false, spotifyOnly: false },
   current: null,
   recent: [],
@@ -57,8 +73,11 @@ const state = {
   roundSeen: new Set(),
   prefs: { soundOn: true, volume: 0.85, deckSku: 'auto' },
   mode: 'classic',
+  version: 'all',
   extensionYear: null,
   blindYear: false,
+  analytics: null,
+  analyticsTimer: null,
   initialCard: null,
   initialPlaylist: null,
   initialHitster: null,
@@ -67,6 +86,7 @@ const state = {
   hitsterDb: null,
   hitsterCards: null,
   playerHidden: false,
+  lastScan: null,
   installPrompt: null,
   scan: { stream: null, raf: null, active: false, detected: false, last: 0, deckSku: 'auto' },
   toastTimer: null,
@@ -95,6 +115,10 @@ const el = {
   backGroupTag: $('#backGroupTag'),
   modeSwitch: $('#modeSwitch'),
   extensionBar: $('#extensionBar'),
+  versionPanel: $('#versionPanel'),
+  versionChips: $('#versionChips'),
+  versionCount: $('#versionCount'),
+  versionHint: $('#versionHint'),
   scanBtn: $('#scanBtn'),
   yearHint: $('#yearHint'),
   printBtn: $('#printBtn'),
@@ -122,6 +146,7 @@ const el = {
   playlistLoad: $('#playlistLoad'),
   playlistClear: $('#playlistClear'),
   playlistStatus: $('#playlistStatus'),
+  categoriesPanel: $('#categoriesPanel'),
   customCategories: $('#customCategories'),
   categoryCount: $('#categoryCount'),
   saveCategory: $('#saveCategory'),
@@ -165,6 +190,9 @@ const el = {
   judgeRight: $('#judgeRight'),
   judgeWrong: $('#judgeWrong'),
   toast: $('#toast'),
+  analyticsSummary: $('#analyticsSummary'),
+  analyticsExport: $('#analyticsExport'),
+  analyticsClear: $('#analyticsClear'),
 };
 
 /* --------------------------------------------------------------------------
@@ -211,13 +239,30 @@ function songGenres(song) {
   return [...new Set(list.filter(Boolean))];
 }
 
-function matches(song, { ignoreGenres = false, ignoreDecade = false } = {}) {
+function decadeKey(year) {
+  return `${Math.floor(year / 10) * 10}s`;
+}
+
+function matchesFilters(song, { ignoreGenres = false, ignoreDecade = false } = {}) {
   const f = state.filters;
   if (!ignoreGenres && f.genres.length && !songGenres(song).some((g) => f.genres.includes(g))) return false;
-  if (!ignoreDecade && f.decade !== 'all' && `${Math.floor(song.year / 10) * 10}s` !== f.decade) return false;
+  if (!ignoreDecade && f.decade !== 'all' && decadeKey(song.year) !== f.decade) return false;
   if (f.oneHit && !song.tags?.includes('onehit')) return false;
   if (f.spotifyOnly && !song.spotifyId) return false;
   return true;
+}
+
+function versionMatches(song, versionId = state.version) {
+  const version = VERSIONS[versionId];
+  if (!version || versionId === 'all') return true;
+  if (version.genres?.length && !songGenres(song).some((genre) => version.genres.includes(genre))) return false;
+  if (version.decades?.length && !version.decades.includes(decadeKey(song.year))) return false;
+  if (version.tags?.length && !version.tags.some((tag) => song.tags?.includes(tag))) return false;
+  return true;
+}
+
+function matches(song, options = {}) {
+  return matchesFilters(song, options) && (state.mode !== 'versions' || versionMatches(song));
 }
 
 function currentPool() {
@@ -225,10 +270,9 @@ function currentPool() {
 }
 
 function pickSong() {
-  let pool = currentPool();
-  if (state.mode === 'extension' && state.extensionYear) {
-    pool = pool.filter((s) => s.year === state.extensionYear);
-  }
+  let pool = state.extensionYear
+    ? activeSongs().filter((s) => s.year === state.extensionYear)
+    : currentPool();
   pool = pool.filter((s) => !state.roundSeen.has(s.id));
   if (!pool.length) return null;
   const fresh = pool.filter((s) => !state.recent.includes(s.id));
@@ -237,6 +281,22 @@ function pickSong() {
   state.recent.push(song.id);
   if (state.recent.length > 80) state.recent.shift();
   return song;
+}
+
+function sameSong(a, b) {
+  if (!a || !b) return false;
+  if (a.spotifyId && b.spotifyId && a.spotifyId === b.spotifyId) return true;
+  return normText(a.title) === normText(b.title) && normText(a.artist) === normText(b.artist);
+}
+
+function pickYearSong(year, { exclude = [] } = {}) {
+  const pool = (state.songs || []).filter((song) => song.year === year && !exclude.some((other) => sameSong(song, other)));
+  if (!pool.length) return null;
+  const unseen = pool.filter((song) => !state.roundSeen.has(song.id));
+  const fresh = unseen.filter((song) => !state.recent.includes(song.id));
+  const playable = (fresh.length ? fresh : unseen.length ? unseen : pool).filter((song) => song.previewUrl || song.itunesId || song.deezerId || song.spotifyId);
+  const list = playable.length ? playable : (fresh.length ? fresh : unseen.length ? unseen : pool);
+  return list[Math.floor(Math.random() * list.length)];
 }
 
 function showToast(message, duration = 2600) {
@@ -283,9 +343,172 @@ function saveRound() {
   try { localStorage.setItem(ROUND_KEY, JSON.stringify([...state.roundSeen])); } catch { /* ignore */ }
 }
 
+function emptyAnalytics() {
+  return {
+    version: 1,
+    since: new Date().toISOString(),
+    updated: null,
+    events: {},
+    versions: {},
+    genres: {},
+    modes: {},
+    decades: {},
+    years: {},
+    scans: { success: 0, fail: 0 },
+    plays: 0,
+    flips: 0,
+    correct: 0,
+    wrong: 0,
+  };
+}
+
+function loadAnalytics() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(ANALYTICS_KEY) || 'null');
+    state.analytics = { ...emptyAnalytics(), ...(raw && typeof raw === 'object' ? raw : {}) };
+    state.analytics.events ||= {};
+    state.analytics.versions ||= {};
+    state.analytics.genres ||= {};
+    state.analytics.modes ||= {};
+    state.analytics.decades ||= {};
+    state.analytics.years ||= {};
+    state.analytics.scans = { success: 0, fail: 0, ...(state.analytics.scans || {}) };
+  } catch {
+    state.analytics = emptyAnalytics();
+  }
+}
+
+function saveAnalytics() {
+  if (!state.analytics) return;
+  try { localStorage.setItem(ANALYTICS_KEY, JSON.stringify(state.analytics)); } catch { /* ignore */ }
+}
+
+function scheduleAnalyticsSave() {
+  clearTimeout(state.analyticsTimer);
+  state.analyticsTimer = setTimeout(saveAnalytics, 400);
+}
+
+function trackEvent(name, data = {}) {
+  if (!state.analytics) return;
+  const a = state.analytics;
+  a.events[name] = (a.events[name] || 0) + 1;
+  if (data.version) a.versions[data.version] = (a.versions[data.version] || 0) + 1;
+  if (data.genre) a.genres[data.genre] = (a.genres[data.genre] || 0) + 1;
+  if (data.mode) a.modes[data.mode] = (a.modes[data.mode] || 0) + 1;
+  if (data.decade) a.decades[data.decade] = (a.decades[data.decade] || 0) + 1;
+  if (data.year) a.years[data.year] = (a.years[data.year] || 0) + 1;
+  if (name === 'scan') a.scans[data.ok ? 'success' : 'fail'] += 1;
+  if (name === 'play') a.plays += 1;
+  if (name === 'flip') a.flips += 1;
+  if (name === 'judge') data.correct ? a.correct += 1 : a.wrong += 1;
+  a.updated = new Date().toISOString();
+  scheduleAnalyticsSave();
+  renderAnalytics();
+}
+
+function topEntries(map, limit = 3) {
+  return Object.entries(map || {}).sort((a, b) => b[1] - a[1]).slice(0, limit);
+}
+
+function renderAnalytics() {
+  if (!el.analyticsSummary) return;
+  const a = state.analytics;
+  if (!a) return;
+  const events = Object.values(a.events).reduce((sum, value) => sum + value, 0);
+  if (!events) {
+    el.analyticsSummary.textContent = 'Noch keine lokalen Daten gesammelt. Spiele ein paar Karten – die Auswertung bleibt in deinem Browser.';
+    return;
+  }
+  const versions = topEntries(a.versions).map(([id, count]) => `${VERSIONS[id]?.label || id} ${count}`).join(' · ') || '–';
+  const genres = topEntries(a.genres).map(([id, count]) => `${genreLabel(id)} ${count}`).join(' · ') || '–';
+  const modes = topEntries(a.modes).map(([id, count]) => `${id === 'classic' ? 'Freies Spiel' : id === 'versions' ? 'Versionen' : id} ${count}`).join(' · ') || '–';
+  const years = topEntries(a.years).map(([id, count]) => `${id} ${count}`).join(' · ') || '–';
+  el.analyticsSummary.replaceChildren();
+  const lines = [
+    `${events} Aktionen · ${a.scans.success} Scans ok · ${a.scans.fail} Fehlversuche`,
+    `Versionen: ${versions}`,
+    `Genres: ${genres}`,
+    `Modi: ${modes}`,
+    `Jahre: ${years}`,
+  ];
+  for (const line of lines) {
+    const p = document.createElement('p');
+    p.textContent = line;
+    el.analyticsSummary.append(p);
+  }
+}
+
+function exportAnalytics() {
+  if (!state.analytics) return;
+  saveAnalytics();
+  const payload = {
+    app: 'HITSTER Web',
+    version: VERSION,
+    exportedAt: new Date().toISOString(),
+    ...state.analytics,
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `hitster-nutzung-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  showToast('Nutzungsdaten exportiert – nur lokal.');
+}
+
+function clearAnalytics() {
+  if (!window.confirm('Lokale Nutzungsdaten wirklich löschen?')) return;
+  state.analytics = emptyAnalytics();
+  saveAnalytics();
+  renderAnalytics();
+  showToast('Lokale Nutzungsdaten gelöscht.');
+}
+
 /* --------------------------------------------------------------------------
    Rendering – chips
    -------------------------------------------------------------------------- */
+
+function renderVersionChips() {
+  if (!el.versionChips) return;
+  const base = activeSongs();
+  const frag = document.createDocumentFragment();
+  for (const [id, version] of Object.entries(VERSIONS)) {
+    const count = base.filter((song) => matchesFilters(song) && versionMatches(song, id)).length;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'version-card' + (state.version === id ? ' active' : '');
+    btn.dataset.version = id;
+    btn.style.setProperty('--v', version.color);
+    btn.setAttribute('aria-pressed', state.version === id ? 'true' : 'false');
+    btn.title = `${version.label} – ${version.desc} (${count} Karten)`;
+    const icon = document.createElement('span');
+    icon.className = 'version-icon';
+    icon.textContent = version.icon;
+    const copy = document.createElement('span');
+    copy.className = 'version-copy';
+    const label = document.createElement('strong');
+    label.textContent = version.label;
+    const desc = document.createElement('small');
+    desc.textContent = version.desc;
+    copy.append(label, desc);
+    const n = document.createElement('span');
+    n.className = 'version-n';
+    n.textContent = count;
+    btn.append(icon, copy, n);
+    btn.addEventListener('click', () => setVersion(id));
+    frag.append(btn);
+  }
+  el.versionChips.replaceChildren(frag);
+  if (el.versionCount) el.versionCount.textContent = String(Object.keys(VERSIONS).length);
+  if (el.versionHint) {
+    const current = VERSIONS[state.version] || VERSIONS.all;
+    const count = currentPool().length;
+    el.versionHint.textContent = `${current.desc} · ${count} Karten in dieser Auswahl.`;
+  }
+}
 
 function renderGenreChips() {
   if (!el.genreChips) return;
@@ -365,14 +588,13 @@ function renderDecadeChips() {
   el.decadeCount.textContent = `${currentPool().length}`;
 }
 
-function renderDifficultyChips() {}
-
 function updateFilterSummary() {
   const parts = [];
   if (state.mode === 'playlist') parts.push(state.playlist?.name ? `Playlist: ${state.playlist.name}` : 'Playlist');
+  if (state.mode === 'versions') parts.push(VERSIONS[state.version]?.label || 'Versionen');
   if (state.filters.genres.length) parts.push(state.filters.genres.map(genreLabel).join(', '));
   if (state.filters.decade !== 'all') parts.push(state.filters.decade);
-  if (state.mode === 'extension') parts.push('Mit Original');
+  if (state.mode === 'extension') parts.push('Karte gescannt');
   if (state.filters.oneHit) parts.push('One-Hit-Wonder');
   if (state.filters.spotifyOnly) parts.push('mit Spotify');
   const count = currentPool().length;
@@ -384,6 +606,7 @@ function toggleGenre(genre) {
   const set = new Set(before);
   if (set.has(genre)) set.delete(genre); else set.add(genre);
   state.filters.genres = [...set];
+  if (!before.includes(genre)) trackEvent('genre', { genre });
   if (!activeSongs().some((song) => matches(song))) {
     state.filters.genres = before;
     renderGenreChips();
@@ -408,9 +631,29 @@ function clearGenres() {
   afterFilterChange();
 }
 
+function setVersion(id) {
+  if (!VERSIONS[id]) return;
+  const previous = state.version;
+  state.version = id;
+  state.mode = 'versions';
+  state.extensionYear = null;
+  state.blindYear = false;
+  if (!activeSongs().some((song) => matchesFilters(song) && versionMatches(song, id))) {
+    state.version = previous;
+    renderVersionChips();
+    showToast('Keine Karten in dieser Version mit den aktuellen Filtern.');
+    return;
+  }
+  setMode('versions', { silent: true, reload: false });
+  afterFilterChange();
+  trackEvent('version', { version: id });
+  showToast(`Version: ${VERSIONS[id].label}`, 2600);
+}
+
 function selectDecade(decade) {
   const before = state.filters.decade;
   state.filters.decade = decade;
+  if (decade !== 'all') trackEvent('decade', { decade });
   if (!activeSongs().some((s) => matches(s))) {
     state.filters.decade = before;
     return showToast('Keine Karten mit dieser Kombination.');
@@ -426,7 +669,7 @@ function selectDecade(decade) {
 function afterFilterChange() {
   renderGenreChips();
   renderDecadeChips();
-  renderDifficultyChips();
+  renderVersionChips();
   updateFilterSummary();
   syncUrl();
   const song = pickSong();
@@ -447,6 +690,7 @@ function syncUrl() {
   if (state.filters.oneHit) params.set('onehit', '1');
   if (state.filters.spotifyOnly) params.set('spotify', '1');
   if (state.mode !== 'classic') params.set('mode', state.mode);
+  if (state.mode === 'versions' && state.version !== 'all') params.set('version', state.version);
   if (state.mode === 'playlist' && state.playlist?.id) params.set('playlist', state.playlist.id);
   const qs = params.toString();
   history.replaceState(null, '', qs ? `?${qs}` : location.pathname);
@@ -459,6 +703,7 @@ function readUrl() {
   state.filters.oneHit = false;
   state.filters.spotifyOnly = false;
   state.mode = 'classic';
+  state.version = 'all';
   state.extensionYear = null;
   state.blindYear = false;
   state.initialCard = null;
@@ -471,7 +716,12 @@ function readUrl() {
   state.filters.oneHit = p.get('onehit') === '1';
   state.filters.spotifyOnly = p.get('spotify') === '1';
   const mode = p.get('mode');
-  if (['classic', 'extension', 'playlist'].includes(mode)) state.mode = mode;
+  if (['classic', 'versions', 'extension', 'playlist'].includes(mode)) state.mode = mode;
+  const version = p.get('version');
+  if (version && VERSIONS[version]) {
+    state.version = version;
+    state.mode = 'versions';
+  }
   const year = Number(p.get('year'));
   if (year >= 1950 && year <= 2030) {
     state.mode = 'extension';
@@ -527,7 +777,7 @@ function renderGroupIcon(song) {
 
 
 function yearPool(year) {
-  return activeSongs().filter((s) => s.year === year && matches(s, { ignoreDecade: true }));
+  return activeSongs().filter((s) => s.year === year && (state.mode === 'extension' || matches(s, { ignoreDecade: true })));
 }
 
 function updateYearHint() {
@@ -572,6 +822,7 @@ function saveCategories() {
 
 function renderCategories() {
   if (!el.customCategories) return;
+  if (el.categoriesPanel) el.categoriesPanel.hidden = !state.categories.length && !state.playlist;
   if (el.categoryCount) el.categoryCount.textContent = String(state.categories.length);
   if (!state.categories.length) {
     const empty = document.createElement('p');
@@ -672,16 +923,18 @@ function removeCategory(id) {
 }
 
 function setMode(mode, { silent = false, reload = true, preserveYear = false } = {}) {
-  if (!['classic', 'extension', 'playlist'].includes(mode)) return;
+  if (!['classic', 'versions', 'extension', 'playlist'].includes(mode)) return;
   state.mode = mode;
-  document.body.classList.remove('mode-classic', 'mode-extension', 'mode-playlist');
+  document.body.classList.remove('mode-classic', 'mode-versions', 'mode-extension', 'mode-playlist');
   document.body.classList.add(`mode-${mode}`);
+  const tabMode = mode === 'extension' ? 'classic' : mode;
   for (const btn of $$('.mode-btn', el.modeSwitch)) {
-    const active = btn.dataset.mode === mode;
+    const active = btn.dataset.mode === tabMode;
     btn.classList.toggle('active', active);
     btn.setAttribute('aria-selected', active ? 'true' : 'false');
   }
   el.extensionBar.hidden = mode !== 'extension';
+  if (el.versionPanel) el.versionPanel.hidden = mode !== 'versions';
   el.playlistBar.hidden = mode !== 'playlist';
   if (mode === 'extension') {
     if (!preserveYear) {
@@ -694,21 +947,31 @@ function setMode(mode, { silent = false, reload = true, preserveYear = false } =
       state.filters.decade = 'all';
       renderDecadeChips();
     }
-    if (!silent) showToast('Mit Original – Karte scannen.');
+    if (!silent) showToast('Karte gescannt – anderes Lied aus demselben Jahr.');
   } else if (mode === 'playlist') {
     state.extensionYear = null;
     state.blindYear = false;
     updatePlaylistStatus();
+    if (!silent) trackEvent('mode', { mode: 'playlist' });
     if (!silent) showToast('Playlist-Modus');
+  } else if (mode === 'versions') {
+    state.extensionYear = null;
+    state.blindYear = false;
+    if (!silent) trackEvent('mode', { mode: 'versions' });
+    if (!silent) showToast('Versionen – wähle eine Auswahl.');
   } else {
     state.extensionYear = null;
     state.blindYear = false;
-    el.yearHint.textContent = 'Scanne eine echte Hitster-Karte – das Jahr bleibt verborgen und wir ziehen ein anderes Lied aus demselben Jahr.';
+    el.yearHint.textContent = 'Scanne eine echte Hitster-Karte – das Jahr bleibt verborgen und wir ziehen ein anderes Lied aus derselben Zeit.';
+    if (!silent) trackEvent('mode', { mode: 'classic' });
     if (!silent) showToast('Freies Spiel');
   }
   if (reload) {
     if (mode === 'playlist' && state.playlist) {
       const song = pickSong();
+      if (song) loadCard(song);
+    } else if (mode === 'versions') {
+      const song = state.current && matches(state.current) ? state.current : pickSong();
       if (song) loadCard(song);
     } else if (state.current) {
       loadCard(state.current);
@@ -716,7 +979,7 @@ function setMode(mode, { silent = false, reload = true, preserveYear = false } =
   }
   renderGenreChips();
   renderDecadeChips();
-  renderDifficultyChips();
+  renderVersionChips();
   updateFilterSummary();
   syncUrl();
 }
@@ -960,33 +1223,27 @@ function resolveHitsterCard(region, card, sku = null) {
 
 function startCardRound(meta, result, label = 'Originalkarte') {
   if (!meta?.year) return false;
-  const song = {
-    id: `h-${meta.sku}-${meta.card}`,
-    title: meta.title,
-    artist: meta.artist,
-    year: meta.year,
-    genre: result?.genre || 'unbekannt',
-    group: meta.group,
-    tags: [],
-    spotifyId: result?.spotifyId || meta.spotifyId || null,
-    art: result?.artUrl || result?.art || null,
-    artUrl: result?.artUrl || result?.art || null,
-    previewUrl: result?.previewUrl || null,
-    source: 'songseeker',
-    cardNumber: meta.card,
-  };
+  const alternative = pickYearSong(meta.year, {
+    exclude: [{ title: meta.title, artist: meta.artist, spotifyId: result?.spotifyId || meta.spotifyId || null }],
+  });
+  if (!alternative) {
+    el.scanStatus.textContent = 'Karte erkannt, aber kein anderes Lied aus diesem Jahr gefunden.';
+    showToast('Kein anderes Lied aus diesem Jahr gefunden.');
+    return false;
+  }
+  state.lastScan = { year: meta.year, card: meta.card, sku: meta.sku, title: meta.title, artist: meta.artist };
   state.extensionYear = meta.year;
   state.blindYear = true;
   setMode('extension', { silent: true, reload: false, preserveYear: true });
-  loadCard(song);
+  loadCard(alternative);
   state.stats.played += 1;
   saveStats();
   renderStats();
   updateYearHint();
   syncUrl();
-  el.scanStatus.textContent = `${label} erkannt – Karte aufgedeckt.`;
-  showToast(`${meta.title} · ${meta.artist}`, 3600);
-  setTimeout(() => { if (!state.playing && song.previewUrl) playClip(); }, 650);
+  el.scanStatus.textContent = `${label} erkannt – anderes Lied aus demselben Jahr.`;
+  showToast('Karte erkannt – anderes Lied aus demselben Jahr.', 3600);
+  setTimeout(() => { if (!state.playing) playClip(); }, 650);
   return true;
 }
 
@@ -1063,6 +1320,12 @@ async function handleHitster(parsed) {
 }
 
 async function handleScan(parsed) {
+  const ok = await handleScanInner(parsed);
+  if (parsed) trackEvent('scan', { ok, year: state.extensionYear });
+  return ok;
+}
+
+async function handleScanInner(parsed) {
   if (!parsed) return false;
   if (parsed.hitster) return handleHitster(parsed.hitster);
   if (parsed.card) {
@@ -1232,6 +1495,7 @@ async function startScanCamera() {
 }
 
 async function openScan() {
+  trackEvent('scan_open');
   if (!window.jsQR) {
     showToast('QR-Scanner konnte nicht geladen werden. Bitte Seite neu laden.');
     return;
@@ -1274,26 +1538,12 @@ function printCardHtml(song, side) {
     </div>`;
   }
   return `<div class="print-card pc-back" style="--c:${color}">
-    <div class="pc-band"><span class="pc-kicker">AUFGELÖST</span><span class="pc-band-right">${printGroupIcon(song)}<span class="pc-genre">${escapeHtml(genreLabel(song.genre))}</span></span></div>
+    <div class="pc-band"><span class="pc-kicker">AUFGELÖST</span><span class="pc-band-right">${printGroupIcon(song)}</span></div>
     <div class="pc-center">
       <div class="pc-year-label">Erschienen</div>
       <div class="pc-year">${song.year}</div>
-      <div class="pc-decade">${decadeLabel(song.year)}</div>
       <div class="pc-title">${escapeHtml(song.title)}</div>
       <div class="pc-artist">${escapeHtml(song.artist)}</div>
-      <div class="pc-meta">${song.group ? 'Gruppe' : 'Solo'} · ${escapeHtml(genreLabel(song.genre))}</div>
-      <div class="pc-bingo">
-        <div class="pc-bingo-cell"><small>Solo/Gruppe</small><strong>${song.group ? 'Gruppe' : 'Solo'}</strong></div>
-        <div class="pc-bingo-cell"><small>Vor 2000?</small><strong>${song.year < 2000 ? 'Ja' : 'Nein'}</strong></div>
-        <div class="pc-bingo-cell"><small>±4 Jahre</small><strong>${song.year}</strong></div>
-        <div class="pc-bingo-cell"><small>Dekade</small><strong>${decadeLabel(song.year)}</strong></div>
-        <div class="pc-bingo-cell"><small>±2 Jahre</small><strong>${song.year}</strong></div>
-        <div class="pc-bingo-cell"><small>Titel</small><strong>${escapeHtml(song.title)}</strong></div>
-        <div class="pc-bingo-cell"><small>Exaktes Jahr</small><strong>${song.year}</strong></div>
-        <div class="pc-bingo-cell"><small>Interpret</small><strong>${escapeHtml(song.artist)}</strong></div>
-        <div class="pc-bingo-cell"><small>Dekade</small><strong>${decadeLabel(song.year)}</strong></div>
-        <div class="pc-bingo-cell"><small>±3 Jahre</small><strong>${song.year}</strong></div>
-      </div>
     </div>
     <div class="pc-foot"><span>Karte #${id}</span><span>HITSTER</span></div>
   </div>`;
@@ -1314,6 +1564,7 @@ function openPrint() {
 
 async function doPrint() {
   const count = Math.max(1, Math.min(27, Number(el.printCount.value) || 9));
+  trackEvent('print');
   const pool = el.printFilter.checked ? currentPool() : activeSongs();
   if (!pool.length) {
     showToast('Keine Karten für diese Filter.');
@@ -1426,7 +1677,7 @@ function updatePlayer() {
   const revealed = state.flipped;
   const song = state.current;
   el.mpKicker.textContent = state.mode === 'playlist' && state.playlist ? state.playlist.name
-    : state.mode === 'extension' ? 'MIT ORIGINAL' : 'HITSTER CLIP';
+    : state.mode === 'extension' ? 'KARTEN-SCAN' : 'HITSTER CLIP';
   el.mpTitle.textContent = revealed ? song.title : 'Geheimnisvoller Song';
   el.mpArtist.textContent = revealed ? song.artist : 'Hör gut zu und rate mit';
   if (revealed && song.artUrl) {
@@ -1517,6 +1768,7 @@ async function playClip({ restart = false } = {}) {
       : 'Tippe auf die Karte, um den Clip zu starten.';
   }
   if (state.timer.remaining <= 0.05) resetTimer();
+  trackEvent('play');
   const promise = el.audio.play();
   if (promise?.catch) {
     promise
@@ -1607,6 +1859,7 @@ function flipCard() {
     state.stats.flipped += 1;
     saveStats();
     renderStats();
+    trackEvent('flip');
   }
   setFaceAccessibility(state.flipped);
   updateFlipButton();
@@ -1637,6 +1890,7 @@ function nextCard() {
 
 function judge(correct) {
   if (!state.current) return;
+  trackEvent('judge', { correct });
   if (correct) {
     state.stats.correct += 1;
     state.stats.streak += 1;
@@ -1721,7 +1975,6 @@ async function loadPlaylist(input) {
     setMode('playlist', { silent: true, reload: false });
     renderGenreChips();
     renderDecadeChips();
-    renderDifficultyChips();
     updateFilterSummary();
     updatePlaylistStatus();
     renderCategories();
@@ -1735,6 +1988,7 @@ async function loadPlaylist(input) {
     }
     syncUrl();
     saveCurrentCategory({ silent: true });
+    trackEvent('playlist');
     showToast(`Playlist geladen und gespeichert: ${data.name}`, 3600);
     return true;
   } catch (err) {
@@ -1753,7 +2007,6 @@ function clearPlaylist() {
   renderCategories();
   renderGenreChips();
   renderDecadeChips();
-  renderDifficultyChips();
   updateFilterSummary();
   const song = pickSong();
   if (song) loadCard(song);
@@ -1808,6 +2061,7 @@ function spotifyUrl(song) {
 function openSpotify() {
   const song = state.current;
   if (!song) return;
+  trackEvent('spotify');
   el.spotifySong.textContent = `${song.title} – ${song.artist} (${song.year})`;
   el.spotifyOpen.href = spotifyUrl(song);
   el.spotifyFrame.replaceChildren();
@@ -1908,6 +2162,12 @@ function toggleSound() {
    Events
    -------------------------------------------------------------------------- */
 
+function openHelp() {
+  renderAnalytics();
+  openModal(el.helpModal);
+  trackEvent('help');
+}
+
 function bindEvents() {
   el.cardPlay.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -1927,7 +2187,7 @@ function bindEvents() {
   el.spotifyBtn.addEventListener('click', openSpotify);
   el.judgeRight.addEventListener('click', () => judge(true));
   el.judgeWrong.addEventListener('click', () => judge(false));
-  el.helpBtn.addEventListener('click', () => openModal(el.helpModal));
+  el.helpBtn.addEventListener('click', openHelp);
   el.soundToggle.addEventListener('click', toggleSound);
 
   el.modeSwitch.addEventListener('click', (e) => {
@@ -1944,8 +2204,7 @@ function bindEvents() {
     state.filters = { genres: [], decade: 'all', oneHit: false, spotifyOnly: false };
     el.oneHitToggle.checked = false;
     el.spotifyToggle.checked = false;
-    renderDifficultyChips();
-    afterFilterChange();
+      afterFilterChange();
     showToast('Filter zurückgesetzt.');
   });
 
@@ -2004,6 +2263,8 @@ function bindEvents() {
     afterFilterChange();
   });
 
+  el.analyticsExport?.addEventListener('click', exportAnalytics);
+  el.analyticsClear?.addEventListener('click', clearAnalytics);
   el.resetStats.addEventListener('click', resetRound);
   el.roundNew.addEventListener('click', resetRound);
 
@@ -2077,11 +2338,11 @@ function bindEvents() {
     }
   });
 
+  window.addEventListener('pagehide', saveAnalytics);
   window.addEventListener('popstate', () => {
     readUrl();
     renderGenreChips();
     renderDecadeChips();
-    renderDifficultyChips();
     updateFilterSummary();
     setMode(state.mode, { silent: true, reload: false, preserveYear: state.mode === 'extension' && !!state.extensionYear });
     if (state.initialPlaylist) {
@@ -2107,6 +2368,9 @@ async function init() {
   applyPrefs();
   loadRound();
   loadCategories();
+  loadAnalytics();
+  renderAnalytics();
+  trackEvent('app_open');
   readUrl();
   renderStats();
 
@@ -2114,7 +2378,6 @@ async function init() {
     const res = await fetch(STATIC ? 'catalog.json' : '/api/catalog?v=3.0.0', { headers: { accept: 'application/json' } });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
-    state.catalog = data;
     state.songs = data.songs || [];
     el.catalogPill.textContent = `${data.count} Karten`;
     if (el.footerCount) el.footerCount.textContent = data.count.toLocaleString('de-DE');
@@ -2131,7 +2394,7 @@ async function init() {
   el.spotifyToggle.checked = state.filters.spotifyOnly;
   renderGenreChips();
   renderDecadeChips();
-  renderDifficultyChips();
+  renderVersionChips();
   updateFilterSummary();
   bindEvents();
   bindInstall();
@@ -2163,7 +2426,7 @@ async function init() {
     flipCard,
     playClip,
     openSpotify,
-    openHelp: () => openModal(el.helpModal),
+    openHelp,
     loadCard,
     setMode,
     applyYear,
@@ -2180,6 +2443,10 @@ async function init() {
     loadPlaylist,
     scanImageFile,
     scanFrame,
+    trackEvent,
+    exportAnalytics,
+    clearAnalytics,
+    setVersion,
   };
 }
 

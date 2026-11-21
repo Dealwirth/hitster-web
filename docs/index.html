@@ -4,9 +4,9 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#0b0b0d" />
-    <meta name="description" content="HITSTER Web – kostenlose Karten-Erweiterung für Hitster. 4.665 Songs, 30-Sekunden-Clips, echte Hitster-QR-Codes, Playlist-Modus, Karten drucken. Kein Login, keine Werbung." />
+    <meta name="description" content="HITSTER Web – kostenlose Karten-Erweiterung für Hitster. 4.701 Songs, 30-Sekunden-Clips, echte Hitster-QR-Codes, Playlist-Modus, Karten drucken. Kein Login, keine Werbung." />
     <meta property="og:title" content="HITSTER Web – Karten-Erweiterung" />
-    <meta property="og:description" content="4.665 Songs, 30-Sekunden-Clips, echte Hitster-QR-Codes, Playlist-Modus, Karten drucken. Kostenlos, ohne Login." />
+    <meta property="og:description" content="4.701 Songs, 30-Sekunden-Clips, echte Hitster-QR-Codes, Playlist-Modus, Karten drucken. Kostenlos, ohne Login." />
     <meta property="og:type" content="website" />
     <meta property="og:image" content="https://dealwirth.github.io/hitster-web/screenshot-front.png" />
     <meta property="og:image:alt" content="HITSTER Web Spielkarte" />
@@ -23,7 +23,7 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" type="image/svg+xml" href="icons/icon.svg" />
     <link rel="apple-touch-icon" href="icons/icon-180.png" />
-    <link rel="stylesheet" href="styles.css?v=4.5.0" />
+    <link rel="stylesheet" href="styles.css?v=4.6.0" />
   </head>
   <body>
     <noscript><div class="noscript">HITSTER Web braucht JavaScript. Bitte aktiviere JavaScript in deinem Browser.</div></noscript>
@@ -80,7 +80,7 @@
 
         <div class="mode-switch" id="modeSwitch" role="tablist" aria-label="Spielmodus">
           <button type="button" class="mode-btn active" data-mode="classic" role="tab" aria-selected="true">Freies Spiel</button>
-          <button type="button" class="mode-btn" data-mode="extension" role="tab" aria-selected="false">Mit Original</button>
+          <button type="button" class="mode-btn" data-mode="versions" role="tab" aria-selected="false">Versionen</button>
           <button type="button" class="mode-btn" data-mode="playlist" role="tab" aria-selected="false">Playlist</button>
         </div>
 
@@ -160,11 +160,16 @@
       </section>
 
       <aside class="panel" aria-label="Einstellungen">
-        <section class="panel-block">
+        <section class="panel-block" id="categoriesPanel" hidden>
           <div class="panel-head"><h2><svg><use href="#i-list"></use></svg> Meine Kategorien</h2><span class="panel-count" id="categoryCount">0</span></div>
           <div class="category-list" id="customCategories"></div>
           <p class="panel-sub panel-hint">Lade eine Spotify-Playlist und speichere sie als eigene Kategorie. Deine Kategorien bleiben lokal im Browser.</p>
           <button class="btn btn-ghost btn-wide btn-small" id="saveCategory" disabled><svg><use href="#i-download"></use></svg> Aktuelle Playlist speichern</button>
+        </section>
+        <section class="panel-block version-panel" id="versionPanel" hidden>
+          <div class="panel-head"><h2><svg><use href="#i-music"></use></svg> Versionen</h2><span class="panel-count" id="versionCount">13</span></div>
+          <div class="version-grid" id="versionChips" role="group" aria-label="Version wählen"></div>
+          <p class="version-hint" id="versionHint">Wähle eine große Auswahl statt nur ein Genre.</p>
         </section>
         <section class="panel-block genre-panel">
           <div class="panel-head"><h2><svg><use href="#i-music"></use></svg> Musikrichtung</h2><span class="panel-count" id="genreCount">Alle</span></div>
@@ -217,8 +222,8 @@
     </div>
 
     <footer class="site-footer">
-      <p><strong>HITSTER Web</strong> ist ein inoffizielles Open-Source-Fanprojekt und eine Karten-Erweiterung für Hitster. Kein Login, keine Werbung, kein Tracking, kein Online-Mehrspieler. Song-Clips sind 30-Sekunden-Vorschauen von Spotify, Deezer bzw. iTunes. Kartendaten: offizielle HITSTER-Spieldatenbank (Jumbo) · Musik/Metadaten: Spotify · Jahre: MusicBrainz.</p>
-      <p class="footer-meta"><span>MIT-Lizenz</span><span>·</span><span><span id="footerCount">4.665</span> Karten</span><span>·</span><span>Made for Hitster</span></p>
+      <p><strong>HITSTER Web</strong> ist ein inoffizielles Open-Source-Fanprojekt und eine Karten-Erweiterung für Hitster. Kein Login, keine Werbung, kein Online-Mehrspieler. Nutzungsdaten bleiben lokal in deinem Browser. Song-Clips sind 30-Sekunden-Vorschauen von Spotify, Deezer bzw. iTunes. Kartendaten: offizielle HITSTER-Spieldatenbank (Jumbo) · Musik/Metadaten: Spotify · Jahre: MusicBrainz.</p>
+      <p class="footer-meta"><span>MIT-Lizenz</span><span>·</span><span><span id="footerCount">4.701</span> Karten</span><span>·</span><span>Made for Hitster</span></p>
     </footer>
 
     <div class="modal" id="helpModal" hidden>
@@ -228,7 +233,9 @@
         <div class="modal-body">
           <h3>Freies Spiel</h3>
           <p class="panel-sub">Zufällige Karte, Clip hören, Jahr raten, umdrehen. Fertig.</p>
-          <h3>Mit Original</h3>
+          <h3>Versionen</h3>
+          <p class="panel-sub">Wähle eine große Auswahl statt nur ein Genre: <strong>Guilty Pleasures</strong>, <strong>Party &amp; Dance</strong>, <strong>Rock &amp; Metal</strong>, <strong>Deutsch</strong>, <strong>Oldies</strong>, <strong>90s Party</strong>, <strong>Love &amp; Heartbreak</strong>, <strong>Film &amp; Musical</strong>, <strong>Summer Hits</strong>, <strong>Charts &amp; Neu</strong> und <strong>Bangers</strong>. Die Versionen lassen sich mit Musikrichtung und Jahrzehnt weiter eingrenzen.</p>
+          <h3>Karte scannen</h3>
           <ol class="steps">
             <li>Ziehe eine Karte aus deinem Hitster – QR-Code nach oben, ohne sie umzudrehen.</li>
             <li>Drücke <strong>Karte scannen</strong> und halte die Kamera auf den QR-Code. Du kannst auch ein Foto wählen.</li>
@@ -236,8 +243,6 @@
           </ol>
           <h3>Echte Hitster-Karten</h3>
           <p class="panel-sub">Der Scanner liest die Rückseite echter HITSTER-Karten (z. B. <code>hitstergame.com/de/00008</code>) und die offizielle Kartendatenbank. Wähle im Scanner dein Kartenset (Original, Bingo, Rock …), falls du nicht das Standard-Original hast. Das Jahr wird vor dem Umdrehen nirgends angezeigt. Die Jahres-Auflösung nutzt zuerst den eigenen Katalog, sonst MusicBrainz (Erstveröffentlichung), iTunes und Spotify.</p>
-          <h3>Hitster-Bingo-Kategorien</h3>
-          <p class="panel-sub">Auf der Rückseite stehen alle Bingo-Antworten: <strong>Solo/Gruppe</strong>, <strong>Vor 2000?</strong>, <strong>Jahrzehnt</strong>, <strong>exaktes Jahr</strong> sowie <strong>Titel</strong> und <strong>Interpret</strong>. Die Toleranzen ±2, ±3 und ±4 Jahre gelten für die Bingo-Varianten; die Karte zeigt dafür das exakte Jahr.</p>
 
           <h3>Eigene Kategorien &amp; Playlist</h3>
           <p class="panel-sub">Spotify-Playlist-Link einfügen. Wir übernehmen <strong>alle</strong> Lieder der Playlist. Mit <strong>Aktuelle Playlist speichern</strong> wird daraus deine eigene Kategorie – lokal, ohne Login.</p>
@@ -253,6 +258,13 @@
             <li><strong>Kostenlos.</strong> Die Clips sind offizielle 30-Sekunden-Vorschauen. Für volle Songs nutzt du den Spotify-Button.</li>
             <li><strong>Tastatur:</strong> <kbd>Leertaste</kbd> Play/Pause, <kbd>F</kbd> umdrehen, <kbd>N</kbd> nächste Karte, <kbd>R</kbd> wiederholen, <kbd>?</kbd> Hilfe.</li>
           </ul>
+          <h3>Deine Nutzung</h3>
+          <p class="panel-sub">Welche Versionen, Genres und Aktionen genutzt werden, wird ausschließlich lokal in deinem Browser gespeichert – ohne Konto und ohne Übertragung. Damit können wir das Spiel in Zukunft besser machen. Du kannst die Daten jederzeit exportieren oder löschen.</p>
+          <div class="analytics-summary" id="analyticsSummary">Noch keine lokalen Daten gesammelt.</div>
+          <div class="analytics-actions">
+            <button class="btn btn-ghost btn-small" id="analyticsExport" type="button"><svg><use href="#i-download"></use></svg> Exportieren</button>
+            <button class="btn btn-ghost btn-small" id="analyticsClear" type="button"><svg><use href="#i-close"></use></svg> Löschen</button>
+          </div>
           <p class="legal-note">HITSTER ist eine Marke der Jumbo Group bzw. ihrer Rechteinhaber. Dieses Projekt ist nicht mit HITSTER verbunden und dient nur dem privaten Spaß.</p>
         </div>
       </div>
@@ -351,7 +363,7 @@
     <div id="printRoot" aria-hidden="true"></div>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
     <audio id="audio" preload="none"></audio>
-    <script src="vendor/jsqr.js?v=4.5.0"></script>
-    <script src="app.js?v=4.5.0" type="module"></script>
+    <script src="vendor/jsqr.js?v=4.6.0"></script>
+    <script src="app.js?v=4.6.0" type="module"></script>
   </body>
 </html>

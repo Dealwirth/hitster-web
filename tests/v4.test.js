@@ -100,8 +100,7 @@ await step('Bingo deck selection changes the resolved card', async () => {
 });
 
 await step('camera/file QR decoder accepts a real Hitster QR', async () => {
-  await page.locator('.mode-btn[data-mode="extension"]').click();
-  await page.waitForTimeout(250);
+  assert.equal(await page.locator('.mode-btn[data-mode="extension"]').count(), 0);
   const file = '/tmp/hitster-card-00008.png';
   await QRCode.toFile(file, 'https://www.hitstergame.com/de/00008', { width: 420, margin: 2 });
   await page.locator('#scanBtn').click();
@@ -182,7 +181,7 @@ await step('PWA manifest and service worker are installed', async () => {
   assert.ok(keys.some((key) => key.startsWith('hitster-web-')));
 });
 
-await step('print sheet contains genre, group and QR on the front', async () => {
+await step('print sheet has QR fronts and a clean back without Bingo', async () => {
   await page.locator('.mode-btn[data-mode="classic"]').click();
   await page.waitForTimeout(300);
   await page.evaluate(() => { window.print = () => { window.__printed = true; }; window.HITSTER.openPrint(); });
@@ -195,8 +194,9 @@ await step('print sheet contains genre, group and QR on the front', async () => 
   assert.equal(cards, 18);
   assert.ok((await page.locator('#printRoot').innerText()).length > 100);
   assert.ok(await page.locator('#printRoot img').count() > 0);
-  assert.equal(await page.locator('#printRoot .pc-bingo-cell').count(), 90);
+  assert.equal(await page.locator('#printRoot .pc-bingo-cell').count(), 0);
   assert.equal(await page.locator('#printRoot .print-sheet.fronts .pc-year, #printRoot .print-sheet.fronts .pc-decade, #printRoot .print-sheet.fronts .pc-title, #printRoot .print-sheet.fronts .pc-genre, #printRoot .print-sheet.fronts .pc-bingo').count(), 0);
+  assert.equal(await page.locator('#printRoot .print-sheet.backs .pc-bingo').count(), 0);
   await page.keyboard.press('Escape');
 });
 

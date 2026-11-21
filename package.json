@@ -1,7 +1,7 @@
 {
   "name": "hitster-web",
-  "version": "4.5.0",
-  "description": "Kostenlose Hitster-Karten-Erweiterung mit 4.665 Songs, echten Hitster-QR-Codes, Spotify-Playlist-Modus (alle Tracks), eigenen Kategorien, 30-Sekunden-Clips und Druckbogen. Kein Login, keine Werbung, kein Online-Mehrspieler.",
+  "version": "4.6.0",
+  "description": "Kostenlose Hitster-Karten-Erweiterung mit 4.701 Songs, echten Hitster-QR-Codes, Spotify-Playlist-Modus (alle Tracks), eigenen Kategorien, 30-Sekunden-Clips und Druckbogen. Kein Login, keine Werbung, kein Online-Mehrspieler.",
   "type": "module",
   "main": "server/index.js",
   "scripts": {
@@ -19,6 +19,7 @@
     "build:hitster": "node scripts/build-hitster-db.js",
     "import:cards": "node scripts/import-songseeker.js",
     "add:rock": "node scripts/add-songseeker-rock.js",
+    "add:years": "node scripts/add-year-fillers.js",
     "build:icons": "node scripts/build-icons.js",
     "enrich:popularity": "node scripts/enrich-popularity-slow.js",
     "test:v4": "node tests/v4.test.js",
