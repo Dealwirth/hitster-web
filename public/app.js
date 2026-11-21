@@ -7,8 +7,10 @@ const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
 const CLIP_SECONDS = 25;
+const STATIC = document.documentElement.dataset.static === 'true' || location.hostname.endsWith('github.io');
+const itunesCache = new Map();
 const STATS_KEY = 'hitster-web-stats-v1';
-const BINGO_KEY = 'hitster-web-bingo-v1';
+const ROUND_KEY = 'hitster-web-round-v1';
 const PREFS_KEY = 'hitster-web-prefs-v1';
 
 const GENRES = {
@@ -36,27 +38,6 @@ const GENRES = {
   ska: { label: 'Ska', color: '#c6ff3d', icon: 'music' },
 };
 
-const BINGO = [
-  { key: 'group', side: 'A', label: 'Gruppe oder Solo', short: 'Solo/Gruppe', color: '#a78bfa', icon: 'users', answer: (s) => (s.group ? 'Gruppe' : 'Solo') },
-  { key: 'before2000', side: 'A', label: 'Vor 2000?', short: 'Vor 2000', color: '#22d3ee', icon: 'calendar', answer: (s) => (s.year < 2000 ? 'Ja' : 'Nein') },
-  { key: 'pm4', side: 'A', label: '± 4 Jahre', short: '±4 Jahre', color: '#f472b6', icon: 'calendar', answer: (s) => String(s.year) },
-  { key: 'decadeA', side: 'A', label: 'Dekade', short: 'Dekade', color: '#f59e0b', icon: 'calendar', answer: (s) => decadeLabel(s.year) },
-  { key: 'pm2', side: 'A', label: '± 2 Jahre', short: '±2 Jahre', color: '#a3e635', icon: 'calendar', answer: (s) => String(s.year) },
-  { key: 'title', side: 'B', label: 'Songtitel', short: 'Titel', color: '#60a5fa', icon: 'music', answer: (s) => s.title },
-  { key: 'year', side: 'B', label: 'Exaktes Jahr', short: 'Jahr', color: '#facc15', icon: 'calendar', answer: (s) => String(s.year) },
-  { key: 'artist', side: 'B', label: 'Interpret', color: '#fb7185', short: 'Interpret', icon: 'user', answer: (s) => s.artist },
-  { key: 'decadeB', side: 'B', label: 'Dekade', short: 'Dekade', color: '#f59e0b', icon: 'calendar', answer: (s) => decadeLabel(s.year) },
-  { key: 'pm3', side: 'B', label: '± 3 Jahre', short: '±3 Jahre', color: '#34d399', icon: 'calendar', answer: (s) => String(s.year) },
-];
-
-const BINGO_LINES = (() => {
-  const lines = [];
-  for (let r = 0; r < 5; r++) lines.push([0, 1, 2, 3, 4].map((c) => r * 5 + c));
-  for (let c = 0; c < 5; c++) lines.push([0, 1, 2, 3, 4].map((r) => r * 5 + c));
-  lines.push([0, 6, 12, 18, 24]);
-  lines.push([4, 8, 12, 16, 20]);
-  return lines;
-})();
 
 const state = {
   songs: [],
@@ -68,7 +49,7 @@ const state = {
   playing: false,
   timer: { remaining: CLIP_SECONDS, id: null, last: 0 },
   stats: { played: 0, flipped: 0, correct: 0, wrong: 0, streak: 0, bestStreak: 0 },
-  bingo: { cells: [], marked: new Set(), celebrated: new Set() },
+  roundSeen: new Set(),
   prefs: { soundOn: true, volume: 0.85 },
   mode: 'classic',
   extensionYear: null,
@@ -101,9 +82,10 @@ const el = {
   backDecade: $('#backDecade'),
   backTitle: $('#backTitle'),
   backArtist: $('#backArtist'),
-  backFacts: $('#backFacts'),
   backQrImg: $('#backQrImg'),
   frontYearBadge: $('#frontYearBadge'),
+  frontGroupIcon: $('#frontGroupIcon'),
+  backGroupIcon: $('#backGroupIcon'),
   modeSwitch: $('#modeSwitch'),
   extensionBar: $('#extensionBar'),
   yearInput: $('#yearInput'),
@@ -123,9 +105,6 @@ const el = {
   scanCanvas: $('#scanCanvas'),
   scanStatus: $('#scanStatus'),
   footerCount: $('#footerCount'),
-  answersA: $('#answersA'),
-  answersB: $('#answersB'),
-  frontBingo: $('#frontBingo'),
   genreChips: $('#genreChips'),
   decadeChips: $('#decadeChips'),
   genreCount: $('#genreCount'),
@@ -135,14 +114,12 @@ const el = {
   resetFilters: $('#resetFilters'),
   filterSummary: $('#filterSummary'),
   catalogPill: $('#catalogPill'),
-  bingoBoard: $('#bingoBoard'),
-  bingoLegend: $('#bingoLegend'),
-  resetBingo: $('#resetBingo'),
   statPlayed: $('#statPlayed'),
   statCorrect: $('#statCorrect'),
   statRate: $('#statRate'),
   statStreak: $('#statStreak'),
   resetStats: $('#resetStats'),
+  roundNew: $('#roundNew'),
   volume: $('#volume'),
   volumeValue: $('#volumeValue'),
   soundToggle: $('#soundToggle'),
@@ -174,6 +151,16 @@ function genreColor(genre) {
   return GENRES[genre]?.color || '#ff2d95';
 }
 
+function normText(value = '') {
+  return String(value)
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
 function shuffle(arr) {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
@@ -201,6 +188,7 @@ function pickSong() {
   if (state.mode === 'extension' && state.extensionYear) {
     pool = pool.filter((s) => s.year === state.extensionYear);
   }
+  pool = pool.filter((s) => !state.roundSeen.has(s.id));
   if (!pool.length) return null;
   const fresh = pool.filter((s) => !state.recent.includes(s.id));
   const list = fresh.length ? fresh : pool;
@@ -243,22 +231,15 @@ function savePrefs() {
   try { localStorage.setItem(PREFS_KEY, JSON.stringify(state.prefs)); } catch { /* ignore */ }
 }
 
-function loadBingo() {
+function loadRound() {
   try {
-    const raw = JSON.parse(localStorage.getItem(BINGO_KEY) || 'null');
-    if (raw && Array.isArray(raw.cells) && raw.cells.length === 25 && BINGO.every((b) => raw.cells.includes(b.key))) {
-      state.bingo.cells = raw.cells;
-      state.bingo.marked = new Set(Array.isArray(raw.marked) ? raw.marked : []);
-      return;
-    }
+    const raw = JSON.parse(localStorage.getItem(ROUND_KEY) || 'null');
+    if (Array.isArray(raw)) state.roundSeen = new Set(raw.filter((id) => /^s\d{4}$/.test(id)));
   } catch { /* ignore */ }
-  resetBingo(false);
 }
 
-function saveBingo() {
-  try {
-    localStorage.setItem(BINGO_KEY, JSON.stringify({ cells: state.bingo.cells, marked: [...state.bingo.marked] }));
-  } catch { /* ignore */ }
+function saveRound() {
+  try { localStorage.setItem(ROUND_KEY, JSON.stringify([...state.roundSeen])); } catch { /* ignore */ }
 }
 
 /* --------------------------------------------------------------------------
@@ -281,7 +262,7 @@ function renderGenreChips() {
     const label = document.createElement('span');
     label.textContent = g.label;
     const c = document.createElement('span');
-    c.className = 'count';
+    c.className = 'n';
     c.textContent = count;
     btn.append(label, c);
     btn.addEventListener('click', () => selectGenre(g.key));
@@ -315,7 +296,7 @@ function renderDecadeChips() {
     const label = document.createElement('span');
     label.textContent = d;
     const c = document.createElement('span');
-    c.className = 'count';
+    c.className = 'n';
     c.textContent = count;
     btn.append(label, c);
     btn.addEventListener('click', () => selectDecade(d));
@@ -375,6 +356,7 @@ function afterFilterChange() {
   syncUrl();
   const song = pickSong();
   if (song) loadCard(song);
+  else showToast('Keine neuen Karten – starte eine neue Runde.');
   if (window.matchMedia('(max-width: 1080px)').matches) {
     const rect = el.cardWrap.getBoundingClientRect();
     if (rect.bottom < 0 || rect.top > window.innerHeight) {
@@ -411,7 +393,7 @@ function readUrl() {
   state.filters.oneHit = p.get('onehit') === '1';
   state.filters.spotifyOnly = p.get('spotify') === '1';
   const mode = p.get('mode');
-  if (['classic', 'bingo', 'extension'].includes(mode)) state.mode = mode;
+  if (['classic', 'extension'].includes(mode)) state.mode = mode;
   const year = Number(p.get('year'));
   if (year >= 1950 && year <= 2024) {
     state.mode = 'extension';
@@ -425,45 +407,14 @@ function readUrl() {
    Rendering – card
    -------------------------------------------------------------------------- */
 
-function renderFrontBingo() {
-  const frag = document.createDocumentFragment();
-  for (const b of BINGO) {
-    const chip = document.createElement('div');
-    chip.className = 'mini-chip';
-    chip.style.setProperty('--c', b.color);
-    chip.title = `${b.side === 'A' ? 'Anfänger' : 'Experten'}: ${b.label}`;
-    const dot = document.createElement('span');
-    dot.className = 'dot';
-    const txt = document.createElement('span');
-    txt.className = 'txt';
-    txt.textContent = b.short;
-    chip.append(dot, txt);
-    frag.append(chip);
+function renderGroupIcon(song) {
+  const icon = song.group ? '#i-users' : '#i-user';
+  const label = song.group ? 'Gruppe' : 'Solo';
+  for (const node of [el.frontGroupIcon, el.backGroupIcon]) {
+    node.querySelector('use').setAttribute('href', icon);
+    node.setAttribute('aria-label', label);
+    node.setAttribute('title', label);
   }
-  el.frontBingo.replaceChildren(frag);
-}
-
-function renderAnswers(song) {
-  const build = (side, target) => {
-    const frag = document.createDocumentFragment();
-    for (const b of BINGO.filter((x) => x.side === side)) {
-      const li = document.createElement('li');
-      const label = document.createElement('span');
-      label.textContent = b.label;
-      const answer = document.createElement('strong');
-      answer.textContent = b.answer(song);
-      answer.title = b.answer(song);
-      li.append(label, answer);
-      frag.append(li);
-    }
-    target.replaceChildren(frag);
-  };
-  build('A', el.answersA);
-  build('B', el.answersB);
-}
-
-function renderFacts(song) {
-  el.backFacts.textContent = song.group ? 'Gruppe' : 'Solo';
 }
 
 function yearPool(year) {
@@ -472,19 +423,24 @@ function yearPool(year) {
 
 function updateYearHint() {
   if (!state.extensionYear) {
-    el.yearHint.textContent = 'Jahr eingeben – wir ziehen ein Lied aus demselben Jahr.';
+    el.yearHint.textContent = 'Jahr eingeben – wir ziehen ein anderes Lied aus demselben Jahr.';
     return;
   }
-  const n = yearPool(state.extensionYear).length;
-  el.yearHint.textContent = n
-    ? `Jahr ${state.extensionYear} · ${n} Lieder im Katalog.`
-    : `Für ${state.extensionYear} ist kein Lied mit diesen Filtern dabei.`;
+  const pool = yearPool(state.extensionYear);
+  const unseen = pool.filter((s) => !state.roundSeen.has(s.id)).length;
+  if (!pool.length) {
+    el.yearHint.textContent = `Für ${state.extensionYear} ist kein Lied mit diesen Filtern dabei.`;
+  } else if (!unseen) {
+    el.yearHint.textContent = `Alle Lieder aus ${state.extensionYear} gespielt – starte eine neue Runde.`;
+  } else {
+    el.yearHint.textContent = `Jahr ${state.extensionYear} · ${unseen} Lieder in dieser Runde übrig.`;
+  }
 }
 
 function setMode(mode, { silent = false, reload = true } = {}) {
-  if (!['classic', 'bingo', 'extension'].includes(mode)) return;
+  if (!['classic', 'extension'].includes(mode)) return;
   state.mode = mode;
-  document.body.classList.remove('mode-classic', 'mode-bingo', 'mode-extension');
+  document.body.classList.remove('mode-classic', 'mode-extension');
   document.body.classList.add(`mode-${mode}`);
   for (const btn of $$('.mode-btn', el.modeSwitch)) {
     const active = btn.dataset.mode === mode;
@@ -507,7 +463,7 @@ function setMode(mode, { silent = false, reload = true } = {}) {
   }
   if (reload && state.current) loadCard(state.current);
   syncUrl();
-  if (!silent) showToast(mode === 'classic' ? 'Modus: Klassisch' : mode === 'bingo' ? 'Modus: Bingo' : 'Modus: Erweiterung');
+  if (!silent) showToast(mode === 'classic' ? 'Freies Spiel' : 'Mit Original');
 }
 
 function applyYear(year, { silent = false } = {}) {
@@ -526,8 +482,15 @@ function applyYear(year, { silent = false } = {}) {
     syncUrl();
     return false;
   }
-  const fresh = pool.filter((s) => !state.recent.includes(s.id));
-  const list = fresh.length ? fresh : pool;
+  const unseen = pool.filter((s) => !state.roundSeen.has(s.id));
+  if (!unseen.length) {
+    showToast(`Alle Lieder aus ${year} in dieser Runde gespielt. Starte eine neue Runde.`, 3800);
+    updateYearHint();
+    syncUrl();
+    return false;
+  }
+  const fresh = unseen.filter((s) => !state.recent.includes(s.id));
+  const list = fresh.length ? fresh : unseen;
   const song = list[Math.floor(Math.random() * list.length)];
   state.recent.push(song.id);
   if (state.recent.length > 80) state.recent.shift();
@@ -537,19 +500,21 @@ function applyYear(year, { silent = false } = {}) {
   renderStats();
   updateYearHint();
   syncUrl();
-  if (!silent) showToast(`Jahr ${year} · ${pool.length} Lieder`);
+  if (!silent) showToast(`Jahr ${year} · ${unseen.length} Lieder in dieser Runde übrig`);
   return true;
 }
 
 function randomYear() {
-  const years = [...new Set(state.songs.filter((s) => matches(s, { ignoreDecade: true })).map((s) => s.year))];
-  if (!years.length) return showToast('Keine Lieder für diese Filter.');
+  const years = [...new Set(state.songs
+    .filter((s) => matches(s, { ignoreDecade: true }) && !state.roundSeen.has(s.id))
+    .map((s) => s.year))];
+  if (!years.length) return showToast('Keine neuen Lieder für diese Filter. Starte eine neue Runde.');
   applyYear(years[Math.floor(Math.random() * years.length)]);
 }
 
 async function loadCardById(id) {
   let song = state.songs.find((s) => s.id === id);
-  if (!song) {
+  if (!song && !STATIC) {
     try {
       const res = await fetch(`/api/song/${id}`, { headers: { accept: 'application/json' } });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -559,6 +524,10 @@ async function loadCardById(id) {
       showToast('Karte nicht gefunden.');
       return false;
     }
+  }
+  if (!song) {
+    showToast('Karte nicht gefunden.');
+    return false;
   }
   state.mode = 'classic';
   setMode('classic', { silent: true, reload: false });
@@ -570,14 +539,19 @@ async function loadCardById(id) {
 }
 
 function parseScan(text) {
-  const t = String(text || '').trim();
-  if (!t) return null;
-  if (/^\d{4}$/.test(t)) {
-    const y = Number(t);
-    if (y >= 1950 && y <= 2024) return { year: y };
-  }
+  const raw = String(text || '').trim();
+  if (!raw) return null;
+  let t = raw;
+  try { t = decodeURIComponent(raw); } catch { /* keep raw */ }
+
+  const uri = t.match(/^spotify:track:([A-Za-z0-9]{22})$/i);
+  if (uri) return { spotifyId: uri[1] };
+  if (/^[A-Za-z0-9]{22}$/.test(t)) return { spotifyId: t };
+
   try {
     const u = new URL(t);
+    const spotify = u.pathname.match(/\/track\/([A-Za-z0-9]{22})/);
+    if (spotify && /(^|\.)spotify\.com$/i.test(u.hostname)) return { spotifyId: spotify[1] };
     const card = u.searchParams.get('card');
     if (card && /^s?\d{4}$/.test(card)) return { card: card.startsWith('s') ? card : `s${card}` };
     const year = Number(u.searchParams.get('year'));
@@ -585,6 +559,9 @@ function parseScan(text) {
     const m = u.pathname.match(/\b(s\d{4})\b/);
     if (m) return { card: m[1] };
   } catch { /* not a URL */ }
+
+  const spotify = t.match(/\/track\/([A-Za-z0-9]{22})/);
+  if (spotify) return { spotifyId: spotify[1] };
   const card = t.match(/\b(s\d{4})\b/);
   if (card) return { card: card[1] };
   const y = t.match(/\b(19[5-9]\d|20[0-2]\d)\b/);
@@ -593,6 +570,57 @@ function parseScan(text) {
     if (n >= 1950 && n <= 2024) return { year: n };
   }
   return null;
+}
+
+async function resolveSpotify(id) {
+  if (STATIC) {
+    const song = state.songs.find((s) => s.spotifyId === id);
+    return song
+      ? { year: song.year, title: song.title, artist: song.artist, song, source: 'catalog' }
+      : { year: null, title: '', artist: '', song: null, source: 'spotify' };
+  }
+  try {
+    const res = await fetch(`/api/resolve?spotify=${encodeURIComponent(id)}`, { headers: { accept: 'application/json' } });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+async function handleScan(parsed) {
+  if (!parsed) return false;
+  if (parsed.card) {
+    showToast('Karte geladen.');
+    await loadCardById(parsed.card);
+    return true;
+  }
+  if (parsed.year) {
+    setMode('extension', { silent: true, reload: false });
+    applyYear(parsed.year);
+    return true;
+  }
+  if (parsed.spotifyId) {
+    el.scanStatus.textContent = 'Lied wird erkannt …';
+    const result = await resolveSpotify(parsed.spotifyId);
+    if (result?.year) {
+      if (result.song?.id) {
+        state.roundSeen.add(result.song.id);
+        saveRound();
+      }
+      setMode('extension', { silent: true, reload: false });
+      const ok = applyYear(result.year, { silent: true });
+      const name = result.title ? `${result.title}${result.artist ? ` – ${result.artist}` : ''}` : 'Lied';
+      if (ok) showToast(`Erkannt: ${name} (${result.year}) – anderes Lied aus ${result.year}.`, 4200);
+      return true;
+    }
+    el.scanStatus.textContent = result?.title
+      ? `Lied erkannt: ${result.title}${result.artist ? ` – ${result.artist}` : ''}. Bitte Jahr manuell eingeben.`
+      : 'Lied nicht erkannt. Bitte Jahr manuell eingeben.';
+    if (result?.title) showToast(`Erkannt: ${result.title} – Jahr bitte eingeben.`, 4200);
+    return false;
+  }
+  return false;
 }
 
 function stopScan() {
@@ -623,16 +651,10 @@ function scanFrame() {
       if (parsed) {
         stopScan();
         closeModal(el.scanModal);
-        if (parsed.card) {
-          showToast('Karte geladen.');
-          loadCardById(parsed.card);
-        } else {
-          setMode('extension', { silent: true, reload: false });
-          applyYear(parsed.year);
-        }
+        handleScan(parsed);
         return;
       }
-      el.scanStatus.textContent = 'QR-Code erkannt, aber kein Jahr/keine Karte. Bitte Jahr manuell eingeben.';
+      el.scanStatus.textContent = 'QR-Code erkannt, aber kein Spotify-Link/Jahr. Bitte Jahr manuell eingeben.';
     }
   }
   state.scan.raf = requestAnimationFrame(scanFrame);
@@ -654,7 +676,7 @@ async function openScan() {
     state.scan.stream = stream;
     el.scanVideo.srcObject = stream;
     await el.scanVideo.play();
-    el.scanStatus.textContent = 'Richte die Kamera auf den QR-Code.';
+    el.scanStatus.textContent = 'Richte die Kamera auf den QR-Code deiner Hitster-Karte.';
     state.scan.active = true;
     scanFrame();
   } catch {
@@ -667,41 +689,47 @@ function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
+function printGroupIcon(song) {
+  return `<svg class="pc-group" aria-hidden="true"><use href="${song.group ? '#i-users' : '#i-user'}"></use></svg>`;
+}
+
 function printCardHtml(song, side) {
   const color = genreColor(song.genre);
+  const genre = escapeHtml(genreLabel(song.genre).toUpperCase());
+  const id = song.id.slice(1);
+  const qrSrc = STATIC ? `qr/${song.id}.svg` : `/api/qr/${song.id}?base=${encodeURIComponent(location.origin)}`;
+  const band = `<div class="pc-band"><span class="pc-kicker">${side === 'front' ? 'HITSTER' : 'AUFGELÖST'}</span><span class="pc-band-right">${printGroupIcon(song)}<span class="pc-genre">${genre}</span></span></div>`;
   if (side === 'front') {
     return `<div class="print-card" style="--c:${color}">
-      <div class="pc-band"><span>HITSTER</span><span>${genreLabel(song.genre).toUpperCase()}</span></div>
+      ${band}
+      <div class="pc-qr"><img src="${qrSrc}" alt="QR-Code Karte ${song.id}" /><span>Scan &amp; Play</span></div>
       <div class="pc-center">
         <div class="pc-vinyl"></div>
         <div class="pc-question">Wie heißt der Song?</div>
-        <div class="pc-sub">30-Sekunden-Clip · QR scannen</div>
+        <div class="pc-sub">30-Sekunden-Clip</div>
       </div>
-      <div class="pc-bingo">${BINGO.map((b) => `<div class="pc-chip">${escapeHtml(b.short)}</div>`).join('')}</div>
-      <div class="pc-qr"><img src="/api/qr/${song.id}?base=${encodeURIComponent(location.origin)}" alt="QR-Code Karte ${song.id}" /></div>
-      <div class="pc-qr-label">Scan &amp; Play</div>
-      <div class="pc-foot"><span>#${song.id.slice(1)}</span><span>Umdrehen</span></div>
+      <div class="pc-foot"><span>#${id}</span><span>Umdrehen</span></div>
     </div>`;
   }
-  const answers = (sideKey) => BINGO.filter((b) => b.side === sideKey)
-    .map((b) => `<div class="pc-answer"><span>${escapeHtml(b.label)}</span><b>${escapeHtml(b.answer(song))}</b></div>`)
-    .join('');
-  return `<div class="print-card" style="--c:${color}">
-    <div class="pc-band"><span>AUFGELÖST</span><span>${genreLabel(song.genre).toUpperCase()}</span></div>
-    <div class="pc-center" style="align-items:flex-start;text-align:left;">
+  return `<div class="print-card pc-back" style="--c:${color}">
+    ${band}
+    <div class="pc-center">
       <div class="pc-year-label">Erschienen</div>
       <div class="pc-year">${song.year}</div>
       <div class="pc-decade">${decadeLabel(song.year)}</div>
       <div class="pc-title">${escapeHtml(song.title)}</div>
       <div class="pc-artist">${escapeHtml(song.artist)}</div>
-      <div class="pc-facts">${song.group ? 'Gruppe' : 'Solo'}</div>
     </div>
-    <div class="pc-answers">
-      <div><h4>A · Anfänger</h4>${answers('A')}</div>
-      <div><h4>B · Experten</h4>${answers('B')}</div>
-    </div>
-    <div class="pc-foot"><span>#${song.id.slice(1)}</span><span>HITSTER BINGO</span></div>
+    <div class="pc-foot"><span>#${id}</span><span>HITSTER</span></div>
   </div>`;
+}
+
+function printSheets(cards, side) {
+  const chunks = [];
+  for (let i = 0; i < cards.length; i += 9) chunks.push(cards.slice(i, i + 9));
+  return chunks
+    .map((chunk) => `<section class="print-sheet ${side === 'back' ? 'backs' : 'fronts'}">${chunk.join('')}</section>`)
+    .join('');
 }
 
 function openPrint() {
@@ -710,7 +738,7 @@ function openPrint() {
 }
 
 async function doPrint() {
-  const count = Math.max(1, Math.min(18, Number(el.printCount.value) || 9));
+  const count = Math.max(1, Math.min(27, Number(el.printCount.value) || 9));
   const pool = el.printFilter.checked ? currentPool() : state.songs;
   if (!pool.length) {
     showToast('Keine Karten für diese Filter.');
@@ -718,11 +746,11 @@ async function doPrint() {
   }
   const songs = shuffle(pool).slice(0, count);
   const sides = el.printSides.value;
-  const fronts = songs.map((s) => printCardHtml(s, 'front')).join('');
-  const backs = songs.map((s) => printCardHtml(s, 'back')).join('');
+  const fronts = songs.map((s) => printCardHtml(s, 'front'));
+  const backs = songs.map((s) => printCardHtml(s, 'back'));
   let html = '';
-  if (sides === 'both' || sides === 'front') html += `<section class="print-sheet fronts"><div class="print-grid">${fronts}</div></section>`;
-  if (sides === 'both' || sides === 'back') html += `<section class="print-sheet backs"><div class="print-grid backs">${backs}</div></section>`;
+  if (sides === 'both' || sides === 'front') html += printSheets(fronts, 'front');
+  if (sides === 'both' || sides === 'back') html += printSheets(backs, 'back');
   el.printRoot.innerHTML = html;
   closeModal(el.printModal);
   const images = [...el.printRoot.querySelectorAll('img')];
@@ -732,6 +760,8 @@ async function doPrint() {
 
 function loadCard(song) {
   state.current = song;
+  state.roundSeen.add(song.id);
+  saveRound();
   state.flipped = false;
   el.card.dataset.flipped = 'false';
   el.card.dataset.genre = song.genre;
@@ -740,7 +770,7 @@ function loadCard(song) {
   setFaceAccessibility(false);
 
   stopAudio();
-  el.audio.src = song.streamUrl;
+  if (!STATIC) el.audio.src = song.streamUrl;
   resetTimer();
 
   el.card.style.setProperty('--c', genreColor(song.genre));
@@ -757,11 +787,9 @@ function loadCard(song) {
   el.backDecade.textContent = decadeLabel(song.year);
   el.backTitle.textContent = song.title;
   el.backArtist.textContent = song.artist;
-  el.backQrImg.src = `/api/qr/${song.id}?base=${encodeURIComponent(location.origin)}`;
+  el.backQrImg.src = STATIC ? `qr/${song.id}.svg` : `/api/qr/${song.id}?base=${encodeURIComponent(location.origin)}`;
 
-  renderFrontBingo();
-  renderAnswers(song);
-  renderFacts(song);
+  renderGroupIcon(song);
   updateFlipButton();
 
   el.cardWrap.classList.remove('dealing');
@@ -771,6 +799,7 @@ function loadCard(song) {
   el.spotifyBtn.disabled = false;
   el.playBtn.disabled = false;
   el.flipBtn.disabled = false;
+  if (state.mode === 'extension') updateYearHint();
 }
 
 function setFaceAccessibility(flipped) {
@@ -803,12 +832,49 @@ function setPlaying(playing) {
   el.playLabel.textContent = playing ? 'Pausieren' : 'Clip abspielen';
 }
 
-function playClip({ restart = false } = {}) {
+async function resolveItunesPreview(song) {
+  if (itunesCache.has(song.id)) return itunesCache.get(song.id);
+  try {
+    const url = song.itunesId
+      ? `https://itunes.apple.com/lookup?id=${encodeURIComponent(song.itunesId)}&country=DE`
+      : `https://itunes.apple.com/search?term=${encodeURIComponent(`${song.title} ${song.artist}`)}&entity=song&limit=10&country=DE`;
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const data = await res.json();
+    const items = data.results || [];
+    const nt = normText(song.title);
+    const na = normText(song.artist);
+    const match = items.find((t) => t.previewUrl
+      && (normText(t.trackName) === nt || normText(t.trackName).includes(nt))
+      && (normText(t.artistName).includes(na) || na.includes(normText(t.artistName))))
+      || items.find((t) => t.previewUrl);
+    const preview = match?.previewUrl || null;
+    if (preview) itunesCache.set(song.id, preview);
+    return preview;
+  } catch {
+    return null;
+  }
+}
+
+async function playClip({ restart = false } = {}) {
   if (!state.current) return;
   if (state.playing) return pauseClip();
   if (restart) {
     try { el.audio.currentTime = 0; } catch { /* ignore */ }
     resetTimer();
+  }
+  if (STATIC && !el.audio.getAttribute('src')) {
+    el.frontSub.textContent = 'Clip wird geladen …';
+    const url = await resolveItunesPreview(state.current);
+    if (!url) {
+      el.frontSub.textContent = 'Kein Clip gefunden. Nächste Karte?';
+      showToast('Kein Clip für diesen Song gefunden.');
+      return;
+    }
+    el.audio.src = url;
+    el.frontSub.textContent = state.mode === 'extension'
+      ? `Jahr ${state.current.year} – tippe für den Clip.`
+      : 'Tippe auf die Karte, um den Clip zu starten.';
   }
   if (state.timer.remaining <= 0.05) resetTimer();
   const promise = el.audio.play();
@@ -912,24 +978,9 @@ function flipCard() {
 }
 
 function nextCard() {
-  if (state.mode === 'extension' && state.extensionYear) {
-    const pool = yearPool(state.extensionYear);
-    if (pool.length) {
-      const fresh = pool.filter((s) => !state.recent.includes(s.id));
-      const list = fresh.length ? fresh : pool;
-      const song = list[Math.floor(Math.random() * list.length)];
-      state.recent.push(song.id);
-      if (state.recent.length > 80) state.recent.shift();
-      loadCard(song);
-      state.stats.played += 1;
-      saveStats();
-      renderStats();
-      return;
-    }
-  }
   const song = pickSong();
   if (!song) {
-    showToast('Keine Karte für diese Filter. Setze die Filter zurück.');
+    showToast('Runde beendet – starte eine neue Runde.', 3600);
     return;
   }
   loadCard(song);
@@ -967,81 +1018,22 @@ function renderStats() {
   el.statStreak.textContent = String(state.stats.streak);
 }
 
-/* --------------------------------------------------------------------------
-   Bingo scorecard
-   -------------------------------------------------------------------------- */
-
-function resetBingo(animate = true) {
-  const pool = [];
-  for (let i = 0; i < 25; i++) pool.push(BINGO[i % BINGO.length]);
-  state.bingo.cells = shuffle(pool).map((b) => b.key);
-  state.bingo.marked = new Set();
-  state.bingo.celebrated = new Set();
-  saveBingo();
-  renderBingo();
-  if (animate) showToast('Neue Bingo-Scorecard – viel Glück!');
-}
-
-function renderBingo() {
-  const frag = document.createDocumentFragment();
-  state.bingo.cells.forEach((key, index) => {
-    const def = BINGO.find((b) => b.key === key) || BINGO[0];
-    const cell = document.createElement('button');
-    cell.type = 'button';
-    cell.className = 'bingo-cell' + (state.bingo.marked.has(index) ? ' marked' : '');
-    cell.dataset.index = String(index);
-    cell.style.setProperty('--c', def.color);
-    cell.title = `${def.side === 'A' ? 'Anfänger' : 'Experten'}: ${def.label}${state.bingo.marked.has(index) ? ' (markiert)' : ''}`;
-    cell.setAttribute('aria-pressed', state.bingo.marked.has(index) ? 'true' : 'false');
-    cell.setAttribute('aria-label', `${def.short} – ${def.label}${state.bingo.marked.has(index) ? ', markiert' : ''}`);
-    const dot = document.createElement('span');
-    dot.className = 'dot';
-    const lbl = document.createElement('span');
-    lbl.className = 'lbl';
-    lbl.textContent = def.short;
-    cell.append(dot, lbl);
-    cell.addEventListener('click', () => toggleBingo(index));
-    frag.append(cell);
-  });
-  el.bingoBoard.replaceChildren(frag);
-
-  const legend = document.createDocumentFragment();
-  for (const b of BINGO) {
-    const item = document.createElement('div');
-    item.className = 'legend-item';
-    item.style.setProperty('--c', b.color);
-    const dot = document.createElement('span');
-    dot.className = 'dot';
-    const label = document.createElement('span');
-    label.textContent = `${b.side} · ${b.label}`;
-    item.append(dot, label);
-    legend.append(item);
-  }
-  el.bingoLegend.replaceChildren(legend);
-}
-
-function toggleBingo(index) {
-  if (state.bingo.marked.has(index)) state.bingo.marked.delete(index);
-  else state.bingo.marked.add(index);
-  saveBingo();
-  renderBingo();
-  checkBingo();
-}
-
-function checkBingo() {
-  for (const line of BINGO_LINES) {
-    if (!line.every((i) => state.bingo.marked.has(i))) continue;
-    const sig = line.join('-');
-    if (state.bingo.celebrated.has(sig)) continue;
-    state.bingo.celebrated.add(sig);
-    for (const i of line) {
-      el.bingoBoard.querySelector(`[data-index="${i}"]`)?.classList.add('in-line');
-    }
-    showToast('BINGO! Fünf in einer Reihe – HITSTER! 🎉', 4200);
-    confetti(60);
-    setTimeout(() => {
-      for (const i of line) el.bingoBoard.querySelector(`[data-index="${i}"]`)?.classList.remove('in-line');
-    }, 2800);
+function resetRound() {
+  state.roundSeen = new Set();
+  state.recent = [];
+  state.stats = { played: 0, flipped: 0, correct: 0, wrong: 0, streak: 0, bestStreak: 0 };
+  saveRound();
+  saveStats();
+  renderStats();
+  const song = pickSong();
+  if (song) {
+    loadCard(song);
+    state.stats.played += 1;
+    saveStats();
+    renderStats();
+    showToast('Neue Runde – viel Spaß!');
+  } else {
+    showToast('Neue Runde – aber keine Karten für diese Filter.', 3600);
   }
 }
 
@@ -1116,7 +1108,7 @@ function closeAllModals() {
 function confetti(count = 36) {
   const colors = ['#ff2d95', '#7c5cff', '#29e6ff', '#c6ff3d', '#ff9f1c', '#ffffff'];
   const layer = document.createElement('div');
-  layer.className = 'confetti-layer';
+  layer.className = 'confetti';
   layer.setAttribute('aria-hidden', 'true');
   for (let i = 0; i < count; i++) {
     const piece = document.createElement('i');
@@ -1224,14 +1216,9 @@ function bindEvents() {
     afterFilterChange();
   });
 
-  el.resetStats.addEventListener('click', () => {
-    state.stats = { played: 0, flipped: 0, correct: 0, wrong: 0, streak: 0, bestStreak: 0 };
-    saveStats();
-    renderStats();
-    showToast('Statistik zurückgesetzt.');
-  });
+  el.resetStats.addEventListener('click', resetRound);
+  el.roundNew.addEventListener('click', resetRound);
 
-  el.resetBingo.addEventListener('click', () => resetBingo(true));
 
   el.volume.addEventListener('input', () => {
     const v = Number(el.volume.value) / 100;
@@ -1321,12 +1308,12 @@ async function init() {
   loadStats();
   loadPrefs();
   applyPrefs();
-  loadBingo();
+  loadRound();
   readUrl();
   renderStats();
 
   try {
-    const res = await fetch('/api/catalog?v=2.0.1', { headers: { accept: 'application/json' } });
+    const res = await fetch(STATIC ? 'catalog.json' : '/api/catalog?v=3.0.0', { headers: { accept: 'application/json' } });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     state.catalog = data;
@@ -1347,8 +1334,6 @@ async function init() {
   renderGenreChips();
   renderDecadeChips();
   updateFilterSummary();
-  renderBingo();
-  renderFrontBingo();
   bindEvents();
   setMode(state.mode, { silent: true, reload: false });
 
@@ -1382,6 +1367,9 @@ async function init() {
     openScan,
     loadCardById,
     parseScan,
+    resetRound,
+    resolveSpotify,
+    handleScan,
   };
 }
 

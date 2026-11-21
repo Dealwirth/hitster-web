@@ -34,7 +34,7 @@ await page.screenshot({ path:'docs/screenshot-extension.png', fullPage:false });
 
 await page.evaluate(() => { window.print = () => {}; window.HITSTER.openPrint(); });
 await page.waitForTimeout(300);
-await page.selectOption('#printCount', '6');
+await page.selectOption('#printCount', '9');
 await page.locator('#printGo').click();
 await page.waitForTimeout(1200);
 await page.emulateMedia({ media:'print' });

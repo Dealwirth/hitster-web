@@ -66,6 +66,91 @@ app.use(
 );
 
 const api = express.Router();
+const resolveCache = new Map();
+
+function decodeHtml(value = '') {
+  return String(value)
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>');
+}
+
+function normalizeText(value = '') {
+  return String(value)
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+function cacheResolve(id, result) {
+  if (resolveCache.size > 500) resolveCache.delete(resolveCache.keys().next().value);
+  resolveCache.set(id, result);
+}
+
+function matchCatalog(title, artist) {
+  const nt = normalizeText(title);
+  const na = normalizeText(artist);
+  if (!nt) return null;
+  return songs.find((s) => normalizeText(s.title) === nt && na && normalizeText(s.artist).includes(na))
+    || songs.find((s) => normalizeText(s.title) === nt && na && na.includes(normalizeText(s.artist)))
+    || songs.find((s) => normalizeText(s.title) === nt)
+    || songs.find((s) => nt.length > 4 && normalizeText(s.title).includes(nt))
+    || null;
+}
+
+async function fetchSpotifyPage(id) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 8000);
+  try {
+    const res = await fetch(`https://open.spotify.com/track/${id}`, {
+      signal: ctrl.signal,
+      headers: {
+        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
+        'accept-language': 'de-DE,de;q=0.9,en;q=0.8',
+      },
+    });
+    if (!res.ok) throw new Error(`spotify HTTP ${res.status}`);
+    const html = await res.text();
+    const title = decodeHtml(html.match(/<meta property="og:title" content="([^"]*)"/)?.[1] || '');
+    const description = decodeHtml(html.match(/<meta property="og:description" content="([^"]*)"/)?.[1] || '');
+    const parts = description.split(' · ').map((x) => x.trim()).filter(Boolean);
+    const artist = parts[0] || '';
+    const year = Number((description.match(/\b(19[5-9]\d|20[0-2]\d)\b/) || [])[1]);
+    return { title, artist, year: year >= 1950 && year <= 2024 ? year : null };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function fetchSpotifyOembed(id) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 6000);
+  try {
+    const target = encodeURIComponent(`https://open.spotify.com/track/${id}`);
+    const res = await fetch(`https://open.spotify.com/oembed?url=${target}`, {
+      signal: ctrl.signal,
+      headers: { 'user-agent': 'Mozilla/5.0' },
+    });
+    if (!res.ok) throw new Error(`spotify oembed HTTP ${res.status}`);
+    const data = await res.json();
+    return { title: decodeHtml(data.title || ''), artist: '', year: null };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function fetchSpotifyMeta(id) {
+  try {
+    const page = await fetchSpotifyPage(id);
+    if (page.title && !/^(spotify|log in|anmelden)$/i.test(page.title)) return page;
+  } catch { /* fall back to oEmbed */ }
+  return fetchSpotifyOembed(id);
+}
 
 api.get('/health', (_req, res) => {
   res.json({ ok: true, songs: songs.length, uptime: Math.round(process.uptime()) });
@@ -114,6 +199,49 @@ api.get('/song/:id', (req, res) => {
   if (!song) return res.status(404).json({ error: 'Karte nicht gefunden.' });
   res.setHeader('Cache-Control', 'public, max-age=86400');
   res.json({ song: publicSong(song), bingo: bingoAnswers(song) });
+});
+
+api.get('/resolve', async (req, res) => {
+  const id = String(req.query.spotify || '');
+  if (!/^[A-Za-z0-9]{22}$/.test(id)) {
+    return res.status(400).json({ error: 'Ungültige Spotify-ID.' });
+  }
+  if (resolveCache.has(id)) {
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    return res.json(resolveCache.get(id));
+  }
+
+  const direct = songs.find((s) => s.spotifyId === id);
+  if (direct) {
+    const result = {
+      year: direct.year,
+      title: direct.title,
+      artist: direct.artist,
+      song: publicSong(direct),
+      source: 'catalog',
+    };
+    cacheResolve(id, result);
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    return res.json(result);
+  }
+
+  try {
+    const meta = await fetchSpotifyMeta(id);
+    const match = matchCatalog(meta.title, meta.artist);
+    const result = {
+      year: match?.year || meta.year || null,
+      title: match?.title || meta.title || '',
+      artist: match?.artist || meta.artist || '',
+      song: match ? publicSong(match) : null,
+      source: match ? 'catalog' : 'spotify',
+    };
+    cacheResolve(id, result);
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    return res.json(result);
+  } catch (err) {
+    console.warn(`[resolve] ${id}:`, err.message);
+    return res.status(502).json({ error: 'Spotify-Lied konnte nicht erkannt werden.' });
+  }
 });
 
 api.get('/qr/:id', async (req, res) => {

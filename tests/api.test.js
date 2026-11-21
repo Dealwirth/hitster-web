@@ -66,6 +66,19 @@ test('GET /api/song/:id returns song and all Bingo answers', async () => {
   await request(app).get('/api/song/nope').expect(404);
 });
 
+test('GET /api/resolve recognizes a catalog Spotify id', async () => {
+  const song = songs.find((s) => s.spotifyId);
+  const res = await request(app).get(`/api/resolve?spotify=${song.spotifyId}`).expect(200);
+  assert.equal(res.body.year, song.year);
+  assert.equal(res.body.song.id, song.id);
+  assert.equal(res.body.source, 'catalog');
+  assert.match(res.headers['cache-control'], /max-age=86400/);
+});
+
+test('GET /api/resolve rejects malformed Spotify ids', async () => {
+  await request(app).get('/api/resolve?spotify=bad').expect(400);
+});
+
 test('GET /api/bingo/:id returns the ten answers', async () => {
   const res = await request(app).get(`/api/bingo/${songs[10].id}`).expect(200);
   assert.equal(res.body.bingo.beginner.length, 5);

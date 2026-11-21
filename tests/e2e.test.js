@@ -59,17 +59,18 @@ await step('catalog loads with more than 1000 cards', async () => {
   assert.ok(count >= 1000, text);
 });
 
-await step('card shows all ten Bingo categories', async () => {
-  assert.equal(await page.locator('.mini-chip').count(), 10);
-  assert.equal(await page.locator('#answersA li').count(), 5);
-  assert.equal(await page.locator('#answersB li').count(), 5);
-  assert.equal(await page.locator('.bingo-cell').count(), 25);
+await step('cards are clean: no Bingo scorecard or Anfänger/Experten clutter', async () => {
+  assert.equal(await page.locator('.mini-chip, .bingo-cell, .bingo-answers, .bingo-panel').count(), 0);
+  assert.equal(await page.locator('text=Bingo').count(), 0);
+  assert.equal(await page.locator('text=Anfänger').count(), 0);
+  assert.equal(await page.locator('text=Experten').count(), 0);
 });
 
-await step('front card shows genre, number and play prompt', async () => {
+await step('front card shows genre, group/solo symbol, number and play prompt', async () => {
   assert.ok((await page.locator('#frontGenre').innerText()).length > 1);
   assert.match(await page.locator('#frontNumber').innerText(), /^#\d{4}$/);
   assert.match(await page.locator('.card-question').innerText(), /Song/i);
+  assert.ok(['#i-users', '#i-user'].includes(await page.locator('#frontGroupIcon use').getAttribute('href')));
 });
 
 await step('no audio is downloaded before the user presses play', async () => {
@@ -129,16 +130,25 @@ await step('judging a correct answer updates the statistics', async () => {
   await page.waitForTimeout(300);
   assert.equal(await page.locator('#statCorrect').innerText(), '1');
   assert.equal(await page.locator('#statStreak').innerText(), '1');
-  assert.ok(await page.locator('.confetti-layer').count() > 0);
+  assert.ok(await page.locator('.confetti').count() > 0);
 });
 
-await step('Bingo scorecard can be marked and is persisted', async () => {
-  const cell = page.locator('.bingo-cell').first();
-  await cell.click();
-  await page.waitForTimeout(200);
-  assert.ok(await cell.evaluate((el) => el.classList.contains('marked')));
-  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('hitster-web-bingo-v1') || '{}'));
-  assert.equal(saved.marked.length, 1);
+await step('a round never repeats a card and can be reset', async () => {
+  await page.locator('#roundNew').click();
+  await page.waitForTimeout(400);
+  const ids = new Set();
+  for (let i = 0; i < 5; i++) {
+    await page.locator('#nextBtn').click();
+    await page.waitForTimeout(220);
+    const id = await page.evaluate(() => window.HITSTER.state.current.id);
+    assert.ok(!ids.has(id), `duplicate ${id}`);
+    ids.add(id);
+  }
+  assert.equal(ids.size, 5);
+  assert.ok((await page.evaluate(() => window.HITSTER.state.roundSeen.size)) >= 5);
+  await page.locator('#roundNew').click();
+  await page.waitForTimeout(400);
+  assert.equal(await page.evaluate(() => window.HITSTER.state.roundSeen.size), 1);
 });
 
 await step('help modal opens and closes with Escape', async () => {
@@ -151,6 +161,10 @@ await step('help modal opens and closes with Escape', async () => {
 });
 
 await step('Spotify player modal embeds a track', async () => {
+  if ((await page.locator('#card').getAttribute('data-flipped')) !== 'true') {
+    await page.locator('#flipBtn').click();
+    await page.waitForTimeout(900);
+  }
   await page.locator('#spotifyBtn').click();
   await page.waitForTimeout(500);
   assert.equal(await page.locator('#spotifyModal').getAttribute('hidden'), null);
@@ -230,17 +244,39 @@ await step('random year stays in the catalogue range', async () => {
   assert.equal(await page.evaluate(() => window.HITSTER.state.mode), 'extension');
 });
 
-await step('QR payload parser accepts cards, years and bare ids', async () => {
+await step('QR payload parser accepts cards, years, Spotify links and bare ids', async () => {
   const parsed = await page.evaluate(() => ({
     card: window.HITSTER.parseScan('https://example.com/?card=s0042'),
     year: window.HITSTER.parseScan('1984'),
     bare: window.HITSTER.parseScan('s0042'),
+    spotify: window.HITSTER.parseScan('https://open.spotify.com/track/5DNmWyeY9sildeeHnmIImG?si=abc'),
+    spotifyUri: window.HITSTER.parseScan('spotify:track:5DNmWyeY9sildeeHnmIImG'),
     bad: window.HITSTER.parseScan('hello'),
   }));
   assert.deepEqual(parsed.card, { card: 's0042' });
   assert.deepEqual(parsed.year, { year: 1984 });
   assert.deepEqual(parsed.bare, { card: 's0042' });
+  assert.deepEqual(parsed.spotify, { spotifyId: '5DNmWyeY9sildeeHnmIImG' });
+  assert.deepEqual(parsed.spotifyUri, { spotifyId: '5DNmWyeY9sildeeHnmIImG' });
   assert.equal(parsed.bad, null);
+});
+
+await step('Spotify scan draws a different song from the same year', async () => {
+  const result = await page.evaluate(async () => {
+    const scanned = '5DNmWyeY9sildeeHnmIImG';
+    await window.HITSTER.handleScan({ spotifyId: scanned });
+    return {
+      mode: window.HITSTER.state.mode,
+      year: window.HITSTER.state.extensionYear,
+      current: window.HITSTER.state.current,
+      seen: [...window.HITSTER.state.roundSeen],
+    };
+  });
+  assert.equal(result.mode, 'extension');
+  assert.equal(result.year, 1951);
+  assert.equal(result.current.year, 1951);
+  assert.notEqual(result.current.id, 's0002');
+  assert.ok(result.seen.includes('s0002'), 'scanned song should be excluded from the round');
 });
 
 await step('card deep link opens the exact card', async () => {
@@ -269,7 +305,7 @@ await step('print sheet builds fronts, backs and QR codes', async () => {
   await page.evaluate(() => { window.print = () => { window.__printed = true; }; window.HITSTER.openPrint(); });
   await page.waitForTimeout(250);
   assert.equal(await page.locator('#printModal').isVisible(), true);
-  await page.selectOption('#printCount', '6');
+  await page.selectOption('#printCount', '9');
   await page.locator('#printGo').click();
   await page.waitForTimeout(1400);
   const print = await page.evaluate(() => ({
@@ -278,23 +314,34 @@ await step('print sheet builds fronts, backs and QR codes', async () => {
     fronts: document.querySelectorAll('#printRoot .print-sheet.fronts .print-card').length,
     backs: document.querySelectorAll('#printRoot .print-sheet.backs .print-card').length,
     qrs: document.querySelectorAll('#printRoot .pc-qr img').length,
+    bingo: document.querySelectorAll('#printRoot .pc-bingo, #printRoot .pc-answers').length,
   }));
   assert.equal(print.printed, true);
-  assert.equal(print.cards, 12);
-  assert.equal(print.fronts, 6);
-  assert.equal(print.backs, 6);
-  assert.equal(print.qrs, 6);
+  assert.equal(print.cards, 18);
+  assert.equal(print.fronts, 9);
+  assert.equal(print.backs, 9);
+  assert.equal(print.qrs, 9);
+  assert.equal(print.bingo, 0);
+  await page.emulateMedia({ media: 'print' });
+  const dims = await page.locator('#printRoot .print-card').first().evaluate((el) => {
+    const r = el.getBoundingClientRect();
+    return { w: Math.round(r.width), h: Math.round(r.height) };
+  });
+  await page.emulateMedia({ media: 'screen' });
+  assert.ok(dims.w >= 215 && dims.w <= 230, JSON.stringify(dims));
+  assert.ok(dims.h >= 335 && dims.h <= 350, JSON.stringify(dims));
 });
 
 await step('mode switch shows and hides the extension bar', async () => {
-  await page.locator('.mode-btn[data-mode="bingo"]').click();
-  await page.waitForTimeout(250);
-  assert.equal(await page.evaluate(() => window.HITSTER.state.mode), 'bingo');
-  assert.equal(await page.locator('#extensionBar').isVisible(), false);
-  assert.ok(await page.evaluate(() => document.body.classList.contains('mode-bingo')));
+  await page.locator('.mode-btn[data-mode="extension"]').click();
+  await page.waitForTimeout(300);
+  assert.equal(await page.evaluate(() => window.HITSTER.state.mode), 'extension');
+  assert.equal(await page.locator('#extensionBar').isVisible(), true);
+  assert.equal(await page.locator('#frontYearBadge').isVisible(), true);
   await page.locator('.mode-btn[data-mode="classic"]').click();
-  await page.waitForTimeout(250);
+  await page.waitForTimeout(300);
   assert.equal(await page.evaluate(() => window.HITSTER.state.mode), 'classic');
+  assert.equal(await page.locator('#extensionBar').isVisible(), false);
   assert.equal(await page.locator('#frontYearBadge').isVisible(), false);
 });
 
