@@ -807,7 +807,14 @@ function songCategories(song) {
   for (const [id, version] of Object.entries(VERSIONS)) {
     if (id !== 'all' && versionMatches(song, id)) categories.push(version.label);
   }
-  return [...new Set(categories.filter(Boolean))];
+  const seen = new Set();
+  return categories.filter((label) => {
+    if (!label) return false;
+    const key = label.toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 function renderCardCategories(song) {
@@ -1613,7 +1620,7 @@ function printCardHtml(song, side, style = 'compact') {
       <div class="pc-year">${song.year}</div>
       <div class="pc-title">${escapeHtml(song.title)}</div>
       <div class="pc-artist">${escapeHtml(song.artist)}</div>
-      <div class="pc-cats">${songCategories(song).slice(0, 4).map((label) => `<span>${escapeHtml(label)}</span>`).join('')}</div>
+      <div class="pc-cats">${songCategories(song).map((label) => `<span>${escapeHtml(label)}</span>`).join('')}</div>
     </div>
     <div class="pc-foot"><span>Karte #${id}</span><span>HITSTER</span></div>
   </div>`;
