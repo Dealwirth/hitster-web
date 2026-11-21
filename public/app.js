@@ -718,7 +718,7 @@ function afterFilterChange() {
 function syncUrl() {
   const params = new URLSearchParams();
   const incoming = new URLSearchParams(location.search);
-  if (incoming.get('online')) params.set('online', incoming.get('online'));
+  if (incoming.has('online')) params.set('online', incoming.get('online') || '1');
   if (incoming.get('localonline') === '1') params.set('localonline', '1');
   if (incoming.get('start') === '1' && !document.body.classList.contains('started')) params.set('start', '1');
   if (state.filters.genres.length) params.set('genre', state.filters.genres.join(','));

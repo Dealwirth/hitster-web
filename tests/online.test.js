@@ -178,6 +178,15 @@ await step('online bingo: voting, 5x5 color cards, sync audio, answer, marking a
   assert.equal(rules.card.length, 25);
   assert.deepEqual(Object.values(rules.card.reduce((a, x) => { a[x] = (a[x] || 0) + 1; return a; }, {})).sort(), [5, 5, 5, 5, 5]);
 
+  const direct = await context.newPage();
+  await direct.goto(`${base}/?online`, { waitUntil: 'networkidle' });
+  await direct.waitForFunction(() => window.HITSTER?.state?.ready, { timeout: 30000 });
+  await direct.waitForTimeout(300);
+  assert.equal(await direct.locator('#onlineScreen').isVisible(), true);
+  assert.equal(await direct.locator('#onlineLobby').isVisible(), true);
+  assert.equal(await direct.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), 0);
+  await direct.close();
+
   await host.locator('#onlineStart').click();
   await host.waitForSelector('#onlineSetup:not([hidden])');
   await player.waitForSelector('#onlineSetup:not([hidden])');

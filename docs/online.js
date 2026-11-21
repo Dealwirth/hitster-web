@@ -789,8 +789,9 @@ function stopTimers() { clearRoundTimers(); clearTimeout(online.timers.countdown
 
 function boot() {
   buildScreen();
-  const code = cleanCode(new URLSearchParams(location.search).get('online') || '');
-  if (code) open(code);
+  const params = new URLSearchParams(location.search);
+  const code = cleanCode(params.get('online') || '');
+  if (params.has('online')) open(code.length === 6 ? code : '');
   window.HitsterOnline = { open, close, state: online, debug: { isCorrect, makeBingoCard, hasBingo, hostMark, revealRound, beginRound, endGame, render, online } };
 }
 if (window.HITSTER) boot(); else window.addEventListener('hitster-ready', boot, { once: true });
