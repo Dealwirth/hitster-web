@@ -1049,11 +1049,17 @@ function checkBingo() {
    Spotify
    -------------------------------------------------------------------------- */
 
+function spotifyUrl(song) {
+  return song.spotifyId
+    ? `https://open.spotify.com/track/${song.spotifyId}`
+    : `https://open.spotify.com/search/${encodeURIComponent(`${song.title} ${song.artist}`)}`;
+}
+
 function openSpotify() {
   const song = state.current;
   if (!song) return;
   el.spotifySong.textContent = `${song.title} – ${song.artist} (${song.year})`;
-  el.spotifyOpen.href = song.spotifyUrl;
+  el.spotifyOpen.href = spotifyUrl(song);
   el.spotifyFrame.replaceChildren();
 
   if (song.spotifyId && /^[A-Za-z0-9]{22}$/.test(song.spotifyId)) {
@@ -1320,7 +1326,7 @@ async function init() {
   renderStats();
 
   try {
-    const res = await fetch('/api/catalog', { headers: { accept: 'application/json' } });
+    const res = await fetch('/api/catalog?v=2.0.1', { headers: { accept: 'application/json' } });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     state.catalog = data;

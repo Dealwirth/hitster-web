@@ -56,13 +56,13 @@ function norm(s = '') {
     .trim();
 }
 
-async function fetchJson(url, timeout = 12000) {
+async function fetchJson(url, timeout = 10000) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeout);
   try {
     const res = await fetch(url, {
       signal: ctrl.signal,
-      headers: { 'user-agent': 'HitsterWeb/1.0 (+https://github.com/openhands/hitster-web)' },
+      headers: { 'user-agent': 'HitsterWeb/2.0 (+https://github.com/openhands/hitster-web)' },
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return await res.json();
@@ -91,7 +91,8 @@ async function itunesPreview(trackId) {
 async function searchDeezer(song) {
   const q = `${song.title} ${song.artist}`;
   const data = await fetchJson(
-    `https://api.deezer.com/2.0/search?q=${encodeURIComponent(q)}&limit=10`
+    `https://api.deezer.com/2.0/search?q=${encodeURIComponent(q)}&limit=10`,
+    8000
   );
   const target = norm(song.title);
   const artist = norm(song.artist);
@@ -107,7 +108,8 @@ async function searchDeezer(song) {
 async function searchItunes(song) {
   const q = `${song.title} ${song.artist}`;
   const data = await fetchJson(
-    `https://itunes.apple.com/search?term=${encodeURIComponent(q)}&entity=song&limit=10&country=DE`
+    `https://itunes.apple.com/search?term=${encodeURIComponent(q)}&entity=song&limit=10&country=DE`,
+    8000
   );
   const target = norm(song.title);
   const artist = norm(song.artist);
@@ -125,30 +127,32 @@ async function searchItunes(song) {
 }
 
 async function resolvePreview(song) {
-  const attempts = [];
-  if (song.deezerId) attempts.push(() => deezerPreview(song.deezerId));
-  if (song.itunesId) attempts.push(() => itunesPreview(song.itunesId));
-  attempts.push(() => searchDeezer(song));
-  attempts.push(() => searchItunes(song));
+  const direct = [];
+  if (song.deezerId) direct.push(deezerPreview(song.deezerId));
+  if (song.itunesId) direct.push(itunesPreview(song.itunesId));
 
-  let lastErr;
-  for (const attempt of attempts) {
+  if (direct.length) {
     try {
-      return await attempt();
-    } catch (err) {
-      lastErr = err;
+      return await Promise.any(direct);
+    } catch {
+      /* fall through to the search APIs */
     }
   }
-  throw lastErr || new Error('no audio source');
+
+  try {
+    return await Promise.any([searchDeezer(song), searchItunes(song)]);
+  } catch (err) {
+    throw err?.errors?.[0] || err || new Error('no audio source');
+  }
 }
 
 async function download(url) {
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 20000);
+  const timer = setTimeout(() => ctrl.abort(), 15000);
   try {
     const res = await fetch(url, {
       signal: ctrl.signal,
-      headers: { 'user-agent': 'HitsterWeb/1.0' },
+      headers: { 'user-agent': 'HitsterWeb/2.0' },
     });
     if (!res.ok) throw new Error(`audio HTTP ${res.status}`);
     const buffer = Buffer.from(await res.arrayBuffer());
@@ -170,13 +174,14 @@ export async function getAudio(song) {
   if (inflight.has(song.id)) return inflight.get(song.id);
 
   const task = (async () => {
-    const files = fs.readdirSync(CACHE_DIR).filter((f) => f.startsWith(`${song.id}.`));
-    if (files.length) {
-      const file = path.join(CACHE_DIR, files[0]);
-      const buffer = await fsp.readFile(file);
+    const cachedFile = [`${song.id}.mp3`, `${song.id}.m4a`]
+      .map((name) => path.join(CACHE_DIR, name))
+      .find((candidate) => fs.existsSync(candidate));
+    if (cachedFile) {
+      const buffer = await fsp.readFile(cachedFile);
       const isM4a = buffer.subarray(4, 8).toString() === 'ftyp';
       const contentType = isM4a ? 'audio/mp4' : 'audio/mpeg';
-      const entry = { buffer, contentType, file };
+      const entry = { buffer, contentType, file: cachedFile };
       touch(song.id, entry);
       return entry;
     }
@@ -207,7 +212,7 @@ export async function getArt(song) {
   }
   if (artInflight.has(song.id)) return artInflight.get(song.id);
   const task = (async () => {
-    const res = await fetch(song.art, { headers: { 'user-agent': 'HitsterWeb/1.0' } });
+    const res = await fetch(song.art, { headers: { 'user-agent': 'HitsterWeb/2.0' } });
     if (!res.ok) throw new Error(`art HTTP ${res.status}`);
     const buffer = Buffer.from(await res.arrayBuffer());
     const contentType = (res.headers.get('content-type') || 'image/jpeg').split(';')[0];

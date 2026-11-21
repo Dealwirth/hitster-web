@@ -11,6 +11,7 @@ import {
   stats,
   generatedAt,
   publicSong,
+  publicSongs,
   randomSong,
   filterSongs,
   bingoAnswers,
@@ -47,6 +48,13 @@ app.use((req, res, next) => {
   next();
 });
 
+app.use((req, res, next) => {
+  if (req.query.v && /\.(?:css|js|mjs|woff2?)$/.test(req.path)) {
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+  }
+  next();
+});
+
 app.use(
   express.static(PUBLIC_DIR, {
     etag: true,
@@ -64,14 +72,14 @@ api.get('/health', (_req, res) => {
 });
 
 api.get('/catalog', (req, res) => {
-  res.setHeader('Cache-Control', 'public, max-age=300');
+  res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
   res.json({
     generatedAt,
     count: songs.length,
     stats,
     genres,
     decades,
-    songs: songs.map(publicSong),
+    songs: publicSongs,
   });
 });
 
@@ -104,6 +112,7 @@ api.get('/random', (req, res) => {
 api.get('/song/:id', (req, res) => {
   const song = byId.get(req.params.id);
   if (!song) return res.status(404).json({ error: 'Karte nicht gefunden.' });
+  res.setHeader('Cache-Control', 'public, max-age=86400');
   res.json({ song: publicSong(song), bingo: bingoAnswers(song) });
 });
 
@@ -130,6 +139,7 @@ api.get('/qr/:id', async (req, res) => {
 api.get('/bingo/:id', (req, res) => {
   const song = byId.get(req.params.id);
   if (!song) return res.status(404).json({ error: 'Karte nicht gefunden.' });
+  res.setHeader('Cache-Control', 'public, max-age=86400');
   res.json({ bingo: bingoAnswers(song) });
 });
 

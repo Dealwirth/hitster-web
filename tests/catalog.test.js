@@ -61,13 +61,15 @@ test('spotify ids are well formed when present', () => {
   assert.ok(stats.withSpotify > 500, `only ${stats.withSpotify} spotify ids`);
 });
 
-test('publicSong exposes safe stream and spotify urls', () => {
+test('publicSong exposes a lean, safe payload', () => {
   const s = publicSong(songs[0]);
   assert.equal(s.streamUrl, `/api/audio/${songs[0].id}`);
-  assert.equal(s.artUrl, `/api/art/${songs[0].id}`);
-  assert.ok(s.spotifyUrl.startsWith('https://open.spotify.com/'));
+  assert.equal(s.spotifyId, songs[0].spotifyId);
   assert.equal(s.year, songs[0].year);
   assert.equal(s.group, songs[0].group);
+  assert.ok(!('artUrl' in s));
+  assert.ok(!('album' in s));
+  assert.ok(!('duration' in s));
 });
 
 test('bingo answers cover all ten Hitster Bingo categories', () => {

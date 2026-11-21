@@ -1,6 +1,6 @@
 {
   "name": "hitster-web",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Kostenlose Hitster-Karten-Erweiterung mit 4.121 Songs, 30-Sekunden-Clips, QR-Scanner, Druckbogen und allen Hitster-Bingo-Kategorien. Kein Login, keine Werbung, kein Online-Mehrspieler.",
   "type": "module",
   "main": "server/index.js",

@@ -16,7 +16,8 @@ test('GET /api/catalog returns all songs with filters metadata', async () => {
   assert.equal(res.body.songs.length, res.body.count);
   assert.ok(res.body.genres.length >= 20);
   assert.ok(res.body.decades.length >= 7);
-  assert.ok(res.body.songs.every((s) => s.streamUrl && s.spotifyUrl && s.artUrl));
+  assert.ok(res.body.songs.every((s) => s.streamUrl && s.spotifyId !== undefined));
+  assert.match(res.headers['cache-control'], /max-age=86400/);
   assert.match(res.headers['content-type'], /application\/json/);
 });
 

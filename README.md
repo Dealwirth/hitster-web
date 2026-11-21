@@ -198,7 +198,8 @@ können nach einem Rebuild leicht abweichen).
 ├── scripts/
 │   ├── build-catalog.js  TSV → JSON, Deezer/iTunes-Matching, Spotify-IDs
 │   ├── expand-catalog.js Zusätzliche Songs aus Deezer-Künstlern
-│   └── expand-oldies.js  Oldies ergänzen
+│   ├── expand-oldies.js  Oldies ergänzen
+│   └── serve-watchdog.sh Startet den Server bei Absturz automatisch neu
 ├── data/
 │   ├── songs.source.tsv  Kuratierte Quelle (Jahr | Genre | G/S | Interpret | Titel | Tags)
 │   ├── catalog.json      Generierter Katalog (4.121 Songs)
@@ -258,6 +259,18 @@ und ein Cover, fällt bei Bedarf auf die **iTunes Search API** zurück und ergä
 Ergebnisse werden in `data/.cache/resolved.json` zwischengespeichert; ein
 abgebrochener Lauf kann fortgesetzt werden (`--force` ignoriert den Cache,
 `--limit=N` verarbeitet nur N offene Songs).
+
+### Performance
+
+- Der Katalog wird beim Start einmal aufbereitet (`publicSongs`) und als gzip
+  ausgeliefert: **~708 KB roh / ~144 KB komprimiert** statt ~1,37 MB / ~247 KB.
+- `/api/catalog` ist **1 Tag** cachebar (`stale-while-revalidate`), versionierte
+  CSS/JS-Dateien **1 Jahr** (`immutable`); die App lädt den Katalog mit `?v=2.0.1`.
+- Audio-Quellen werden **parallel** aufgelöst (Deezer/iTunes) und mit 8–15 s
+  Timeouts abgesichert. Treffer liegen im RAM-/Disk-Cache; ein Cache-Hit braucht
+  keinen Verzeichnis-Scan mehr.
+- `scripts/serve-watchdog.sh` startet den Node-Prozess nach einem Absturz
+  automatisch neu – damit die Seite nicht wieder „Bad Gateway“ zeigt.
 
 ### Audio-Proxy
 
@@ -352,6 +365,12 @@ Der Server ist eine normale Node-App ohne Datenbank:
 
 ```bash
 PORT=12000 npm start
+```
+
+Für Dauerbetrieb mit automatischem Neustart:
+
+```bash
+setsid ./scripts/serve-watchdog.sh >/dev/null 2>&1 < /dev/null &
 ```
 
 Empfohlen: hinter einem Reverse Proxy (Caddy/Nginx) mit HTTPS betreiben.

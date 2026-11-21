@@ -20,10 +20,12 @@ Printable 62×88 mm cards with QR codes; no online multiplayer.
   Resumable via `data/.cache/resolved.json`; `--force`, `--limit=N`.
 - `scripts/expand-catalog.js` / `scripts/expand-oldies.js` – catalog expansion
   helpers; the merged source of truth is `data/songs.source.tsv`.
+- `scripts/serve-watchdog.sh` – restart loop for production; logs to `server.log`.
 
 ## Architecture
 - `server/index.js` – Express, CSP/security headers, `/api/{health,catalog,random,song,bingo,audio,art,qr}`.
-- `server/catalog.js` – loads `data/catalog.json`, filters, random pick, Bingo answers.
+- `server/catalog.js` – loads `data/catalog.json`, filters, random pick, Bingo answers;
+  precomputes `publicSongs` so `/api/catalog` does not re-map 4,121 songs per request.
 - `server/audio.js` – Deezer preview first, iTunes fallback, disk+LRU cache,
   HTTP Range, 800 MB audio cache prune.
 - `public/app.js` – state, audio, 25 s timer, 3D flip, filters, Bingo scorecard,
@@ -53,6 +55,11 @@ Printable 62×88 mm cards with QR codes; no online multiplayer.
   catalog years. Use curated years; anchors are tested.
 - `npm test` intentionally excludes E2E (glob `tests/*.test.js` would include it).
 - CSP allows `frame-src https://open.spotify.com` only; no inline scripts.
+- `/api/catalog` is cached 1 day and fetched with `?v=2.0.1`; versioned static
+  assets are cached 1 year. `publicSong` is intentionally lean (no album/art/
+  duration/spotifyUrl) to keep the payload at ~144 KB gzip.
+- Audio resolution runs Deezer/iTunes direct sources in parallel, then both
+  search APIs in parallel; cache hits check `<id>.mp3`/`<id>.m4a` directly.
 - `tests/a11y.mjs` uses `bypassCSP` because axe is injected inline.
 - Data/cache folders (`data/.cache`, `test-results`) are gitignored.
 - QR cards encode `${base}/?card=<id>`; the scanner also accepts bare years and

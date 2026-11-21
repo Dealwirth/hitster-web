@@ -36,20 +36,15 @@ export function publicSong(song) {
     title: song.title,
     artist: song.artist,
     year: song.year,
-    decade: `${Math.floor(song.year / 10) * 10}s`,
     genre: song.genre,
     group: song.group,
     tags: song.tags,
     spotifyId: song.spotifyId,
-    album: song.album,
-    duration: song.duration,
-    artUrl: song.art ? `/api/art/${song.id}` : null,
     streamUrl: `/api/audio/${song.id}`,
-    spotifyUrl: song.spotifyId
-      ? `https://open.spotify.com/track/${song.spotifyId}`
-      : `https://open.spotify.com/search/${encodeURIComponent(`${song.title} ${song.artist}`)}`,
   };
 }
+
+export const publicSongs = songs.map(publicSong);
 
 export function filterSongs({ genre, decade, tag, group, q, spotifyOnly } = {}) {
   let list = songs;
