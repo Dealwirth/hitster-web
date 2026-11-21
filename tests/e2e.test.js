@@ -126,6 +126,30 @@ await step('card back reveals only year, title, artist and group icon', async ()
   assert.equal(await page.locator('.back-bingo').count(), 0);
 });
 
+await step('next card changes only after the card has turned back', async () => {
+  await page.evaluate(() => { if (!window.HITSTER.state.flipped) window.HITSTER.flipCard(); });
+  await page.waitForTimeout(800);
+  const before = await page.evaluate(() => ({ id: window.HITSTER.state.current.id, year: document.querySelector('#backYear').textContent }));
+  await page.locator('#nextBtn').click();
+  await page.waitForTimeout(120);
+  const during = await page.evaluate(() => ({
+    id: window.HITSTER.state.current.id,
+    year: document.querySelector('#backYear').textContent,
+    flipped: window.HITSTER.state.flipped,
+    attr: document.querySelector('#card').dataset.flipped,
+  }));
+  assert.equal(during.id, before.id, 'next card must not be loaded before the flip');
+  assert.equal(during.year, before.year, 'next year must not be visible during the flip');
+  assert.equal(during.flipped, false);
+  assert.equal(during.attr, 'false');
+  await page.waitForTimeout(900);
+  const after = await page.evaluate(() => ({ id: window.HITSTER.state.current.id, flipped: window.HITSTER.state.flipped }));
+  assert.notEqual(after.id, before.id);
+  assert.equal(after.flipped, false);
+  await page.evaluate(() => { if (!window.HITSTER.state.flipped) window.HITSTER.flipCard(); });
+  await page.waitForTimeout(800);
+});
+
 await step('judging a correct answer updates the statistics', async () => {
   await page.locator('#judgeRight').click();
   await page.waitForTimeout(300);
@@ -190,7 +214,7 @@ await step('Spotify player modal embeds a track', async () => {
 await step('next card resets the flip and draws a different card', async () => {
   const before = await page.locator('#frontNumber').innerText();
   await page.locator('#nextBtn').click();
-  await page.waitForTimeout(700);
+  await page.waitForTimeout(900);
   assert.equal(await page.locator('#card').getAttribute('data-flipped'), 'false');
   const after = await page.locator('#frontNumber').innerText();
   assert.notEqual(before, after);
@@ -220,7 +244,7 @@ await step('keyboard shortcuts control the game', async () => {
   await page.waitForTimeout(900);
   assert.equal(await page.locator('#card').getAttribute('data-flipped'), 'true');
   await page.keyboard.press('n');
-  await page.waitForTimeout(700);
+  await page.waitForTimeout(900);
   assert.equal(await page.locator('#card').getAttribute('data-flipped'), 'false');
 });
 

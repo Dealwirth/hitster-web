@@ -7,7 +7,7 @@ const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
 const CLIP_SECONDS = 30;
-const VERSION = '4.6.0';
+const VERSION = '4.7.0';
 const STATIC = document.documentElement.dataset.static === 'true' || location.hostname.endsWith('github.io');
 const API_BASE = (document.querySelector('meta[name="hitster-api"]')?.content || '').replace(/\/$/, '');
 const API = (path) => `${API_BASE}${path}`;
@@ -28,7 +28,7 @@ const VERSIONS = {
   oldies: { label: 'Oldies', short: 'Oldies', desc: '50er, 60er und 70er', color: '#e8e2d0', icon: '📻', decades: ['1950s', '1960s', '1970s'] },
   nineties: { label: '90s Party', short: '90s', desc: 'Der Sound der 1990er', color: '#c084fc', icon: '💿', decades: ['1990s'] },
   love: { label: 'Love & Heartbreak', short: 'Love', desc: 'Soul, Pop, Folk, Schlager', color: '#ff2d95', icon: '💔', genres: ['rnb', 'pop', 'folk', 'schlager'] },
-  movie: { label: 'Film & Musical', short: 'Film', desc: 'Kino, Musical und Klassik', color: '#ffd23f', icon: '🎬', genres: ['film', 'klassik', 'jazz'] },
+  movie: { label: 'Film & Musical', short: 'Film', desc: 'Kino, Musical und Klassik', color: '#ffd23f', icon: '🎬', tags: ['movie'] },
   summer: { label: 'Summer Hits', short: 'Summer', desc: 'Latin, Reggae, Dance, Pop', color: '#ff9f1c', icon: '🌴', genres: ['latin', 'reggae', 'electronic', 'pop'] },
   charts: { label: 'Charts & Neu', short: 'Charts', desc: '2010er und 2020er', color: '#29e6ff', icon: '📈', decades: ['2010s', '2020s'] },
   bangers: { label: 'Bangers', short: 'Bangers', desc: 'Laut, schnell, Party', color: '#ff3b5c', icon: '🔥', genres: ['metal', 'rock', 'electronic', 'hiphop'] },
@@ -87,6 +87,8 @@ const state = {
   hitsterCards: null,
   playerHidden: false,
   lastScan: null,
+  returnMode: null,
+  transitioning: false,
   installPrompt: null,
   scan: { stream: null, raf: null, active: false, detected: false, last: 0, deckSku: 'auto' },
   toastTimer: null,
@@ -706,6 +708,8 @@ function readUrl() {
   state.version = 'all';
   state.extensionYear = null;
   state.blindYear = false;
+  state.returnMode = null;
+  state.transitioning = false;
   state.initialCard = null;
   state.initialPlaylist = null;
   state.initialHitster = null;
@@ -992,6 +996,7 @@ function applyYear(year, { silent = false } = {}) {
   }
   state.extensionYear = year;
   state.blindYear = true;
+  state.returnMode = null;
   setMode('extension', { silent: true, reload: false, preserveYear: true });
   const pool = yearPool(year);
   if (!pool.length) {
@@ -1232,9 +1237,11 @@ function startCardRound(meta, result, label = 'Originalkarte') {
     return false;
   }
   state.lastScan = { year: meta.year, card: meta.card, sku: meta.sku, title: meta.title, artist: meta.artist };
+  const returnMode = state.mode === 'extension' ? 'classic' : state.mode;
   state.extensionYear = meta.year;
   state.blindYear = true;
   setMode('extension', { silent: true, reload: false, preserveYear: true });
+  state.returnMode = returnMode;
   loadCard(alternative);
   state.stats.played += 1;
   saveStats();
@@ -1849,7 +1856,7 @@ function updateTimerUI() {
    -------------------------------------------------------------------------- */
 
 function flipCard() {
-  if (!state.current) return;
+  if (!state.current || state.transitioning) return;
   state.flipped = !state.flipped;
   el.card.dataset.flipped = state.flipped ? 'true' : 'false';
   setCardAccent(state.flipped);
@@ -1873,15 +1880,43 @@ function flipCard() {
 }
 
 function nextCard() {
+  if (state.transitioning) return;
+  const returnMode = state.returnMode || (state.version !== 'all' ? 'versions' : 'classic');
+  if (state.extensionYear || state.mode === 'extension') {
+    state.extensionYear = null;
+    state.blindYear = false;
+    state.returnMode = null;
+    setMode(returnMode, { silent: true, reload: false });
+  }
   const song = pickSong();
   if (!song) {
     showToast('Runde beendet – starte eine neue Runde.', 3600);
     return;
   }
-  loadCard(song);
-  state.stats.played += 1;
-  saveStats();
-  renderStats();
+  const reveal = () => {
+    loadCard(song);
+    state.stats.played += 1;
+    saveStats();
+    renderStats();
+  };
+  if (!state.flipped) {
+    reveal();
+    return;
+  }
+  // Turn the old card to its neutral front first. Only then put the next
+  // song into the DOM, otherwise the new year is visible during the flip.
+  state.flipped = false;
+  el.card.dataset.flipped = 'false';
+  setCardAccent(false);
+  setFaceAccessibility(false);
+  updateFlipButton();
+  updatePlayer();
+  state.transitioning = true;
+  const delay = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 30 : 760;
+  setTimeout(() => {
+    state.transitioning = false;
+    reveal();
+  }, delay);
 }
 
 /* --------------------------------------------------------------------------

@@ -51,7 +51,7 @@ await step('official card database covers all 51.208 cards', async () => {
 
 await step('catalog is complete and contains the new bangers', async () => {
   const health = await (await fetch(`${base}/api/health`)).json();
-  assert.equal(health.songs, 4701);
+  assert.equal(health.songs, 4860);
   const catalog = JSON.parse(fs.readFileSync('data/catalog.json', 'utf8'));
   assert.ok(catalog.songs.every((song) => song.year >= 1950 && song.year <= 2030));
   assert.ok(catalog.songs.every((song) => song.genre && song.title && song.artist));
@@ -95,6 +95,15 @@ await step('version presets combine genres and are URL-synced', async () => {
   assert.match(page.url(), /version=guilty/);
   await page.locator('.mode-btn[data-mode="classic"]').click();
   await page.waitForTimeout(300);
+});
+
+await step('every version preset has at least 200 cards', async () => {
+  const counts = await page.$$eval('#versionChips .version-card', (cards) => cards.map((card) => ({
+    id: card.dataset.version,
+    count: Number(card.querySelector('.version-n')?.textContent || 0),
+  })));
+  assert.ok(counts.length >= 13);
+  for (const { id, count } of counts) assert.ok(count >= 200, `${id} has only ${count}`);
 });
 
 await step('QR code 00052 reveals a different song from the same year', async () => {
@@ -184,6 +193,28 @@ await step('deep link ?hitster=de/00052 opens the card', async () => {
   assert.equal(await deep.evaluate(() => window.HITSTER.state.extensionYear), 2018);
   assert.equal(await deep.evaluate(() => window.HITSTER.state.blindYear), true);
   await deep.close();
+});
+
+await step('next after a scan leaves the scanned year and draws randomly', async () => {
+  const scanPage = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  await scanPage.goto(`${base}/?hitster=de/00052`, { waitUntil: 'networkidle' });
+  await scanPage.waitForFunction(() => window.HITSTER?.state?.ready);
+  await scanPage.waitForFunction(() => window.HITSTER.state.extensionYear === 2018);
+  const scannedId = await scanPage.evaluate(() => window.HITSTER.state.current.id);
+  await scanPage.locator('#flipBtn').click();
+  await scanPage.waitForTimeout(800);
+  await scanPage.locator('#nextBtn').click();
+  await scanPage.waitForTimeout(900);
+  const after = await scanPage.evaluate(() => ({
+    id: window.HITSTER.state.current.id,
+    year: window.HITSTER.state.current.year,
+    extensionYear: window.HITSTER.state.extensionYear,
+    mode: window.HITSTER.state.mode,
+  }));
+  assert.notEqual(after.id, scannedId);
+  assert.equal(after.extensionYear, null);
+  assert.notEqual(after.mode, 'extension');
+  await scanPage.close();
 });
 
 await step('deep link with SKU opens a different song from the same year', async () => {

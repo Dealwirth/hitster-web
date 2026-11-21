@@ -1,7 +1,7 @@
 # HITSTER Web – Karten-Erweiterung
 
 **Die kostenlose, werbefreie Karten-Erweiterung für Hitster – direkt im Browser.**
-4.701 Songs · 30-Sekunden-Clips · echte Hitster-QR-Codes · Spotify-Playlists · eigene Kategorien · PWA · Karten zum Ausdrucken.
+4.860 Songs · 30-Sekunden-Clips · echte Hitster-QR-Codes · Spotify-Playlists · eigene Kategorien · PWA · Karten zum Ausdrucken.
 Kein Login, keine Werbung, kein externes Tracking. Open Source (MIT).
 
 ![HITSTER Web – Kartenvorderseite](docs/screenshot-front.png)
@@ -94,7 +94,7 @@ Kein Login, keine Werbung, kein externes Tracking. Open Source (MIT).
   - `/api/resolve?spotify=…` – Spotify-Link → Titel/Künstler/Jahr (Katalog + Spotify-Metadaten)
   - `/api/spotify/track/:id` – Spotify-Embed-Metadaten + MusicBrainz-Erstveröffentlichung
 - `/api/playlist?url=…` – Spotify-Playlist → **alle** Karten mit Jahr, Vorschau und Cover
-- **Daten:** `data/songs.source.tsv` (Quelle) → `data/catalog.json` (4.701 Songs, 1950–2026), ergänzt um Chart-Hits, kuratierte Klassiker, Songseeker-Rock/Metal und Oldie-Ergänzungen.
+- **Daten:** `data/songs.source.tsv` (Quelle) → `data/catalog.json` (4.860 Songs, 1950–2026), ergänzt um Chart-Hits, kuratierte Klassiker, Songseeker-Rock/Metal, Oldie- sowie Soundtrack-/One-Hit-Ergänzungen.
 - **Echte Kartendaten:** `public/hitster-cards.json` mit **5.192 Karten aus 18 Decks** (Titel, Interpret, Jahr, Solo/Band, Spotify-/YouTube-Link) aus [Songseeker](https://github.com/andygruber/songseeker-hitster-playlists) (MIT). Import: `npm run import:cards`. Die Kartenmetadaten dienen nur zur Jahres-/Set-Erkennung; gespielt wird ein anderes Lied aus demselben Jahr.
 - **Statische Version:** `docs/` ist ein GitHub-Pages-Build. Sie nutzt `catalog.json`,
   `hitster-db.json`, `hitster-cards.json`, vorgenerierte QR-Codes und iTunes-Vorschauen direkt im Browser.
@@ -110,7 +110,7 @@ Kein Login, keine Werbung, kein externes Tracking. Open Source (MIT).
 - Die exakte Karten-Datenbank (`hitster-cards.json`) ist **~2,0 MB roh / ~420 KB gzip**
   und wird nur beim ersten Scan geladen.
 - `/api/catalog` ist **1 Tag** cachebar, versionierte CSS/JS-Dateien **1 Jahr**
-  (`immutable`), Asset-Version `4.6.0`.
+  (`immutable`), Asset-Version `4.7.0`.
 - Audio-Quellen werden **parallel** (Deezer/iTunes) aufgelöst, Timeouts 8–15 s.
 - Cache-Hits brauchen keinen Verzeichnis-Scan.
 - `scripts/serve-watchdog.sh` startet den Node-Prozess nach einem Absturz neu.
@@ -134,7 +134,7 @@ Kein Login, keine Werbung, kein externes Tracking. Open Source (MIT).
 npm install
 npm start              # http://localhost:12000
 npm test               # Unit- und API-Tests
-npm run test:e2e       # Browser-E2E (Chromium, 32 Checks)
+npm run test:e2e       # Browser-E2E (Chromium, 33 Checks)
 npm run test:v4        # Scan, Kartenset, Versionen, Playlist, PWA, Druck (Chromium)
 npm run test:v5        # 51.208 Karten, Genre-Filter, anderes Lied aus demselben Jahr, 664-Track-Playlist
 npm run test:static    # GitHub-Pages-Build + lokale API (Chromium)
@@ -165,7 +165,7 @@ Logs: `server.log`. Für Dauerbetrieb eignen sich auch systemd, PM2 oder Docker.
 
 ## Daten & Lizenz
 
-- 4.701 Songs, 1950–2026, 21 Genres, 300 Chart-Hits, 63 kuratierte Klassiker, 181 Rock-/Metal-Ergänzungen und 36 Oldie-Ergänzungen für die Jahre 1950–1955.
+- 4.860 Songs, 1950–2026, 21 Genres, 300 Chart-Hits, 63 kuratierte Klassiker, 181 Rock-/Metal-Ergänzungen, 36 Oldie-Ergänzungen für die Jahre 1950–1955 und 159 Soundtrack-/One-Hit-Erweiterungen. Jede Version hat mindestens 200 Karten.
 - Song-Clips sind offizielle 30-Sekunden-Vorschauen von Deezer, Spotify bzw. iTunes.
 - Jahres-Auflösung: kuratierter Katalog, sonst MusicBrainz-Erstveröffentlichung, sonst iTunes/Spotify.
 - Echte Kartendaten: `public/hitster-db.json` (176 Spieldatenbanken, Karten → Spotify-ID + Gruppe/Solo) und `public/hitster-cards.json` (5.192 Karten mit exakten Songdaten).

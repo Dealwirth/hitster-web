@@ -1,5 +1,5 @@
 # year|genre|group|artist|title|tags
-1954|rock|G|Bill Haley & His Comets|Rock Around the Clock|
+1954|rock|G|Bill Haley & His Comets|Rock Around the Clock|onehit,movie
 1956|rock|S|Elvis Presley|Heartbreak Hotel|
 1956|rock|S|Elvis Presley|Hound Dog|
 1956|rock|S|Elvis Presley|Don't Be Cruel|
@@ -8,11 +8,11 @@
 1957|rock|S|Little Richard|Lucille|
 1955|rock|S|Chuck Berry|Maybellene|
 1958|rock|S|Chuck Berry|Johnny B. Goode|
-1957|rock|S|Buddy Holly|Peggy Sue|
+1957|rock|S|Buddy Holly|Peggy Sue|onehit,movie
 1958|rock|G|The Everly Brothers|All I Have to Do Is Dream|
-1959|rock|S|Ritchie Valens|La Bamba|
-1958|rock|G|The Champs|Tequila|onehit
-1959|pop|S|Bobby Darin|Mack the Knife|
+1959|rock|S|Ritchie Valens|La Bamba|onehit,movie
+1958|rock|G|The Champs|Tequila|onehit,movie
+1959|pop|S|Bobby Darin|Mack the Knife|onehit,movie
 1959|pop|S|Frank Sinatra|Fly Me to the Moon|
 1958|pop|S|Dean Martin|Volare|
 1956|pop|S|Doris Day|Que Sera, Sera|
@@ -22,26 +22,26 @@
 1959|rnb|S|Ray Charles|What'd I Say|
 1960|rnb|S|Sam Cooke|Wonderful World|
 1962|rnb|S|Sam Cooke|Bring It On Home to Me|
-1963|rnb|G|The Ronettes|Be My Baby|
+1963|rnb|G|The Ronettes|Be My Baby|onehit
 1961|rnb|G|The Shirelles|Will You Love Me Tomorrow|
 1964|rnb|G|The Supremes|Baby Love|
 1965|rnb|G|The Supremes|Stop! In the Name of Love|
 1965|rnb|G|The Temptations|My Girl|
 1966|rnb|G|The Four Tops|Reach Out I'll Be There|
-1964|rnb|G|Martha and the Vandellas|Dancing in the Street|
-1965|rnb|G|Wilson Pickett|In the Midnight Hour|
+1964|rnb|G|Martha and the Vandellas|Dancing in the Street|onehit
+1965|rnb|G|Wilson Pickett|In the Midnight Hour|onehit
 1966|rnb|S|Percy Sledge|When a Man Loves a Woman|onehit
 1967|rnb|S|Aretha Franklin|Respect|
 1968|rnb|S|Aretha Franklin|Think|
-1968|rnb|S|Otis Redding|(Sittin' On) The Dock of the Bay|
-1960|rnb|S|Etta James|At Last|
+1968|rnb|S|Otis Redding|(Sittin' On) The Dock of the Bay|onehit
+1960|rnb|S|Etta James|At Last|onehit
 1965|rnb|S|Nina Simone|Feeling Good|
 1965|rnb|S|Nina Simone|I Put a Spell on You|
 1969|rnb|G|The Jackson 5|I Want You Back|
 1970|rnb|G|The Jackson 5|ABC|
 1965|funk|S|James Brown|Papa's Got a Brand New Bag|
 1967|funk|S|James Brown|Cold Sweat|
-1969|funk|G|Sly and the Family Stone|Everyday People|
+1969|funk|G|Sly and the Family Stone|Everyday People|onehit
 1968|rock|G|The Beatles|Hey Jude|
 1965|rock|G|The Beatles|Help!|
 1965|rock|G|The Beatles|Yesterday|
@@ -87,66 +87,66 @@
 1967|folk|S|Scott McKenzie|San Francisco (Be Sure to Wear Flowers in Your Hair)|onehit
 1969|rock|G|Creedence Clearwater Revival|Fortunate Son|
 1969|rock|G|Creedence Clearwater Revival|Bad Moon Rising|
-1968|rock|G|The Band|The Weight|
+1968|rock|G|The Band|The Weight|onehit
 1967|rock|G|Jefferson Airplane|Somebody to Love|
 1967|rock|S|Janis Joplin|Piece of My Heart|
 1964|rock|G|The Animals|The House of the Rising Sun|
 1965|rock|G|The Yardbirds|For Your Love|
-1966|rock|G|The Troggs|Wild Thing|
-1967|rock|G|Procol Harum|A Whiter Shade of Pale|
+1966|rock|G|The Troggs|Wild Thing|onehit,movie
+1967|rock|G|Procol Harum|A Whiter Shade of Pale|onehit,movie
 1966|pop|G|The Monkees|I'm a Believer|
 1967|pop|G|The Monkees|Daydream Believer|
 1968|pop|G|The Archies|Sugar, Sugar|onehit
-1969|pop|G|The Shocking Blue|Venus|
+1969|pop|G|The Shocking Blue|Venus|onehit
 1969|pop|G|Zager and Evans|In the Year 2525|onehit
-1966|pop|S|Nancy Sinatra|These Boots Are Made for Walkin'|
+1966|pop|S|Nancy Sinatra|These Boots Are Made for Walkin'|onehit,movie
 1967|pop|S|Frank Sinatra|That's Life|
 1966|pop|S|Tom Jones|It's Not Unusual|
 1968|pop|S|Tom Jones|Delilah|
 1964|pop|G|The Righteous Brothers|You've Lost That Lovin' Feelin'|
-1965|pop|G|Sonny & Cher|I Got You Babe|
-1966|pop|G|The Lovin' Spoonful|Summer in the City|
-1967|pop|G|The Turtles|Happy Together|
-1967|pop|G|The Box Tops|The Letter|onehit
+1965|pop|G|Sonny & Cher|I Got You Babe|onehit,movie
+1966|pop|G|The Lovin' Spoonful|Summer in the City|onehit,movie
+1967|pop|G|The Turtles|Happy Together|onehit
+1967|pop|G|The Box Tops|The Letter|onehit,movie
 1969|pop|G|The Foundations|Build Me Up Buttercup|onehit
-1967|pop|G|The Tremeloes|Silence Is Golden|
-1964|pop|G|The Shangri-Las|Leader of the Pack|
-1962|pop|S|Bobby Vinton|Blue Velvet|
+1967|pop|G|The Tremeloes|Silence Is Golden|onehit
+1964|pop|G|The Shangri-Las|Leader of the Pack|onehit,movie
+1962|pop|S|Bobby Vinton|Blue Velvet|onehit,movie
 1963|pop|S|Roy Orbison|Oh, Pretty Woman|
 1961|pop|S|Roy Orbison|Crying|
 1960|pop|S|Elvis Presley|It's Now or Never|
 1961|pop|S|Elvis Presley|Can't Help Falling in Love|
 1969|pop|S|Elvis Presley|Suspicious Minds|
-1967|pop|S|Leonard Cohen|Suzanne|
+1967|pop|S|Leonard Cohen|Suzanne|onehit,movie
 1968|rock|G|Steppenwolf|Born to Be Wild|
 1969|rock|G|Steppenwolf|Magic Carpet Ride|
 1968|rock|G|Iron Butterfly|In-A-Gadda-Da-Vida|onehit
-1969|rock|G|Blood, Sweat & Tears|Spinning Wheel|
-1969|rock|G|Santana|Evil Ways|
-1969|rock|G|The Allman Brothers Band|Whipping Post|
+1969|rock|G|Blood, Sweat & Tears|Spinning Wheel|onehit
+1969|rock|G|Santana|Evil Ways|onehit
+1969|rock|G|The Allman Brothers Band|Whipping Post|onehit
 1969|rock|G|Fleetwood Mac|Oh Well|
-1968|rock|G|The Small Faces|Lazy Sunday|
+1968|rock|G|The Small Faces|Lazy Sunday|onehit
 1968|rock|G|The Zombies|Time of the Season|onehit
 1967|rock|G|The Easybeats|Friday on My Mind|onehit
-1966|rock|G|The Spencer Davis Group|Gimme Some Lovin'|
-1967|rock|G|Traffic|Hole in My Shoe|
-1969|rock|G|King Crimson|21st Century Schizoid Man|
+1966|rock|G|The Spencer Davis Group|Gimme Some Lovin'|onehit,movie
+1967|rock|G|Traffic|Hole in My Shoe|onehit
+1969|rock|G|King Crimson|21st Century Schizoid Man|onehit
 1969|pop|S|David Bowie|Space Oddity|
-1969|rock|G|The Velvet Underground|Sweet Jane|
-1969|rock|G|MC5|Kick Out the Jams|
-1969|rock|G|The Stooges|I Wanna Be Your Dog|
+1969|rock|G|The Velvet Underground|Sweet Jane|onehit
+1969|rock|G|MC5|Kick Out the Jams|onehit
+1969|rock|G|The Stooges|I Wanna Be Your Dog|onehit
 1968|pop|S|Bobby Goldsboro|Honey|onehit
-1968|pop|G|Gary Puckett & The Union Gap|Young Girl|
-1969|country|S|Johnny Cash|A Boy Named Sue|
-1968|country|S|Glen Campbell|Wichita Lineman|
+1968|pop|G|Gary Puckett & The Union Gap|Young Girl|onehit
+1969|country|S|Johnny Cash|A Boy Named Sue|onehit
+1968|country|S|Glen Campbell|Wichita Lineman|onehit
 1973|country|S|Dolly Parton|Jolene|
-1968|jazz|S|Louis Armstrong|What a Wonderful World|
-1959|jazz|S|Miles Davis|So What|
-1959|jazz|S|Dave Brubeck|Take Five|
-1965|film|S|Julie Andrews|My Favorite Things|
-1965|film|S|Julie Andrews|Supercalifragilisticexpialidocious|
-1964|film|S|Dick Van Dyke|Chim Chim Cher-ee|
-1969|film|S|B.J. Thomas|Raindrops Keep Fallin' on My Head|onehit
+1968|jazz|S|Louis Armstrong|What a Wonderful World|onehit
+1959|jazz|S|Miles Davis|So What|onehit
+1959|jazz|S|Dave Brubeck|Take Five|onehit
+1965|film|S|Julie Andrews|My Favorite Things|movie
+1965|film|S|Julie Andrews|Supercalifragilisticexpialidocious|movie
+1964|film|S|Dick Van Dyke|Chim Chim Cher-ee|movie,onehit
+1969|film|S|B.J. Thomas|Raindrops Keep Fallin' on My Head|onehit,movie
 1970|rock|G|The Beatles|Let It Be|
 1970|rock|G|The Beatles|The Long and Winding Road|
 1970|folk|G|Simon & Garfunkel|Bridge over Troubled Water|
@@ -186,12 +186,12 @@
 1973|pop|S|Elton John|Goodbye Yellow Brick Road|
 1973|pop|S|Elton John|Bennie and the Jets|
 1975|pop|S|Elton John|Philadelphia Freedom|
-1976|pop|G|Elton John & Kiki Dee|Don't Go Breaking My Heart|
+1976|pop|G|Elton John & Kiki Dee|Don't Go Breaking My Heart|onehit
 1971|rock|S|Rod Stewart|Maggie May|
 1978|pop|S|Rod Stewart|Da Ya Think I'm Sexy?|
 1971|rock|S|John Lennon|Imagine|
 1970|rock|S|John Lennon|Instant Karma!|
-1970|folk|S|George Harrison|My Sweet Lord|
+1970|folk|S|George Harrison|My Sweet Lord|onehit
 1973|rock|G|Paul McCartney & Wings|Live and Let Die|
 1973|rock|G|Paul McCartney & Wings|Band on the Run|
 1976|pop|G|Paul McCartney & Wings|Silly Love Songs|
@@ -220,7 +220,7 @@
 1979|funk|S|Donna Summer|Hot Stuff|
 1978|funk|G|Chic|Le Freak|
 1979|funk|G|Chic|Good Times|
-1978|funk|S|Gloria Gaynor|I Will Survive|
+1978|funk|S|Gloria Gaynor|I Will Survive|onehit
 1978|funk|G|Village People|Y.M.C.A.|
 1979|funk|G|Village People|In the Navy|
 1975|funk|G|KC and the Sunshine Band|That's the Way (I Like It)|
@@ -281,7 +281,7 @@
 1974|rock|G|Slade|Far Far Away|
 1973|rock|G|Sweet|Ballroom Blitz|
 1975|rock|G|Sweet|Fox on the Run|
-1974|rock|G|Mud|Tiger Feet|
+1974|rock|G|Mud|Tiger Feet|onehit
 1976|funk|G|Boney M.|Daddy Cool|
 1977|funk|G|Boney M.|Ma Baker|
 1978|funk|G|Boney M.|Rasputin|
@@ -292,69 +292,69 @@
 1978|electronic|G|Kraftwerk|Das Model|
 1974|pop|S|Barry Manilow|Mandy|
 1978|pop|S|Barry Manilow|Copacabana (At the Copa)|
-1972|pop|S|Neil Diamond|Song Sung Blue|
-1973|pop|S|Barbra Streisand|The Way We Were|
+1972|pop|S|Neil Diamond|Song Sung Blue|onehit
+1973|pop|S|Barbra Streisand|The Way We Were|movie
 1973|pop|G|The Carpenters|Top of the World|
 1971|country|S|John Denver|Take Me Home, Country Roads|
 1974|country|S|John Denver|Annie's Song|
-1978|country|S|Kenny Rogers|The Gambler|
+1978|country|S|Kenny Rogers|The Gambler|onehit
 1974|reggae|G|Bob Marley & The Wailers|No Woman, No Cry|
 1977|reggae|G|Bob Marley & The Wailers|Three Little Birds|
 1977|reggae|G|Bob Marley & The Wailers|Jamming|
 1977|reggae|G|Bob Marley & The Wailers|One Love|
 1977|rock|S|Iggy Pop|Lust for Life|
-1972|rock|S|Lou Reed|Walk on the Wild Side|
-1978|rock|G|Patti Smith Group|Because the Night|
-1976|rock|G|Tom Petty and the Heartbreakers|American Girl|
+1972|rock|S|Lou Reed|Walk on the Wild Side|onehit
+1978|rock|G|Patti Smith Group|Because the Night|onehit
+1976|rock|G|Tom Petty and the Heartbreakers|American Girl|onehit
 1977|rock|G|Heart|Barracuda|
 1975|rock|G|Heart|Crazy on You|
-1976|rock|G|Boston|More Than a Feeling|
+1976|rock|G|Boston|More Than a Feeling|onehit
 1977|rock|G|Foreigner|Cold as Ice|
-1976|rock|G|Kansas|Carry On Wayward Son|
+1976|rock|G|Kansas|Carry On Wayward Son|onehit
 1977|rock|G|Styx|Come Sail Away|
-1977|rock|G|Cheap Trick|I Want You to Want Me|
+1977|rock|G|Cheap Trick|I Want You to Want Me|onehit
 1978|rock|G|The Cars|Just What I Needed|
 1978|rock|G|Van Halen|Runnin' with the Devil|
 1973|rock|G|Genesis|I Know What I Like (In Your Wardrobe)|
 1971|rock|G|Yes|Roundabout|
-1971|rock|G|Jethro Tull|Locomotive Breath|
-1973|electronic|S|Mike Oldfield|Tubular Bells|
-1976|electronic|S|Jean-Michel Jarre|Oxygène IV|
-1977|electronic|S|Giorgio Moroder|From Here to Eternity|
-1979|funk|S|Amii Stewart|Knock on Wood|
+1971|rock|G|Jethro Tull|Locomotive Breath|onehit
+1973|electronic|S|Mike Oldfield|Tubular Bells|onehit
+1976|electronic|S|Jean-Michel Jarre|Oxygène IV|onehit
+1977|electronic|S|Giorgio Moroder|From Here to Eternity|onehit
+1979|funk|S|Amii Stewart|Knock on Wood|onehit
 1979|funk|G|Sister Sledge|We Are Family|
-1976|funk|G|Rose Royce|Car Wash|
-1976|funk|S|Thelma Houston|Don't Leave Me This Way|
-1978|funk|S|Alicia Bridges|I Love the Nightlife|
+1976|funk|G|Rose Royce|Car Wash|onehit
+1976|funk|S|Thelma Houston|Don't Leave Me This Way|onehit
+1978|funk|S|Alicia Bridges|I Love the Nightlife|onehit
 1979|funk|S|Anita Ward|Ring My Bell|onehit
-1979|funk|G|Ottawan|D.I.S.C.O.|
-1976|funk|G|The Trammps|Disco Inferno|
+1979|funk|G|Ottawan|D.I.S.C.O.|onehit
+1976|funk|G|The Trammps|Disco Inferno|onehit
 1974|funk|S|Carl Douglas|Kung Fu Fighting|onehit
-1974|funk|G|Labelle|Lady Marmalade|
-1975|funk|G|War|Low Rider|
+1974|funk|G|Labelle|Lady Marmalade|onehit
+1975|funk|G|War|Low Rider|onehit
 1976|funk|G|Wild Cherry|Play That Funky Music|onehit
 1977|funk|G|Commodores|Brick House|
 1977|rnb|G|Commodores|Easy|
-1973|rnb|G|The Isley Brothers|That Lady|
-1972|rnb|G|The O'Jays|Love Train|
-1972|rnb|S|Billy Paul|Me and Mrs. Jones|
+1973|rnb|G|The Isley Brothers|That Lady|onehit
+1972|rnb|G|The O'Jays|Love Train|onehit
+1972|rnb|S|Billy Paul|Me and Mrs. Jones|onehit
 1973|rnb|S|Roberta Flack|Killing Me Softly with His Song|
 1972|rnb|S|Roberta Flack|The First Time Ever I Saw Your Face|
 1971|rnb|S|Bill Withers|Ain't No Sunshine|
 1972|rnb|S|Bill Withers|Lean on Me|
 1977|rnb|S|Bill Withers|Lovely Day|
-1972|rnb|G|The Staple Singers|I'll Take You There|
-1972|rnb|S|Curtis Mayfield|Superfly|
-1971|funk|S|Isaac Hayes|Theme from Shaft|
+1972|rnb|G|The Staple Singers|I'll Take You There|onehit
+1972|rnb|S|Curtis Mayfield|Superfly|onehit
+1971|funk|S|Isaac Hayes|Theme from Shaft|movie
 1972|rnb|G|The Temptations|Papa Was a Rollin' Stone|
-1972|rnb|G|The Spinners|I'll Be Around|
-1972|rnb|G|Harold Melvin & The Blue Notes|If You Don't Know Me by Now|
+1972|rnb|G|The Spinners|I'll Be Around|onehit
+1972|rnb|G|Harold Melvin & The Blue Notes|If You Don't Know Me by Now|onehit
 1975|pop|G|10cc|I'm Not in Love|
 1978|pop|G|10cc|Dreadlock Holiday|
 1978|rock|S|Gerry Rafferty|Baker Street|
 1978|rock|S|Gerry Rafferty|Right Down the Line|
-1976|rock|S|Al Stewart|Year of the Cat|
-1977|pop|S|Andrew Gold|Lonely Boy|
+1976|rock|S|Al Stewart|Year of the Cat|onehit
+1977|pop|S|Andrew Gold|Lonely Boy|onehit
 1974|pop|G|Ace|How Long|onehit
 1977|pop|G|Player|Baby Come Back|onehit
 1976|pop|G|Starbuck|Moonlight Feels Right|onehit
@@ -364,7 +364,7 @@
 1978|rock|S|Nick Gilder|Hot Child in the City|onehit
 1979|rock|G|The Knack|My Sharona|onehit
 1979|electronic|G|The Buggles|Video Killed the Radio Star|onehit
-1979|hiphop|G|The Sugarhill Gang|Rapper's Delight|
+1979|hiphop|G|The Sugarhill Gang|Rapper's Delight|onehit
 1980|rock|G|Blondie|Call Me|
 1980|funk|G|Queen|Another One Bites the Dust|
 1981|rock|G|Queen|Under Pressure|
@@ -373,7 +373,7 @@
 1980|pop|G|ABBA|The Winner Takes It All|
 1980|funk|S|Diana Ross|Upside Down|
 1980|funk|S|Diana Ross|I'm Coming Out|
-1980|film|S|Irene Cara|Fame|
+1980|film|S|Irene Cara|Fame|movie
 1980|funk|G|Kool & The Gang|Celebration|
 1980|rock|G|REO Speedwagon|Keep On Loving You|
 1980|country|S|Dolly Parton|9 to 5|
@@ -382,7 +382,7 @@
 1980|punk|G|The Jam|Going Underground|
 1981|ska|G|The Specials|Ghost Town|
 1980|ska|G|Madness|Baggy Trousers|
-1980|ska|G|Dexys Midnight Runners|Geno|
+1980|ska|G|Dexys Midnight Runners|Geno|onehit
 1981|electronic|G|The Human League|Don't You Want Me|
 1981|electronic|G|Soft Cell|Tainted Love|
 1982|electronic|G|A Flock of Seagulls|I Ran (So Far Away)|
@@ -398,8 +398,8 @@
 1982|pop|G|Hall & Oates|Maneater|
 1981|pop|S|Olivia Newton-John|Physical|
 1981|pop|S|Juice Newton|Angel of the Morning|
-1980|pop|G|Air Supply|All Out of Love|
-1980|pop|G|Barbra Streisand & Barry Gibb|Guilty|
+1980|pop|G|Air Supply|All Out of Love|onehit
+1980|pop|G|Barbra Streisand & Barry Gibb|Guilty|onehit
 1981|pop|G|Lionel Richie & Diana Ross|Endless Love|
 1982|pop|S|Michael Jackson|Billie Jean|
 1982|rock|S|Michael Jackson|Beat It|
@@ -441,7 +441,7 @@
 1984|rock|S|Bonnie Tyler|Holding Out for a Hero|
 1983|rock|S|Pat Benatar|Love Is a Battlefield|
 1980|rock|S|Pat Benatar|Hit Me with Your Best Shot|
-1983|film|S|Irene Cara|Flashdance... What a Feeling|
+1983|film|S|Irene Cara|Flashdance... What a Feeling|movie
 1982|rock|G|Survivor|Eye of the Tiger|
 1981|pop|S|Phil Collins|In the Air Tonight|
 1984|pop|S|Phil Collins|Against All Odds (Take a Look at Me Now)|
@@ -563,7 +563,7 @@
 1987|deutschpop|S|Marius Müller-Westernhagen|Freiheit|
 1980|ndw|G|Ideal|Blaue Augen|
 1981|electronic|G|Deutsch Amerikanische Freundschaft|Der Mussolini|
-1980|ndw|G|Fehlfarben|Ein Jahr (Es geht voran)|
+1980|ndw|G|Fehlfarben|Ein Jahr (Es geht voran)|onehit
 1982|ndw|G|Spliff|Carbonara|
 1983|ndw|G|Geier Sturzflug|Bruttosozialprodukt|
 1983|ndw|G|Relax|Weil i di mog|
@@ -583,11 +583,11 @@
 1989|pop|G|Milli Vanilli|Blame It on the Rain|
 1984|pop|S|Al Corley|Square Rooms|
 1984|pop|S|Rockwell|Somebody's Watching Me|
-1984|film|S|Ray Parker Jr.|Ghostbusters|
-1984|film|S|Harold Faltermeyer|Axel F|
-1984|film|S|Kenny Loggins|Footloose|
-1984|film|S|Deniece Williams|Let's Hear It for the Boy|
-1984|pop|S|Stevie Wonder|I Just Called to Say I Love You|
+1984|film|S|Ray Parker Jr.|Ghostbusters|movie
+1984|film|S|Harold Faltermeyer|Axel F|movie
+1984|film|S|Kenny Loggins|Footloose|movie
+1984|film|S|Deniece Williams|Let's Hear It for the Boy|movie
+1984|pop|S|Stevie Wonder|I Just Called to Say I Love You|movie
 1984|pop|G|Band Aid|Do They Know It's Christmas?|
 1985|pop|G|USA for Africa|We Are the World|
 1986|pop|G|The Bangles|Walk Like an Egyptian|
@@ -626,7 +626,7 @@
 1981|rock|G|Foreigner|Waiting for a Girl Like You|
 1984|pop|G|Hall & Oates|Out of Touch|
 1981|funk|G|Hall & Oates|I Can't Go for That (No Can Do)|
-1980|pop|G|Daryl Hall & John Oates|You Make My Dreams|
+1980|pop|G|Daryl Hall & John Oates|You Make My Dreams|onehit
 1985|rock|G|Huey Lewis and the News|The Power of Love|
 1986|rock|G|Huey Lewis and the News|Hip to Be Square|
 1985|rock|S|Robert Palmer|Addicted to Love|
@@ -728,12 +728,12 @@
 1997|electronic|G|Daft Punk|Around the World|
 1998|electronic|G|Air|Sexy Boy|
 1995|electronic|S|Robert Miles|Children|
-1992|electronic|G|Snap!|Rhythm Is a Dancer|
+1992|electronic|G|Snap!|Rhythm Is a Dancer|onehit
 1990|electronic|G|Snap!|The Power|
-1993|electronic|G|Culture Beat|Mr. Vain|
+1993|electronic|G|Culture Beat|Mr. Vain|onehit
 1993|electronic|G|Real McCoy|Another Night|
 1995|electronic|S|La Bouche|Be My Lover|
-1993|electronic|S|Haddaway|What Is Love|
+1993|electronic|S|Haddaway|What Is Love|onehit
 1992|pop|G|Ace of Base|All That She Wants|
 1993|pop|G|Ace of Base|The Sign|
 1993|electronic|S|Corona|The Rhythm of the Night|
@@ -741,10 +741,10 @@
 1993|electronic|G|2 Unlimited|No Limit|
 1992|electronic|S|Dr. Alban|It's My Life|
 1996|pop|G|Mr. President|Coco Jamboo|
-1994|electronic|G|Rednex|Cotton Eye Joe|
+1994|electronic|G|Rednex|Cotton Eye Joe|onehit
 1998|electronic|G|Vengaboys|Boom, Boom, Boom, Boom!!|
 1999|electronic|G|Vengaboys|We're Going to Ibiza|
-1997|pop|G|Aqua|Barbie Girl|
+1997|pop|G|Aqua|Barbie Girl|onehit
 1997|pop|G|Aqua|Doctor Jones|
 1997|pop|G|Backstreet Boys|Everybody (Backstreet's Back)|
 1999|pop|G|Backstreet Boys|I Want It That Way|
@@ -766,7 +766,7 @@
 1995|pop|S|Mariah Carey|Fantasy|
 1994|pop|S|Mariah Carey|All I Want for Christmas Is You|
 1992|pop|S|Whitney Houston|I Will Always Love You|
-1997|pop|S|Celine Dion|My Heart Will Go On|
+1997|pop|S|Celine Dion|My Heart Will Go On|movie
 1996|pop|S|Celine Dion|Because You Loved Me|
 1996|rnb|S|Toni Braxton|Un-Break My Heart|
 1993|rnb|S|Janet Jackson|That's the Way Love Goes|
@@ -809,7 +809,7 @@
 1991|rock|S|Bryan Adams|(Everything I Do) I Do It for You|
 1993|rock|S|Bryan Adams|Please Forgive Me|
 1992|rock|G|Bon Jovi|Bed of Roses|
-1998|rock|G|Aerosmith|I Don't Want to Miss a Thing|
+1998|rock|G|Aerosmith|I Don't Want to Miss a Thing|movie
 1993|rock|G|Aerosmith|Cryin'|
 1992|rock|G|Guns N' Roses|November Rain|
 1991|rock|G|Guns N' Roses|Don't Cry|
@@ -846,7 +846,7 @@
 1998|electronic|S|ATB|9 PM (Till I Come)|
 1999|electronic|G|Alice Deejay|Better Off Alone|
 1999|electronic|S|Darude|Sandstorm|
-1999|electronic|G|Eiffel 65|Blue (Da Ba Dee)|
+1999|electronic|G|Eiffel 65|Blue (Da Ba Dee)|onehit
 1998|pop|S|Cher|Believe|
 1998|pop|S|Madonna|Ray of Light|
 1994|pop|G|Everything but the Girl|Missing|
@@ -1950,7 +1950,7 @@
 1978|electronic|G|Kraftwerk|Die Roboter|
 1999|rock|G|Blondie|Maria|
 1980|rock|G|The Police|De Do Do Do, De Da Da Da|
-1993|rock|S|Bruce Springsteen|Streets of Philadelphia|
+1993|rock|S|Bruce Springsteen|Streets of Philadelphia|movie
 2023|electronic|G|Depeche Mode|Ghosts Again|
 2000|punk|G|Die Ärzte|Manchmal haben Frauen...|
 1984|rock|G|Bon Jovi|Runaway|
@@ -2046,7 +2046,7 @@
 1964|pop|S|Frank Sinatra|My Way|
 1989|pop|S|Roy Orbison|You Got It|
 1964|funk|S|James Brown|I Got You|
-1977|film|S|Julie Andrews|I Feel Pretty|
+1977|film|S|Julie Andrews|I Feel Pretty|movie
 1999|pop|S|Tom Jones|Sexbomb|
 1967|rnb|S|Aretha Franklin|A Natural Woman|
 1968|rock|G|Cream|White Room|
@@ -2153,7 +2153,7 @@
 1955|rock|S|Chuck Berry|Johnny Be Good|
 1989|pop|S|Roy Orbison|California Blue|
 1985|funk|S|James Brown|Living In America|
-1964|film|S|Julie Andrews|A Spoonful of Sugar|
+1964|film|S|Julie Andrews|A Spoonful of Sugar|movie
 1971|pop|S|Tom Jones|She's a Lady|
 1968|rnb|S|Aretha Franklin|I Say a Little Prayer|
 1971|rock|S|Jimi Hendrix|Angel|
@@ -2448,7 +2448,7 @@
 2022|pop|S|Harry Styles|Matilda|
 1964|pop|G|The Platters|The Anniversary Song|
 1973|funk|S|James Brown|The Boss|
-1964|film|S|Julie Andrews|Feed the Birds|
+1964|film|S|Julie Andrews|Feed the Birds|movie
 1984|rnb|G|The Temptations|Treat Her Like a Lady|
 1970|rock|S|Jimi Hendrix|Who Knows|
 1980|rock|S|John Lennon|Woman|
@@ -2622,7 +2622,7 @@
 2008|pop|S|Frank Sinatra|Strangers In the Night|
 1963|pop|S|Roy Orbison|In Dreams|
 2008|funk|S|James Brown|I Feel Good|
-1964|film|S|Julie Andrews|Stay Awake|
+1964|film|S|Julie Andrews|Stay Awake|movie
 1971|rnb|G|The Temptations|Just My Imagination|
 1968|pop|S|Tom Jones|Help Yourself|
 1967|rock|G|The Jimi Hendrix Experience|The Wind Cries Mary|
@@ -2776,7 +2776,7 @@
 1985|pop|S|Phil Collins|Don't Lose My Number|
 1981|pop|G|Duran Duran|Save a Prayer|
 1996|punk|G|Die Toten Hosen|Paradies|
-1985|pop|S|Lionel Richie|Say You, Say Me|
+1985|pop|S|Lionel Richie|Say You, Say Me|movie
 1985|rock|S|Tina Turner|We Don't Need Another Hero|
 1989|indie|G|The Cure|Lovesong|
 2016|punk|G|Green Day|Still Breathing|
@@ -3197,7 +3197,7 @@
 1999|latin|S|Enrique Iglesias|Rhythm Divine|
 1962|rock|S|Elvis Presley|Return to Sender|
 1997|rock|G|The Rolling Stones|Anybody Seen My Baby?|
-1994|pop|S|Elton John|Can You Feel the Love Tonight|
+1994|pop|S|Elton John|Can You Feel the Love Tonight|movie
 1968|folk|G|Simon & Garfunkel|America|
 1967|rock|G|The Doors|Touch Me|
 2006|deutschpop|S|Herbert Grönemeyer|Zeit, dass sich was dreht|
@@ -4093,7 +4093,7 @@
 1965|pop|G|Herman's Hermits|Silhouettes|
 1965|pop|G|Herman's Hermits|I'm Henery the Eighth I Am|
 1965|pop|G|Herman's Hermits|Heartbeat|
-1965|rock|G|The Moody Blues|Go Now|
+1965|rock|G|The Moody Blues|Go Now|onehit,movie
 1965|pop|S|Dusty Springfield|You Don't Have To Say You Love Me|
 1965|pop|S|Sandie Shaw|Pourvu Que Ça Dure|
 1965|pop|S|Sandie Shaw|Girl Don't Come|
@@ -4116,14 +4116,14 @@
 1965|rock|G|The Equals|Gimme Some Lovin'|
 1965|rock|G|The Equals|Little Bit O' Soul|
 1965|rock|G|The Equals|Domino|
-1965|rnb|G|The Young Rascals|I Ain't Gonna Eat Out My Heart Anymore|
+1965|rnb|G|The Young Rascals|I Ain't Gonna Eat Out My Heart Anymore|onehit
 1965|pop|G|The Mamas & the Papas|Go Where You Wanna Go|
 1965|rock|G|The Byrds|Turn! Turn! Turn!|
 1965|rock|G|The Byrds|I'll Feel a Whole Lot Better|
 1965|rock|G|The Byrds|All I Really Want to Do|
 1965|rock|G|The Byrds|Chimes of Freedom|
-1976|rock|G|Thin Lizzy|The Boys Are Back in Town|
-1979|rock|G|The B-52's|Rock Lobster|
+1976|rock|G|Thin Lizzy|The Boys Are Back in Town|onehit
+1979|rock|G|The B-52's|Rock Lobster|onehit
 1980|rock|G|Iron Maiden|Running Free|
 1983|rock|G|ZZ Top|Sharp Dressed Man|
 1989|rock|G|Aerosmith|Love in an Elevator|
@@ -4140,10 +4140,10 @@
 2008|rock|G|Kings of Leon|Use Somebody|
 2011|rock|G|Foster the People|Pumped Up Kicks|
 2018|rock|G|Imagine Dragons|Natural|
-2019|rock|G|Tones and I|Dance Monkey|
+2019|rock|G|Tones and I|Dance Monkey|onehit
 2023|rock|G|Måneskin|Honey (Are U Coming?)|
 2024|rock|G|Linkin Park|The Emptiness Machine|
-1971|pop|S|Donny Osmond|Puppy Love|
+1971|pop|S|Donny Osmond|Puppy Love|onehit
 1986|pop|S|Madonna|Papa Don't Preach|
 1993|pop|S|Mariah Carey|Dreamlover|
 2004|pop|S|Gwen Stefani|What You Waiting For?|
@@ -4167,12 +4167,12 @@
 2022|electronic|G|Fred again..|Delilah (Pull Me Out of This)|
 2023|electronic|G|Peggy Gou|(It Goes Like) Nanana|
 2024|electronic|G|Chase & Status|Backbone|
-1965|schlager|S|Roy Black|Ganz in Weiß|
+1965|schlager|S|Roy Black|Ganz in Weiß|onehit
 1966|schlager|S|Udo Jürgens|Merci, Chérie|
-1962|schlager|S|Freddy Quinn|Junge, komm bald wieder|
-1974|schlager|S|Reinhard Mey|Über den Wolken|
+1962|schlager|S|Freddy Quinn|Junge, komm bald wieder|onehit
+1974|schlager|S|Reinhard Mey|Über den Wolken|onehit
 1974|schlager|S|Udo Jürgens|Griechischer Wein|
-1976|schlager|S|Jürgen Drews|Ein Bett im Kornfeld|
+1976|schlager|S|Jürgen Drews|Ein Bett im Kornfeld|onehit
 1980|ndw|G|Ideal|Berlin|
 1982|ndw|G|Hubert Kah|Rosemarie|
 1982|ndw|G|TriO|Da Da Da ich lieb dich nicht du liebst mich nicht|
@@ -4200,7 +4200,7 @@
 2011|rock|S|Rise Against|Satellite|songseeker
 1983|rock|G|Yes|Owner of a Lonely Heart|songseeker
 1979|rock|G|Electric Light Orchestra|Don't Bring Me Down|songseeker
-1976|rock|G|The Runaways|Cherry Bomb|songseeker
+1976|rock|G|The Runaways|Cherry Bomb|songseeker,onehit
 1983|rock|S|Dio|Holy Diver|songseeker
 2022|rock|S|Motionless In White|Masterpiece|songseeker
 1996|rock|G|Rage Against The Machine|Bulls On Parade|songseeker
@@ -4213,7 +4213,7 @@
 1998|rock|G|Hole|Celebrity Skin|songseeker
 2000|rock|G|Limp Bizkit|Rollin' (Air Raid Vehicle)|songseeker
 2017|rock|G|Asking Alexandria|Alone In A Room|songseeker
-1971|rock|S|The Guess Who|American Woman|songseeker
+1971|rock|S|The Guess Who|American Woman|songseeker,onehit
 1982|rock|G|Asia|Heat Of The Moment|songseeker
 2016|rock|S|Volbeat|The Devil's Bleeding Crown|songseeker
 2000|rock|G|Wheatus|Teenage Dirtbag|songseeker
@@ -4250,8 +4250,8 @@
 1984|rock|G|Twisted Sister|I Wanna Rock|songseeker
 2017|rock|G|The Killers|Run For Cover|songseeker
 2023|rock|S|Sleep Token|The Summoning|songseeker
-1974|rock|G|Bachman-Turner Overdrive|You Ain't Seen Nothing Yet|songseeker
-1966|rock|G|Buffalo Springfield|For What It's Worth|songseeker
+1974|rock|G|Bachman-Turner Overdrive|You Ain't Seen Nothing Yet|songseeker,onehit
+1966|rock|G|Buffalo Springfield|For What It's Worth|songseeker,onehit
 1989|rock|S|Faith No More|Epic|songseeker
 1986|rock|G|Beastie Boys|Fight For Your Right|songseeker
 2006|rock|S|Bullet For My Valentine|Tears Don't Fall|songseeker
@@ -4266,7 +4266,7 @@
 1980|rock|S|Ozzy Osbourne|Crazy Train|songseeker
 2021|rock|G|Måneskin|I Wanna be your slave|songseeker
 1991|rock|G|Pearl Jam|Even Flow|songseeker
-1977|rock|G|Ram Jam|Black Betty|songseeker
+1977|rock|G|Ram Jam|Black Betty|songseeker,onehit
 1976|rock|G|KISS|Detroit Rock City|songseeker
 1982|rock|G|George Thorogood & The Destroyers|Bad To The Bone|songseeker
 1989|rock|S|Alice Cooper|Poison|songseeker
@@ -4285,7 +4285,7 @@
 1993|rock|S|Meat Loaf|I'd Do Anything For Love (But I Won't Do That)|songseeker
 1993|rock|S|H-Blockx|Risin' High - Def Core Grind Version|songseeker
 2007|rock|S|Seether|Fake It|songseeker
-1974|rock|G|Nazareth|Love Hurts|songseeker
+1974|rock|G|Nazareth|Love Hurts|songseeker,onehit
 2015|rock|S|Five Finger Death Punch|Jekyll and Hyde|songseeker
 2017|rock|S|The Glorious Sons|S.O.S. (Sawed Off Shotgun)|songseeker
 2006|rock|S|Billy Talent|Red Flag|songseeker
@@ -4295,7 +4295,7 @@
 1988|rock|S|Poison|Nothin' But A Good Time|songseeker
 2018|rock|S|Greta Van Fleet|You're The One|songseeker
 1999|rock|G|Rage Against The Machine|Guerrilla Radio|songseeker
-1960|rock|S|Maurice Williams|Stay|songseeker
+1960|rock|S|Maurice Williams|Stay|songseeker,onehit
 1997|rock|G|Guano Apes|Open Your Eyes|songseeker
 2002|rock|G|Audioslave|Like a Stone|songseeker
 2010|rock|G|Kings of Leon|Radioactive|songseeker
@@ -4330,16 +4330,16 @@
 2009|rock|G|Skillet|Monster|songseeker
 2005|rock|G|The All-American Rejects|Dirty Little Secret|songseeker
 2022|rock|S|Bad Omens|Just Pretend|songseeker
-1970|rock|G|Free|All Right Now|songseeker
+1970|rock|G|Free|All Right Now|songseeker,onehit
 2010|rock|G|My Chemical Romance|Na Na Na (Na Na Na Na Na Na Na Na Na)|songseeker
 1973|rock|G|Pink Floyd|Money - 2023 Remaster|songseeker
 1982|rock|S|Billy Idol|White Wedding|songseeker
 1978|rock|G|Styx|Renegade|songseeker
-1956|rock|S|Gene Vincent|Be Bop a Lula|songseeker
+1956|rock|S|Gene Vincent|Be Bop a Lula|songseeker,onehit
 1978|rock|G|TOTO|Hold the Line|songseeker
 2023|rock|S|Bring Me The Horizon|LosT|songseeker
 2020|rock|S|Corey Taylor|CMFT Must Be Stopped (feat. Tech N9ne and Kid Bookie)|songseeker
-1976|rock|G|Blue Öyster Cult|(Don't Fear) The Reaper|songseeker
+1976|rock|G|Blue Öyster Cult|(Don't Fear) The Reaper|songseeker,onehit
 2015|rock|G|Disturbed|The Vengeful One|songseeker
 2011|rock|S|Neon Trees|Everybody Talks|songseeker
 1995|rock|G|No Doubt|Just A Girl|songseeker
@@ -4371,37 +4371,197 @@
 
 1950|pop|S|Nat King Cole|Mona Lisa|year-filler
 1950|country|S|Patti Page|Tennessee Waltz|year-filler
-1950|pop|S|Teresa Brewer|Music! Music! Music!|year-filler
+1950|pop|S|Teresa Brewer|Music! Music! Music!|year-filler,oldies,onehit
 1950|pop|S|Perry Como|Hoop-Dee-Doo|year-filler
-1950|country|S|Frankie Laine|The Cry of the Wild Goose|year-filler
-1950|jazz|S|Gordon Jenkins|My Foolish Heart|year-filler
-1950|pop|S|Sammy Kaye|Harbor Lights|year-filler
-1950|country|S|Bing Crosby|Chattanoogie Shoe Shine Boy|year-filler
+1950|country|S|Frankie Laine|The Cry of the Wild Goose|year-filler,oldies,onehit
+1950|jazz|S|Gordon Jenkins|My Foolish Heart|year-filler,oldies,onehit
+1950|pop|S|Sammy Kaye|Harbor Lights|year-filler,oldies,onehit
+1950|country|S|Bing Crosby|Chattanoogie Shoe Shine Boy|year-filler,oldies,onehit
 1950|pop|G|Les Paul & Mary Ford|Tennessee Waltz|year-filler
 1951|pop|S|Tony Bennett|Because of You|year-filler
 1951|pop|S|Rosemary Clooney|Come On-a My House|year-filler
 1951|jazz|S|Nat King Cole|Unforgettable|year-filler
 1952|pop|S|Patti Page|I Went to Your Wedding|year-filler
-1952|pop|S|Vera Lynn|Auf Wiederseh'n Sweetheart|year-filler
+1952|pop|S|Vera Lynn|Auf Wiederseh'n Sweetheart|year-filler,oldies,onehit
 1952|pop|S|Eddie Fisher|Wish You Were Here|year-filler
 1952|pop|S|Perry Como|Don't Let the Stars Get in Your Eyes|year-filler
-1952|pop|S|Jo Stafford|You Belong to Me|year-filler
-1952|film|S|Gene Kelly|Singin' in the Rain|year-filler
+1952|pop|S|Jo Stafford|You Belong to Me|year-filler,oldies,onehit
+1952|film|S|Gene Kelly|Singin' in the Rain|year-filler,oldies,movie
 1952|pop|S|Doris Day|A Guy Is a Guy|year-filler
-1952|pop|S|Johnnie Ray|Walkin' My Baby Back Home|year-filler
+1952|pop|S|Johnnie Ray|Walkin' My Baby Back Home|year-filler,oldies,onehit
 1952|country|S|Rosemary Clooney|Half as Much|year-filler
-1952|country|S|Hank Williams|Jambalaya (On the Bayou)|year-filler
+1952|country|S|Hank Williams|Jambalaya (On the Bayou)|year-filler,oldies,onehit
 1953|jazz|S|Frank Sinatra|I've Got the World on a String|year-filler
 1953|pop|G|Les Paul & Mary Ford|Vaya con Dios|year-filler
 1953|pop|S|Eddie Fisher|I'm Walking Behind You|year-filler
 1953|pop|S|Perry Como|No Other Love|year-filler
 1953|pop|S|Patti Page|How Much Is That Doggie in the Window|year-filler
-1953|film|S|Doris Day|Secret Love|year-filler
-1953|pop|S|Kitty Kallen|Little Things Mean a Lot|year-filler
+1953|film|S|Doris Day|Secret Love|year-filler,oldies,movie
+1953|pop|S|Kitty Kallen|Little Things Mean a Lot|year-filler,oldies,onehit
 1954|rock|S|Elvis Presley|That's All Right|year-filler
 1954|pop|S|Perry Como|Wanted|year-filler
 1954|pop|S|Rosemary Clooney|Mambo Italiano|year-filler
-1954|rnb|S|The Crew Cuts|Sh-Boom|year-filler
+1954|rnb|S|The Crew Cuts|Sh-Boom|year-filler,oldies,onehit
 1954|pop|S|Eddie Fisher|Oh! My Pa-Pa|year-filler
-1954|film|S|The Four Aces|Three Coins in the Fountain|year-filler
-1955|country|S|Tennessee Ernie Ford|Sixteen Tons|year-filler
+1954|film|S|The Four Aces|Three Coins in the Fountain|year-filler,oldies,movie
+1955|country|S|Tennessee Ernie Ford|Sixteen Tons|year-filler,oldies,onehit
+
+2012|film|S|Alan Silvestri|The Avengers|movie
+1974|film|G|David Rose,Daniel Caine Orchestra|Unsere kleine Farm|movie,onehit
+1999|film|S|Thomas Newman|American Beauty|movie
+1992|film|S|Whitney Houston|Bodyguard (I Will Always Love You)|movie
+1983|film|G|Dominik Hause & Mike Post|Das A-Team|movie
+1988|film|S|James Horner|Willow|movie
+2009|film|S|Leona Lewis|Avatar - Aufbruch nach Pandora (I See You)|movie
+1996|film|S|The Wonders|That Thing You Do!|movie
+1982|film|S|Gary Portnoy|Cheers (Where Everybody Knows Your Name)|movie
+1984|film|S|Harold Faltermeyer|Beverly Hills Cop (Axel F)|movie
+2018|film|S|Lady Gaga|A Star Is Born (Always Remember Us This Way)|movie
+1997|film|S|Nicola Piovani|Das Leben ist schön (La vita è bella)|movie
+2013|film|S|José González|Das erstaunliche Leben des Walter Mitty (Stay Alive)|movie
+2007|film|S|Glen Hansard, Markéta Irglová|Once (Falling Slowly)|movie
+1990|film|S|John E. Davis|Beverly Hills 90210|movie
+2007|film|S|Barenaked Ladies|The Big Bang Theory|movie
+2000|film|S|Hans Zimmer|Gladiator (Now We Are Free)|movie
+1982|film|S|Joe Cocker, Jennifer Warnes|Ein Offizier und ein Gentleman (Up Where We Belong)|movie
+1978|film|S|John Travolta, Olivia Newton-John|Grease (Summer Nights)|movie,onehit
+2015|film|S|Rodrigo Amarante|Narcos (Tuyo)|movie
+2016|film|G|Kyle Dixon & Michael Stein|Stranger Things|movie
+1977|film|S|John Williams|Krieg der Sterne (Star Wars)|movie
+2018|film|S|Kendrick Lamar, SZA|Black Panther (All The Stars)|movie
+1977|film|S|Bee Gees|Saturday Night Fever (Night Fever)|movie
+1990|film|S|Roxette|Pretty Woman (It Must Have Been Love)|movie
+1993|film|S|Michael Nyman|Das Piano (The Heart Asks Pleasure First)|movie
+2010|film|S|Bear McCreary|The Walking Dead|movie
+1986|film|S|Georges Delerue|Platoon|movie
+2016|film|S|Ryan Gosling, Emma Stone|La La Land (City Of Stars)|movie
+1989|film|S|Jonathan Wolff|Seinfeld|movie
+1987|film|S|Madonna|Who's That Girl|movie
+2006|film|S|Beyoncé|Dreamgirls (Listen)|movie
+1972|film|S|Liza Minnelli|Cabaret|movie,onehit
+1996|film|S|Eric Clapton|Phenomenon (Change the World)|movie
+1991|film|S|Brad Fiedel|Terminator 2|movie
+1998|film|S|Douglas J. Cuomo|Sex And The City|movie
+1966|film|S|Ennio Morricone|Zwei glorreiche Halunken - The Good, The Bad And The Ugly|movie,onehit
+1968|film|S|The Beatles|Yellow Submarine|movie
+1986|film|S|Berlin|Top Gun (Take My Breath Away)|movie
+1961|film|S|Audrey Hepburn|Frühstück bei Tiffany (Moon River)|movie,onehit
+1989|film|S|Danny Elfman|Batman|movie
+1971|film|S|Isaac Hayes|Shaft|movie
+2011|film|S|Ramin Djawadi|Game of Thrones|movie
+2019|film|S|Ludwig Göransson|The Mandalorian|movie
+1998|film|S|Aerosmith|Armageddon (I Don't Want to Miss a Thing)|movie
+1979|film|S|Monty Python|Das Leben des Brian (Always Look On The Bright Side Of Life)|movie,onehit
+1978|film|S|John Williams|Superman|movie
+2022|film|S|Danny Elfman|Wednesday|movie
+1972|film|S|Gato Barbieri|Der letzte Tango in Paris|movie,onehit
+1990|film|S|Angelo Badalamenti|Twin Peaks|movie
+1985|film|S|John Barry|Jenseits von Afrika (I Had A Farm)|movie
+1986|film|S|Dominik Hauser|L.A. Law - Law & Order|movie
+2002|film|S|Eminem|8 Mile (Lose Yourself)|movie
+2005|film|S|Hey Beautiful|How I Met Your Mother|movie
+2003|film|S|Klaus Badelt|Fluch der Karibik (He's a Pirate)|movie
+2017|film|S|Keala Settle|Greatest Showman (This Is Me)|movie
+1994|film|S|Alan Silvestri|Forrest Gump (Forrest Gump Suite)|movie
+2000|film|S|LeAnn Rimes|Coyote Ugly (Can't Fight The Moonlight)|movie
+1981|film|S|Vangelis|Die Stunde des Siegers|movie
+1995|film|S|Inner Circle|Bad Boys|movie
+1978|film|S|Dominik Hauser|Dallas|movie
+2002|film|S|Catherine Zeta-Jones|Chicago (Cell Block Tango)|movie
+2007|film|S|Linkin Park|Transformers (What I've Done)|movie
+2008|film|S|Christina Perri|The Twilight Saga: Breaking Dawn (A thousand years)|movie
+1976|film|S|Jack Elliot|Drei Engel für Charlie|movie,onehit
+2001|film|S|Howard Shore|Der Herr der Ringe (The Shire)|movie
+1995|film|S|James Horner|Braveheart (For The Love Of A Princess)|movie
+1959|film|S|Ray Evans, Jerry Livingston|Bonanza|movie,onehit
+1986|film|S|Queen|Highlander - Es kann nur einen geben (Princes Of The Universe)|movie
+1987|film|S|Starship|Mannequin (Nothing's Gonna Stop Us Now)|movie
+2018|film|S|Nicholas Britell|Succession|movie
+1972|film|S|Nino Rota|Der Pate (The Godfather Waltz)|movie,onehit
+2002|film|S|Chad Kroeger, Josey Scott|Spider-Man (Hero)|movie
+1999|film|S|Ronan Keating|Notting Hill (When You Say Nothing At All)|movie
+2006|film|S|Rolfe Kent|Dexter|movie
+2005|film|S|Jay Ferguson|The Office|movie
+1952|film|S|Gene Kelly|Du sollst mein Glücksstern sein (Singin' In The Rain)|movie
+2008|film|S|A. R. Rahman|Slumdog Millionär (Jai Ho)|movie
+2016|film|S|Twenty One Pilots|Suicide Squad (Heathens)|movie
+2016|film|S|Hans Zimmer|The Crown|movie
+1999|film|S|Robert D.|Matrix (Clubbed to Death)|movie
+1993|film|S|John Williams|Jurassic Park|movie
+2001|film|S|John Williams|Harry Potter und der Stein der Weisen (Prologue)|movie
+2017|film|S|Anthony Gonzalez, Gael Garcia Bernal|Coco - Lebendiger als das Leben! (Un Poco Loco)|movie
+2003|film|S|Chuck Lorre, Lee Aronsohn|Two and a Half Men (Manly Men)|movie
+2004|film|S|Andrew Lloyd Webber, Gerard Butler, Emmy Rossum|Das Phantom der Opera|movie
+1998|film|S|Jamiroquai|Godzilla (Deeper Underground)|movie
+1985|film|S|Tina Turner|Mad Max - Jenseits der Donnerkuppel (We Don't Need Another Hero)|movie
+1975|film|S|John Williams|Der weiße Hai|movie
+1970|film|S|Francis Lai|Love Story|movie,onehit
+1980|film|S|Wendy Carlos|Shining|movie
+2004|film|S|Lea Salonga, Brad Kane|Aladdin (A Whole New World)|movie
+1953|film|S|Marilyn Monroe|Blondinen bevorzugt (Diamonds Are a Girl's Best Friend)|movie,onehit
+2013|film|S|Karen O, Ezra Koenig|Her (The Moon Song)|movie
+1969|film|S|Burt Bacharach|Zwei Banditen (Raindrops Keep Fallin' On My Head)|movie,onehit
+2003|film|S|Billy Mack|Tatsächlich Liebe (Christmas Is All Around)|movie
+1990|film|S|John Williams|Kevin - Allein zu Haus (Somewhere in My Memory)|movie
+1989|film|S|Jimi Jamison|Baywatch (I'm Always Here)|movie
+1984|film|S|Robert Folk|Police Academy|movie
+1988|film|S|The Beach Boys|Cocktail (Kokomo)|movie
+1981|film|S|Marc Bradley|Falcon Crest|movie
+1997|film|S|Éric Serra, Inva Mula|Das fünfte Element (The Diva Dance)|movie
+2009|film|S|Gabriel Mann|Modern Family|movie
+2000|film|S|Clint Mansell|Requiem for a Dream (Lux Aeterna)|movie
+1991|film|S|Bryan Adams|Robin Hood - König der Diebe ((Everything I Do) I Do It For You)|movie
+1960|film|S|Bernard Herrmann|Psycho (Prelude)|movie,onehit
+1963|film|S|Henry Mancini|Der Rosarote Panther|movie
+1981|film|S|John Williams|Jäger des verlorenen Schatzes (Indiana Jones)|movie
+1999|film|S|Alabama 3|Die Sopranos (Woke Up This Morning)|movie
+1961|film|S|Leonard Bernstein|West Side Story (America)|movie,onehit
+2013|film|S|Demi Lovato|Die Eiskönigin - Völlig unverfroren (Let It Go)|movie
+1967|film|S|Phil Harris, Bruce Reitherman|Das Dschungelbuch (The Bare Necessities)|movie,onehit
+1982|film|S|Stu Phillips|Knight Rider|movie
+2012|film|S|Luis Bacalov, Rocky Roberts|Django Unchained (Django)|movie
+1992|film|S|Annie Lennox|Bram Stoker's Dracula (Love Song for a Vampire)|movie
+2023|film|S|Ryan Gosling|Barbie (I'm Just Ken)|movie
+2023|film|S|Gustavo Santaolalla|The Last of Us|movie
+1979|film|S|Jerry Goldsmith|Star Trek|movie,onehit
+2020|film|S|Ashley Park|Emily in Paris (Mon Soleil)|movie
+1976|film|S|Bill Conti|Rocky (Gonna Fly Now)|movie,onehit
+2001|film|S|GABRIELLE|Bridget Jones - Schokolade zum Frühstück (Out Of Reach)|movie
+1984|film|S|John Addison|Mord ist ihr Hobby|movie
+1975|film|S|Tom Scott|Starsky & Hutch (Gotcha)|movie,onehit
+1965|film|S|Tom Jones|Was gibt's Neues, Pussy? (What's New Pussycat?)|movie
+1988|film|S|Carly Simon|Die Waffen der Frauen (Let The River Run)|movie
+1955|film|S|The Four Aces|Love Is a Many-Splendored Thing|movie
+1956|film|S|Doris Day|Que Sera, Sera (Whatever Will Be, Will Be)|movie
+2002|film|S|Bryan Adams|Spirit - Der wilde Mustang (Here I Am)|movie
+2006|film|S|High School Musical Cast|High School Musical (We're All In This Together)|movie
+1957|film|S|Frank Sinatra|All the Way|movie
+1959|film|S|Frank Sinatra|High Hopes|movie
+1960|film|S|Pat Boone|Theme from Exodus|movie,onehit
+1961|film|S|Henry Mancini|Moon River|movie
+1962|film|S|Andy Williams|Days of Wine and Roses|movie
+1963|film|S|Jack Jones|Call Me Irresponsible|movie,onehit
+1965|film|S|Tony Bennett|The Shadow of Your Smile|movie
+1966|film|S|Matt Monro|Born Free|movie,onehit
+1967|film|S|Rex Harrison|Talk to the Animals|movie,onehit
+1972|film|S|Andy Williams|Speak Softly Love|movie
+1968|film|S|Noel Harrison|The Windmills of Your Mind|movie,onehit
+1974|film|S|Maureen McGovern|We May Never Love Like This Again|movie,onehit
+1975|film|S|Keith Carradine|I'm Easy|movie,onehit
+1976|film|S|Barbra Streisand|Evergreen (Love Theme from A Star Is Born)|movie
+1978|film|S|Donna Summer|Last Dance|movie
+1977|film|S|Debby Boone|You Light Up My Life|movie,onehit
+1979|film|S|Jennifer Warnes|It Goes Like It Goes|movie,onehit
+1970|film|S|Andy Williams|Love Story (Where Do I Begin)|movie
+1981|film|S|Christopher Cross|Arthur's Theme (Best That You Can Do)|movie
+1982|film|G|Joe Cocker & Jennifer Warnes|Up Where We Belong|movie
+1986|film|S|Berlin|Take My Breath Away|movie
+1988|film|S|Carly Simon|Let the River Run|movie
+1989|film|S|Samuel E. Wright|Under the Sea|movie
+1990|film|S|Madonna|Sooner or Later|movie
+1991|film|G|Céline Dion & Peabo Bryson|Beauty and the Beast|movie
+1995|film|S|Vanessa Williams|Colors of the Wind|movie
+1987|film|G|Bill Medley & Jennifer Warnes|(I've Had) The Time of My Life|movie
+1992|film|G|Peabo Bryson & Regina Belle|A Whole New World|movie
+1996|film|S|Madonna|You Must Love Me|movie
+1999|film|S|Sarah McLachlan|When She Loved Me|movie

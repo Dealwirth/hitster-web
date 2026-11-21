@@ -3,7 +3,7 @@
 ## What this is
 Unofficial, ad-free, login-free HITSTER-style music party game and card expansion.
 Node/Express backend + vanilla JS/CSS frontend. No frontend build step.
-4,701 curated songs (1950–2026), 21 genres, 8 decades, 300 chart hits + 63 curated classics + 181 Songseeker rock/metal songs + 36 oldie fillers. Every year 1950–2026 has at least 10 songs.
+4,860 curated songs (1950–2026), 21 genres, 8 decades, 300 chart hits + 63 curated classics + 181 Songseeker rock/metal songs + 36 oldie fillers + 159 soundtrack/one-hit pool cards. Every year 1950–2026 has at least 10 songs.
 Three modes: **Freies Spiel** (classic), **Versionen** (13 broad presets such as Guilty Pleasures, Party & Dance, Rock & Metal) and **Playlist** (Spotify playlist, all tracks). Real Hitster QR scans remain available from every mode; they use the card year but draw a different song from that year. The card front is deliberately neutral (no year, title, genre, group or QR);
 the back shows only the large release year, title, artist and a solo/band icon.
 A fixed vinyl player shows cover, progress, pause/replay and hides the title until flip. Local analytics aggregate versions, genres, modes, decades, scans and actions in `localStorage`; they are never uploaded.
@@ -12,11 +12,11 @@ Own playlists can be saved as local categories. Genre and version chips filter t
 ## Commands
 - `npm start` – serve on `PORT` (default 12000), binds 0.0.0.0.
 - `npm test` – 32 catalog + API + range + Songseeker card tests.
-- `npm run test:e2e` – 32 Playwright E2E checks; needs Chromium at `/usr/bin/chromium`
+- `npm run test:e2e` – 33 Playwright E2E checks; needs Chromium at `/usr/bin/chromium`
   or `CHROMIUM_PATH`.
 - `npm run test:v4` – blind scan, deck selection, full playlist, own categories,
   PWA and print; needs Chromium and network for Spotify/MusicBrainz.
-- `npm run test:v5` – all 51,208 official cards, 4,701-song catalog, genre chips,
+- `npm run test:v5` – all 51,208 official cards, 4,860-song catalog, genre chips,
   card/SKU deep links (different same-year song), new audio and the full 664-track playlist.
 - `npm run test:static` – builds and serves `docs/`, checks blind card, real QR,
   PWA and runtime errors against a local API.
@@ -25,12 +25,14 @@ Own playlists can be saved as local categories. Genre and version chips filter t
 - `npm run test:small` – 320 px overflow/card/flip check; server on 12000.
 - `npm run screenshots` – write `docs/screenshot-*.png`.
 - `npm run build:static` – build `docs/` for GitHub Pages (catalog, `hitster-db.json`,
-  `hitster-cards.json`, 4,701 QR SVGs, PWA). Set `PUBLIC_API_BASE` for playlist/Spotify resolution.
+  `hitster-cards.json`, 4,860 QR SVGs, PWA). Set `PUBLIC_API_BASE` for playlist/Spotify resolution.
 - `npm run build:catalog` – `data/songs.source.tsv` → `data/catalog.json`.
 - `npm run build:charts` – add current iTunes chart hits to `data/catalog.json`.
 - `npm run import:cards` – Songseeker CSVs → `public/hitster-cards.json`.
 - `npm run add:rock` – add missing Songseeker Rock/Metal songs to the catalog.
 - `npm run add:years` – fill years below ten songs with curated oldies and iTunes/Deezer previews.
+- `npm run add:versions` – expand the Movie and One-Hit pools to at least 200 cards.
+- `npm run repair:versions` – resolve previews/art for imported pool cards and keep the Movie pool at 200.
 - `scripts/serve-watchdog.sh` – restart loop for production; logs to `server.log`.
 
 ## Architecture
