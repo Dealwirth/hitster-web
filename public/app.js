@@ -73,8 +73,6 @@ const el = {
   flipBtn: $('#flipBtn'),
   nextBtn: $('#nextBtn'),
   cardPlay: $('#cardPlay'),
-  frontGenre: $('#frontGenre'),
-  backGenre: $('#backGenre'),
   frontSub: $('#frontSub'),
   frontNumber: $('#frontNumber'),
   backNumber: $('#backNumber'),
@@ -708,10 +706,9 @@ function printGroupIcon(song) {
 
 function printCardHtml(song, side) {
   const color = genreColor(song.genre);
-  const genre = escapeHtml(genreLabel(song.genre).toUpperCase());
   const id = song.id.slice(1);
   const qrSrc = STATIC ? `qr/${song.id}.svg` : `/api/qr/${song.id}?base=${encodeURIComponent(location.origin)}`;
-  const band = `<div class="pc-band"><span class="pc-kicker">${side === 'front' ? 'HITSTER' : 'AUFGELÖST'}</span><span class="pc-band-right">${printGroupIcon(song)}<span class="pc-genre">${genre}</span></span></div>`;
+  const band = `<div class="pc-band"><span class="pc-kicker">${side === 'front' ? 'HITSTER' : 'AUFGELÖST'}</span><span class="pc-band-right">${printGroupIcon(song)}</span></div>`;
   if (side === 'front') {
     return `<div class="print-card" style="--c:${color}">
       ${band}
@@ -787,14 +784,12 @@ function loadCard(song) {
   resetTimer();
 
   el.card.style.setProperty('--c', genreColor(song.genre));
-  el.frontGenre.textContent = genreLabel(song.genre).toUpperCase();
   el.frontNumber.textContent = `#${song.id.slice(1)}`;
   el.frontSub.textContent = state.mode === 'extension'
     ? `Jahr ${song.year} – tippe für den Clip.`
     : 'Tippe auf die Karte, um den Clip zu starten.';
   el.frontYearBadge.hidden = state.mode !== 'extension';
   el.frontYearBadge.textContent = String(song.year);
-  el.backGenre.textContent = genreLabel(song.genre).toUpperCase();
   el.backNumber.textContent = `#${song.id.slice(1)}`;
   el.backYear.textContent = String(song.year);
   el.backDecade.textContent = decadeLabel(song.year);

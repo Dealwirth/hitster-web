@@ -66,8 +66,8 @@ await step('cards are clean: no Bingo scorecard or Anfänger/Experten clutter', 
   assert.equal(await page.locator('text=Experten').count(), 0);
 });
 
-await step('front card shows genre, group/solo symbol, number and play prompt', async () => {
-  assert.ok((await page.locator('#frontGenre').innerText()).length > 1);
+await step('front card shows group/solo symbol, number and play prompt', async () => {
+  assert.ok((await page.evaluate(() => window.HITSTER.state.current.genre)).length > 1);
   assert.match(await page.locator('#frontNumber').innerText(), /^#\d{4}$/);
   assert.match(await page.locator('.card-question').innerText(), /Song/i);
   assert.ok(['#i-users', '#i-user'].includes(await page.locator('#frontGroupIcon use').getAttribute('href')));
@@ -189,7 +189,7 @@ await step('next card resets the flip and draws a different card', async () => {
 await step('genre filter changes the card and URL', async () => {
   await page.locator('.chip[data-genre="rock"]').click();
   await page.waitForTimeout(700);
-  assert.equal((await page.locator('#frontGenre').innerText()).toLowerCase(), 'rock');
+  assert.equal(await page.evaluate(() => window.HITSTER.state.current.genre), 'rock');
   assert.match(page.url(), /genre=rock/);
   assert.match(await page.locator('#filterSummary').innerText(), /Rock/);
 });
@@ -394,7 +394,7 @@ await step('mobile tap plays audio and flips', async () => {
 await step('mobile filter chips work', async () => {
   await mp.locator('.chip[data-genre="pop"]').tap();
   await mp.waitForTimeout(700);
-  assert.equal((await mp.locator('#frontGenre').innerText()).toLowerCase(), 'pop');
+  assert.equal(await mp.evaluate(() => window.HITSTER.state.current.genre), 'pop');
 });
 
 await step('mobile has no runtime errors', async () => {

@@ -227,12 +227,6 @@ img { max-width: 100%; }
 }
 .band-right { display: flex; align-items: center; gap: 7px; }
 .group-icon { width: 20px; height: 20px; color: #fff; opacity: 0.92; flex: 0 0 auto; }
-.genre-badge {
-  display: inline-flex; align-items: center; padding: 4px 8px;
-  border-radius: 999px; background: var(--paper); color: var(--ink);
-  font-size: 7px; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase;
-  white-space: nowrap;
-}
 
 .card-center {
   flex: 1 1 auto; display: flex; flex-direction: column;
@@ -503,7 +497,6 @@ kbd {
   .pc-kicker { font-family: var(--font-heavy); font-size: 2.5mm; letter-spacing: 0.1em; }
   .pc-band-right { display: flex; align-items: center; gap: 1.2mm; }
   .pc-group { width: 3.8mm; height: 3.8mm; color: #fff; }
-  .pc-genre { background: #f6f0e4; color: #111; border-radius: 99px; padding: 1mm 1.6mm; font-size: 1.8mm; font-weight: 900; letter-spacing: 0.04em; }
   .pc-qr {
     position: absolute; top: 9.5mm; right: 2.5mm; width: 13mm;
     padding: 1mm; border-radius: 2mm; background: #f6f0e4; color: #111;
