@@ -59,10 +59,8 @@ await step('catalog loads with more than 1000 cards', async () => {
   assert.ok(count >= 1000, text);
 });
 
-await step('cards are clean: no Bingo scorecard or Anfänger/Experten clutter', async () => {
-  assert.equal(await page.locator('#card .mini-chip, #card .bingo-panel, #card .bingo-scorecard').count(), 0);
-  assert.equal(await page.locator('#card .back-bingo').count(), 1);
-  assert.equal(await page.locator('#card .back-bingo .bingo-cell').count(), 10);
+await step('cards are clean: no Bingo answers or Anfänger/Experten clutter', async () => {
+  assert.equal(await page.locator('#card .mini-chip, #card .bingo-panel, #card .bingo-scorecard, #card .back-bingo').count(), 0);
   assert.equal(await page.locator('#card').innerText().then((t) => /Anfänger|Experten/i.test(t)), false);
 });
 
@@ -119,15 +117,13 @@ await step('flipping reveals title, artist and year', async () => {
   assert.equal(await page.locator('#cardBack').getAttribute('aria-hidden'), 'false');
 });
 
-await step('card back reveals year, title, artist, group and all Bingo categories', async () => {
+await step('card back reveals only year, title, artist and group icon', async () => {
   assert.equal(await page.locator('#backQrImg').count(), 0);
   assert.match(await page.locator('#backYear').innerText(), /^\d{4}$/);
   assert.ok((await page.locator('#backTitle').innerText()).length > 1);
   assert.ok((await page.locator('#backArtist').innerText()).length > 1);
-  assert.match(await page.locator('#backGroupTag').getAttribute('aria-label'), /^(Solo|Band)$/i);
-  assert.equal(await page.locator('.back-bingo .bingo-cell').count(), 10);
-  assert.match(await page.locator('#bingoYear').textContent(), /^\d{4}$/);
-  assert.match(await page.locator('#bingoDecade').textContent(), /^\d{4}er$/);
+  assert.match(await page.locator('#backGroupTag').getAttribute('aria-label'), /^(Solo|Gruppe)$/i);
+  assert.equal(await page.locator('.back-bingo').count(), 0);
 });
 
 await step('judging a correct answer updates the statistics', async () => {
@@ -236,7 +232,7 @@ await step('extension mode draws a song from the chosen year', async () => {
   assert.equal(await page.evaluate(() => window.HITSTER.state.current.year), 1984);
   assert.equal(await page.locator('#frontYearBadge').count(), 0);
   assert.doesNotMatch(await page.locator('#yearHint').innerText(), /1984/);
-  assert.doesNotMatch(await page.locator('#cardFront').innerText(), /1984/);
+  assert.doesNotMatch((await page.locator('#cardFront').innerText()).replace(/KARTE #[^\n]*/i, ''), /1984/);
   assert.match(page.url(), /mode=extension/);
   assert.doesNotMatch(page.url(), /year=1984/);
 });
@@ -303,7 +299,7 @@ await step('year deep link opens extension mode for that year', async () => {
   assert.equal(await yp.evaluate(() => window.HITSTER.state.mode), 'extension');
   assert.equal(await yp.evaluate(() => window.HITSTER.state.current.year), 1984);
   assert.equal(await yp.locator('#frontYearBadge').count(), 0);
-  assert.doesNotMatch(await yp.locator('#cardFront').innerText(), /1984/);
+  assert.doesNotMatch((await yp.locator('#cardFront').innerText()).replace(/KARTE #[^\n]*/i, ''), /1984/);
   assert.doesNotMatch(await yp.locator('#yearHint').innerText(), /1984/);
   await yp.close();
 });
@@ -345,7 +341,7 @@ await step('mode switch shows and hides the extension bar', async () => {
   assert.equal(await page.evaluate(() => window.HITSTER.state.mode), 'extension');
   assert.equal(await page.locator('#extensionBar').isVisible(), true);
   assert.equal(await page.locator('#frontYearBadge').count(), 0);
-  assert.equal(await page.locator('#cardFront').innerText().then((t) => /19\d\d|20\d\d/.test(t)), false);
+  assert.equal(await page.locator('#cardFront').innerText().then((t) => /19\d\d|20\d\d/.test(t.replace(/KARTE #[^\n]*/i, ''))), false);
   await page.locator('.mode-btn[data-mode="classic"]').click();
   await page.waitForTimeout(300);
   assert.equal(await page.evaluate(() => window.HITSTER.state.mode), 'classic');

@@ -51,7 +51,7 @@ await step('official card database covers all 51.208 cards', async () => {
 
 await step('catalog is complete and contains the new bangers', async () => {
   const health = await (await fetch(`${base}/api/health`)).json();
-  assert.equal(health.songs, 4484);
+  assert.equal(health.songs, 4665);
   const catalog = JSON.parse(fs.readFileSync('data/catalog.json', 'utf8'));
   assert.ok(catalog.songs.every((song) => song.year >= 1950 && song.year <= 2030));
   assert.ok(catalog.songs.every((song) => song.genre && song.title && song.artist));
@@ -72,7 +72,7 @@ await step('genre filter is visible, counted and URL-synced', async () => {
   assert.match(await page.locator('#filterSummary').innerText(), /^Alle Karten · \d+$/);
 });
 
-await step('QR code 00052 resolves and reveals all Bingo categories', async () => {
+await step('QR code 00052 resolves and reveals the exact card', async () => {
   assert.equal(await page.locator('#scanLinkInput').count(), 0);
   assert.equal(await page.locator('#scanStage').count(), 1);
   assert.equal(await page.locator('#scanFile').count(), 1);
@@ -90,19 +90,30 @@ await step('QR code 00052 resolves and reveals all Bingo categories', async () =
   assert.equal(state.year, 2018);
   assert.equal(state.blind, true);
   assert.doesNotMatch(state.front, /2018/);
-  assert.equal(await page.locator('#card .back-bingo').count(), 1);
+  assert.equal(await page.locator('#card .back-bingo').count(), 0);
   await page.locator('#flipBtn').click();
   await page.waitForTimeout(700);
   assert.equal(await page.locator('#backYear').innerText(), '2018');
-  assert.equal(await page.locator('#bingoBefore').textContent(), 'Nein');
-  assert.equal(await page.locator('#bingoDecade').textContent(), '2010er');
-  assert.equal(await page.locator('#bingoYear').textContent(), '2018');
-  assert.equal(await page.locator('#bingoPlus2').textContent(), '2018');
-  assert.equal(await page.locator('#bingoPlus3').textContent(), '2018');
-  assert.equal(await page.locator('#bingoPlus4').textContent(), '2018');
-  assert.equal(await page.locator('#bingoTitle').textContent().then((t) => t.length > 1), true);
-  assert.equal(await page.locator('#bingoArtist').textContent().then((t) => t.length > 1), true);
-  assert.equal(await page.locator('#backGroupTag').getAttribute('aria-label'), await page.locator('#bingoGroup').textContent());
+  assert.equal(await page.locator('#backTitle').innerText(), 'La Cintura');
+  assert.equal(await page.locator('#backArtist').innerText(), 'Alvaro Soler');
+  assert.equal(await page.locator('#backGroupTag').getAttribute('aria-label'), 'Solo');
+});
+
+await step('SKU URL aaaa0019/00215 resolves the exact Bingo card', async () => {
+  const parsed = await page.evaluate(() => window.HITSTER.parseScan('http://www.hitstergame.com/de/aaaa0019/00215'));
+  assert.deepEqual(parsed.hitster, { region: 'de', sku: 'aaaa0019', card: '00215' });
+  const qrFile = '/tmp/hitster-sku-00215.png';
+  await QRCode.toFile(qrFile, 'http://www.hitstergame.com/de/aaaa0019/00215', { width: 420, margin: 2 });
+  await page.locator('#scanBtn').click();
+  await page.waitForTimeout(300);
+  await page.locator('#scanFile').setInputFiles(qrFile);
+  await page.waitForFunction(() => window.HITSTER?.state?.extensionYear === 2007, { timeout: 30000 });
+  await page.locator('#flipBtn').click();
+  await page.waitForTimeout(700);
+  assert.equal(await page.locator('#backYear').innerText(), '2007');
+  assert.equal(await page.locator('#backTitle').innerText(), 'Better in Time');
+  assert.equal(await page.locator('#backArtist').innerText(), 'Leona Lewis');
+  assert.equal(await page.locator('#card .back-bingo').count(), 0);
 });
 
 await step('camera video frame resolves arbitrary card 00128', async () => {
@@ -123,8 +134,8 @@ await step('camera video frame resolves arbitrary card 00128', async () => {
     window.HITSTER.state.scan.detected = false;
     window.HITSTER.scanFrame(performance.now() + 1000);
   }, qr);
-  await page.waitForFunction(() => window.HITSTER?.state?.extensionYear === 1967, { timeout: 15000 });
-  assert.equal(await page.evaluate(() => window.HITSTER.state.extensionYear), 1967);
+  await page.waitForFunction(() => window.HITSTER?.state?.extensionYear === 1968, { timeout: 15000 });
+  assert.equal(await page.evaluate(() => window.HITSTER.state.extensionYear), 1968);
 });
 
 await step('arbitrary QR card number 00128 resolves to a year', async () => {
@@ -145,6 +156,17 @@ await step('deep link ?hitster=de/00052 opens the card', async () => {
   await deep.close();
 });
 
+await step('deep link with SKU opens the exact Bingo card', async () => {
+  const deep = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  await deep.goto(`${base}/?hitster=de/aaaa0019/00215`, { waitUntil: 'networkidle' });
+  await deep.waitForFunction(() => window.HITSTER?.state?.extensionYear === 2007, { timeout: 30000 });
+  assert.equal(await deep.evaluate(() => window.HITSTER.state.current.title), 'Better in Time');
+  await deep.locator('#flipBtn').click();
+  await deep.waitForTimeout(700);
+  assert.equal(await deep.locator('#backArtist').innerText(), 'Leona Lewis');
+  await deep.close();
+});
+
 await step('official card API returns metadata and candidates', async () => {
   const res = await fetch(`${base}/api/hitster/de/00052`);
   assert.equal(res.status, 200);
@@ -155,6 +177,10 @@ await step('official card API returns metadata and candidates', async () => {
   assert.equal(data.track.year, 2018);
   assert.equal(data.candidateCount, 176);
   assert.ok(data.candidates.length >= 10);
+  const bingo = await (await fetch(`${base}/api/hitster/de/00215?sku=aaaa0019`)).json();
+  assert.equal(bingo.track.title, 'Better in Time');
+  assert.equal(bingo.track.year, 2007);
+  assert.equal(bingo.track.group, false);
 });
 
 await step('new banger audio is playable', async () => {

@@ -1,7 +1,7 @@
 {
   "name": "hitster-web",
-  "version": "4.4.0",
-  "description": "Kostenlose Hitster-Karten-Erweiterung mit 4.484 Songs, echten Hitster-QR-Codes, Spotify-Playlist-Modus (alle Tracks), eigenen Kategorien, 30-Sekunden-Clips und Druckbogen. Kein Login, keine Werbung, kein Online-Mehrspieler.",
+  "version": "4.5.0",
+  "description": "Kostenlose Hitster-Karten-Erweiterung mit 4.665 Songs, echten Hitster-QR-Codes, Spotify-Playlist-Modus (alle Tracks), eigenen Kategorien, 30-Sekunden-Clips und Druckbogen. Kein Login, keine Werbung, kein Online-Mehrspieler.",
   "type": "module",
   "main": "server/index.js",
   "scripts": {
@@ -9,7 +9,7 @@
     "dev": "node --watch server/index.js",
     "build:catalog": "node scripts/build-catalog.js",
     "build:charts": "node scripts/add-chart-songs.js",
-    "test": "node --test tests/catalog.test.js tests/api.test.js tests/range.test.js",
+    "test": "node --test tests/catalog.test.js tests/api.test.js tests/range.test.js tests/hitster-cards.test.js",
     "test:e2e": "node tests/e2e.test.js",
     "test:a11y": "node tests/a11y.mjs",
     "test:audio": "node tests/sample-audio.mjs && node tests/fallback-audio.mjs",
@@ -17,6 +17,8 @@
     "test:small": "node tests/small-viewport.mjs",
     "build:static": "node scripts/build-static.js",
     "build:hitster": "node scripts/build-hitster-db.js",
+    "import:cards": "node scripts/import-songseeker.js",
+    "add:rock": "node scripts/add-songseeker-rock.js",
     "build:icons": "node scripts/build-icons.js",
     "enrich:popularity": "node scripts/enrich-popularity-slow.js",
     "test:v4": "node tests/v4.test.js",

@@ -60,14 +60,14 @@ await step('static flag, catalog and API base are wired', async () => {
 });
 
 await step('front is spoiler-free and back reveals metadata', async () => {
-  const front = await page.locator('#cardFront').innerText();
+  const front = (await page.locator('#cardFront').innerText()).replace(/KARTE #[^\n]*/i, '');
   assert.doesNotMatch(front, /19\d\d|20\d\d/);
   await page.locator('#flipBtn').click();
   await page.waitForTimeout(700);
   assert.match(await page.locator('#backYear').innerText(), /^\d{4}$/);
-  assert.equal(await page.locator('.back-bingo .bingo-cell').count(), 10);
-  assert.match(await page.locator('#bingoBefore').textContent(), /^(Ja|Nein)$/);
-  assert.equal(await page.locator('#bingoYear').textContent(), await page.locator('#backYear').innerText());
+  assert.equal(await page.locator('.back-bingo').count(), 0);
+  assert.ok((await page.locator('#backTitle').innerText()).length > 1);
+  assert.ok((await page.locator('#backArtist').innerText()).length > 1);
   assert.match(await page.locator('#backGroupTag').getAttribute('aria-label'), /^(Solo|Gruppe)$/i);
 });
 

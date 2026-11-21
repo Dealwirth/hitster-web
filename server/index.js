@@ -37,6 +37,13 @@ const YEAR_OVERRIDES = (() => {
     return {};
   }
 })();
+const HITSTER_CARDS = (() => {
+  try {
+    return JSON.parse(fs.readFileSync(path.resolve(__dirname, '../public/hitster-cards.json'), 'utf8')).cards || {};
+  } catch {
+    return {};
+  }
+})();
 
 export const app = express();
 app.disable('x-powered-by');
@@ -1199,13 +1206,33 @@ api.get('/hitster/:region/:card', async (req, res) => {
   if (!candidates.length) return res.status(404).json({ error: 'Karte nicht gefunden.' });
   const set = pickHitsterSet(candidates, region, String(req.query.sku || 'auto'));
   const [spotifyId, artistType] = set.cards[card];
+  const meta = HITSTER_CARDS[`${set.sku}:${card}`] || null;
   const local = db.tracks?.[spotifyId] || null;
   const direct = songs.find((song) => song.spotifyId === spotifyId) || null;
   let track = local || (direct ? {
     title: direct.title, artist: direct.artist, year: direct.year,
     genre: direct.genre, group: direct.group, art: direct.art, songId: direct.id,
   } : null);
-  if (!track) {
+  if (meta) {
+    track = {
+      title: meta.title,
+      artist: meta.artist,
+      year: meta.year,
+      genre: local?.genre || direct?.genre || 'unbekannt',
+      group: meta.group,
+      art: local?.art || direct?.art || null,
+      songId: direct?.id || null,
+      previewUrl: null,
+      artUrl: local?.art || direct?.art || null,
+      source: 'songseeker',
+    };
+    try {
+      const spotify = await getSpotifyTrack(spotifyId, { mb: false });
+      track.previewUrl = spotify.previewUrl || null;
+      track.art = track.art || spotify.artUrl || null;
+      track.artUrl = track.artUrl || spotify.artUrl || null;
+    } catch { /* exact Songseeker metadata is still usable */ }
+  } else if (!track) {
     try {
       const resolved = await getSpotifyTrack(spotifyId);
       track = {
@@ -1221,7 +1248,8 @@ api.get('/hitster/:region/:card', async (req, res) => {
     candidateCount: candidates.length,
     set: { sku: set.sku, region: set.region, name: set.name },
     spotifyId,
-    artistType,
+    artistType: meta ? (meta.group ? 'group' : 'solo') : artistType,
+    meta,
     track,
     candidates: candidates.map((entry) => ({
       sku: entry.sku,

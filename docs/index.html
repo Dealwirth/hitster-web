@@ -4,9 +4,9 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#0b0b0d" />
-    <meta name="description" content="HITSTER Web – kostenlose Karten-Erweiterung für Hitster. 4.484 Songs, 30-Sekunden-Clips, echte Hitster-QR-Codes, Playlist-Modus, Karten drucken. Kein Login, keine Werbung." />
+    <meta name="description" content="HITSTER Web – kostenlose Karten-Erweiterung für Hitster. 4.665 Songs, 30-Sekunden-Clips, echte Hitster-QR-Codes, Playlist-Modus, Karten drucken. Kein Login, keine Werbung." />
     <meta property="og:title" content="HITSTER Web – Karten-Erweiterung" />
-    <meta property="og:description" content="4.484 Songs, 30-Sekunden-Clips, echte Hitster-QR-Codes, Playlist-Modus, Karten drucken. Kostenlos, ohne Login." />
+    <meta property="og:description" content="4.665 Songs, 30-Sekunden-Clips, echte Hitster-QR-Codes, Playlist-Modus, Karten drucken. Kostenlos, ohne Login." />
     <meta property="og:type" content="website" />
     <meta property="og:image" content="https://dealwirth.github.io/hitster-web/screenshot-front.png" />
     <meta property="og:image:alt" content="HITSTER Web Spielkarte" />
@@ -23,7 +23,7 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" type="image/svg+xml" href="icons/icon.svg" />
     <link rel="apple-touch-icon" href="icons/icon-180.png" />
-    <link rel="stylesheet" href="styles.css?v=4.4.0" />
+    <link rel="stylesheet" href="styles.css?v=4.5.0" />
   </head>
   <body>
     <noscript><div class="noscript">HITSTER Web braucht JavaScript. Bitte aktiviere JavaScript in deinem Browser.</div></noscript>
@@ -140,28 +140,11 @@
                 <h2 class="back-title" id="backTitle">Dancing Queen</h2>
                 <p class="back-artist" id="backArtist">ABBA</p>
               </div>
-              <details class="back-bingo-details" open>
-                <summary>Bingo-Antworten</summary>
-                <div class="back-bingo" id="backBingo" aria-label="Hitster-Bingo-Kategorien">
-                  <div class="bingo-cell"><small>Solo/Gruppe</small><strong id="bingoGroup">Gruppe</strong></div>
-                  <div class="bingo-cell"><small>Vor 2000?</small><strong id="bingoBefore">Ja</strong></div>
-                  <div class="bingo-cell"><small>± 4 Jahre</small><strong id="bingoPlus4">1976</strong></div>
-                  <div class="bingo-cell"><small>Dekade</small><strong id="bingoDecade">1970er</strong></div>
-                  <div class="bingo-cell"><small>± 2 Jahre</small><strong id="bingoPlus2">1976</strong></div>
-                  <div class="bingo-cell"><small>Titel</small><strong id="bingoTitle">Dancing Queen</strong></div>
-                  <div class="bingo-cell"><small>Exaktes Jahr</small><strong id="bingoYear">1976</strong></div>
-                  <div class="bingo-cell"><small>Interpret</small><strong id="bingoArtist">ABBA</strong></div>
-                  <div class="bingo-cell"><small>Dekade</small><strong id="bingoDecade2">1970er</strong></div>
-                  <div class="bingo-cell"><small>± 3 Jahre</small><strong id="bingoPlus3">1976</strong></div>
-                </div>
-              </details>
-              <p class="back-source" id="backSource">Spotify · HITSTER</p>
               <div class="back-actions">
                 <button class="btn btn-spotify" id="spotifyBtn"><svg><use href="#i-spotify"></use></svg><span>Spotify</span></button>
                 <button class="btn btn-ghost btn-small" id="judgeRight"><svg><use href="#i-check"></use></svg> Richtig</button>
                 <button class="btn btn-ghost btn-small" id="judgeWrong"><svg><use href="#i-x"></use></svg> Daneben</button>
               </div>
-              <footer class="card-foot"><span class="card-number" id="backNumber">#0001</span><span class="card-foot-hint"><svg><use href="#i-flip"></use></svg> Zurück</span></footer>
             </article>
           </div>
         </div>
@@ -235,7 +218,7 @@
 
     <footer class="site-footer">
       <p><strong>HITSTER Web</strong> ist ein inoffizielles Open-Source-Fanprojekt und eine Karten-Erweiterung für Hitster. Kein Login, keine Werbung, kein Tracking, kein Online-Mehrspieler. Song-Clips sind 30-Sekunden-Vorschauen von Spotify, Deezer bzw. iTunes. Kartendaten: offizielle HITSTER-Spieldatenbank (Jumbo) · Musik/Metadaten: Spotify · Jahre: MusicBrainz.</p>
-      <p class="footer-meta"><span>MIT-Lizenz</span><span>·</span><span><span id="footerCount">4.484</span> Karten</span><span>·</span><span>Made for Hitster</span></p>
+      <p class="footer-meta"><span>MIT-Lizenz</span><span>·</span><span><span id="footerCount">4.665</span> Karten</span><span>·</span><span>Made for Hitster</span></p>
     </footer>
 
     <div class="modal" id="helpModal" hidden>
@@ -368,7 +351,7 @@
     <div id="printRoot" aria-hidden="true"></div>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
     <audio id="audio" preload="none"></audio>
-    <script src="vendor/jsqr.js?v=4.4.0"></script>
-    <script src="app.js?v=4.4.0" type="module"></script>
+    <script src="vendor/jsqr.js?v=4.5.0"></script>
+    <script src="app.js?v=4.5.0" type="module"></script>
   </body>
 </html>

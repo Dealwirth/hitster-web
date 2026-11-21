@@ -7,7 +7,7 @@ const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
 const CLIP_SECONDS = 30;
-const VERSION = '4.4.0';
+const VERSION = '4.5.0';
 const STATIC = document.documentElement.dataset.static === 'true' || location.hostname.endsWith('github.io');
 const API_BASE = (document.querySelector('meta[name="hitster-api"]')?.content || '').replace(/\/$/, '');
 const API = (path) => `${API_BASE}${path}`;
@@ -65,6 +65,7 @@ const state = {
   playlist: null,
   categories: [],
   hitsterDb: null,
+  hitsterCards: null,
   playerHidden: false,
   installPrompt: null,
   scan: { stream: null, raf: null, active: false, detected: false, last: 0, deckSku: 'auto' },
@@ -87,23 +88,11 @@ const el = {
   cardPlay: $('#cardPlay'),
   frontSub: $('#frontSub'),
   frontNumber: $('#frontNumber'),
-  backNumber: $('#backNumber'),
   backYear: $('#backYear'),
   backTitle: $('#backTitle'),
   backArtist: $('#backArtist'),
   backGroupIcon: $('#backGroupIcon'),
   backGroupTag: $('#backGroupTag'),
-  bingoGroup: $('#bingoGroup'),
-  bingoBefore: $('#bingoBefore'),
-  bingoDecade: $('#bingoDecade'),
-  bingoYear: $('#bingoYear'),
-  bingoPlus2: $('#bingoPlus2'),
-  bingoPlus3: $('#bingoPlus3'),
-  bingoPlus4: $('#bingoPlus4'),
-  bingoTitle: $('#bingoTitle'),
-  bingoArtist: $('#bingoArtist'),
-  bingoDecade2: $('#bingoDecade2'),
-  backSource: $('#backSource'),
   modeSwitch: $('#modeSwitch'),
   extensionBar: $('#extensionBar'),
   scanBtn: $('#scanBtn'),
@@ -492,9 +481,13 @@ function readUrl() {
   const card = p.get('card');
   if (card && /^s\d{4}$/.test(card)) state.initialCard = card;
   const hitster = p.get('hitster');
-  if (hitster && /^[a-z]{2}\/\d{1,5}$/i.test(hitster)) {
-    const [region, number] = hitster.toLowerCase().split('/');
-    state.initialHitster = { region, card: number.padStart(5, '0') };
+  if (hitster && /^[a-z]{2}\/(?:[a-z][a-z0-9]{3,}\/)?\d{1,5}$/i.test(hitster)) {
+    const [region, skuOrCard, maybeCard] = hitster.toLowerCase().split('/');
+    state.initialHitster = {
+      region,
+      sku: maybeCard ? skuOrCard : null,
+      card: (maybeCard || skuOrCard).padStart(5, '0'),
+    };
   }
   const playlist = p.get('playlist');
   if (playlist && /^[A-Za-z0-9]{22}$/.test(playlist)) {
@@ -503,9 +496,13 @@ function readUrl() {
   }
   // Official Hitster links can be opened directly by a phone camera.
   if (!state.initialHitster) {
-    const pathHit = location.pathname.match(/\/([a-z]{2})(?:-[a-z]{2})?\/(\d{1,5})\/?$/i);
+    const pathHit = location.pathname.match(/\/([a-z]{2})(?:-[a-z]{2})?\/(?:([a-z][a-z0-9]{3,})\/)?(\d{1,5})\/?$/i);
     if (pathHit) {
-      state.initialHitster = { region: pathHit[1].toLowerCase(), card: pathHit[2].padStart(5, '0') };
+      state.initialHitster = {
+        region: pathHit[1].toLowerCase(),
+        sku: pathHit[2] ? pathHit[2].toLowerCase() : null,
+        card: pathHit[3].padStart(5, '0'),
+      };
     }
   }
 }
@@ -802,8 +799,8 @@ function parseScan(text) {
   let t = raw;
   try { t = decodeURIComponent(raw); } catch { /* keep raw */ }
 
-  const hit = t.match(/(?:https?:\/\/)?(?:www\.)?hitstergame\.com\/([a-z]{2})(?:-[a-z]{2})?\/(\d{1,5})/i);
-  if (hit) return { hitster: { region: hit[1].toLowerCase(), card: hit[2].padStart(5, '0') } };
+  const hit = t.match(/(?:https?:\/\/)?(?:www\.)?hitstergame\.com\/([a-z]{2})(?:-[a-z]{2})?\/(?:([a-z][a-z0-9]{3,})\/)?(\d{1,5})/i);
+  if (hit) return { hitster: { region: hit[1].toLowerCase(), sku: hit[2] ? hit[2].toLowerCase() : null, card: hit[3].padStart(5, '0') } };
 
   const uri = t.match(/^spotify:track:([A-Za-z0-9]{22})$/i);
   if (uri) return { spotifyId: uri[1] };
@@ -911,6 +908,19 @@ async function loadHitsterDb() {
   return state.hitsterDb;
 }
 
+async function loadHitsterCards() {
+  if (state.hitsterCards) return state.hitsterCards;
+  const res = await fetch('hitster-cards.json', { headers: { accept: 'application/json' } });
+  if (!res.ok) throw new Error(`Hitster cards HTTP ${res.status}`);
+  state.hitsterCards = await res.json();
+  return state.hitsterCards;
+}
+
+function hitsterMeta(sku, card) {
+  if (!state.hitsterCards?.cards) return null;
+  return state.hitsterCards.cards[`${sku}:${card}`] || null;
+}
+
 function populateDeckSelect() {
   if (!el.deckSelect || !state.hitsterDb) return;
   const current = state.prefs.deckSku || 'auto';
@@ -929,12 +939,13 @@ function populateDeckSelect() {
   el.deckSelect.value = [...el.deckSelect.options].some((o) => o.value === current) ? current : 'auto';
 }
 
-function resolveHitsterCard(region, card) {
+function resolveHitsterCard(region, card, sku = null) {
   if (!state.hitsterDb) return null;
   const candidates = state.hitsterDb.gamesets.filter((set) => set.cards[card]);
   if (!candidates.length) return null;
-  const selected = state.prefs.deckSku && state.prefs.deckSku !== 'auto'
-    ? state.hitsterDb.gamesets.find((set) => set.sku === state.prefs.deckSku)
+  const wantedSku = sku || (state.prefs.deckSku && state.prefs.deckSku !== 'auto' ? state.prefs.deckSku : null);
+  const selected = wantedSku
+    ? state.hitsterDb.gamesets.find((set) => set.sku.toLowerCase() === String(wantedSku).toLowerCase())
     : null;
   if (selected?.cards[card]) return { ...selected.cards[card], gameset: selected };
   const lang = REGION_LANG[region] || '';
@@ -947,8 +958,41 @@ function resolveHitsterCard(region, card) {
   return { ...set.cards[card], gameset: set, candidates: pool.map((entry) => ({ sku: entry.sku, region: entry.region, name: entry.name })) };
 }
 
+function startCardRound(meta, result, label = 'Originalkarte') {
+  if (!meta?.year) return false;
+  const song = {
+    id: `h-${meta.sku}-${meta.card}`,
+    title: meta.title,
+    artist: meta.artist,
+    year: meta.year,
+    genre: result?.genre || 'unbekannt',
+    group: meta.group,
+    tags: [],
+    spotifyId: result?.spotifyId || meta.spotifyId || null,
+    art: result?.artUrl || result?.art || null,
+    artUrl: result?.artUrl || result?.art || null,
+    previewUrl: result?.previewUrl || null,
+    source: 'songseeker',
+    cardNumber: meta.card,
+  };
+  state.extensionYear = meta.year;
+  state.blindYear = true;
+  setMode('extension', { silent: true, reload: false, preserveYear: true });
+  loadCard(song);
+  state.stats.played += 1;
+  saveStats();
+  renderStats();
+  updateYearHint();
+  syncUrl();
+  el.scanStatus.textContent = `${label} erkannt – Karte aufgedeckt.`;
+  showToast(`${meta.title} · ${meta.artist}`, 3600);
+  setTimeout(() => { if (!state.playing && song.previewUrl) playClip(); }, 650);
+  return true;
+}
+
 async function startBlindRound(result, label = 'Originalkarte') {
   if (!result?.year) return false;
+  if (result.meta) return startCardRound(result.meta, result, label);
   if (result.song?.id) {
     state.roundSeen.add(result.song.id);
     saveRound();
@@ -971,7 +1015,9 @@ async function handleHitster(parsed) {
     el.scanStatus.textContent = 'Kartendatenbank konnte nicht geladen werden. Bitte erneut scannen.';
     return false;
   }
-  const mapping = resolveHitsterCard(parsed.region, parsed.card);
+  try { await loadHitsterCards(); } catch { /* API can still resolve the exact card */ }
+  const mapping = resolveHitsterCard(parsed.region, parsed.card, parsed.sku);
+  const meta = hitsterMeta(parsed.sku || mapping?.gameset?.sku, parsed.card);
   if (!mapping) {
     el.scanStatus.textContent = 'Karte nicht im gewählten Set. Bitte anderes Kartenset wählen.';
     return false;
@@ -982,7 +1028,8 @@ async function handleHitster(parsed) {
   let result = null;
   if (API_BASE || !STATIC) {
     try {
-      const sku = state.prefs.deckSku && state.prefs.deckSku !== 'auto' ? `?sku=${encodeURIComponent(state.prefs.deckSku)}` : '';
+      const skuValue = parsed.sku || (state.prefs.deckSku && state.prefs.deckSku !== 'auto' ? state.prefs.deckSku : '');
+      const sku = skuValue ? `?sku=${encodeURIComponent(skuValue)}` : '';
       const res = await fetch(API(`/api/hitster/${parsed.region}/${parsed.card}${sku}`), { headers: { accept: 'application/json' } });
       if (res.ok) {
         const data = await res.json();
@@ -1007,6 +1054,7 @@ async function handleHitster(parsed) {
     };
   }
   if (!result) result = await resolveSpotify(mapping[0]);
+  if (meta) result = { ...(result || {}), ...meta, meta, spotifyId: result?.spotifyId || meta.spotifyId || mapping[0] };
   if (!result?.year) {
     el.scanStatus.textContent = 'Originalkarte erkannt, aber kein Jahr gefunden. Bitte anderes Kartenset wählen oder erneut scannen.';
     return false;
@@ -1302,25 +1350,13 @@ function loadCard(song) {
   resetTimer();
 
   setCardAccent(false);
-  el.frontNumber.textContent = `Karte #${song.id.slice(1)}`;
+  el.frontNumber.textContent = `Karte #${song.cardNumber || song.id.slice(1)}`;
   el.frontSub.textContent = state.mode === 'extension'
     ? 'Tippe für den Clip – die Auflösung kommt erst beim Umdrehen.'
     : 'Tippe auf die Karte, um den Clip zu starten.';
-  el.backNumber.textContent = `Karte #${song.id.slice(1)}`;
   el.backYear.textContent = String(song.year);
   el.backTitle.textContent = song.title;
   el.backArtist.textContent = song.artist;
-  if (el.bingoGroup) el.bingoGroup.textContent = song.group ? 'Gruppe' : 'Solo';
-  if (el.bingoBefore) el.bingoBefore.textContent = song.year < 2000 ? 'Ja' : 'Nein';
-  if (el.bingoDecade) el.bingoDecade.textContent = decadeLabel(song.year);
-  if (el.bingoYear) el.bingoYear.textContent = String(song.year);
-  if (el.bingoPlus2) el.bingoPlus2.textContent = String(song.year);
-  if (el.bingoPlus3) el.bingoPlus3.textContent = String(song.year);
-  if (el.bingoPlus4) el.bingoPlus4.textContent = String(song.year);
-  if (el.bingoTitle) el.bingoTitle.textContent = song.title;
-  if (el.bingoArtist) el.bingoArtist.textContent = song.artist;
-  if (el.bingoDecade2) el.bingoDecade2.textContent = decadeLabel(song.year);
-  el.backSource.textContent = song.source === 'spotify' ? 'Spotify' : 'Spotify · HITSTER';
   renderGroupIcon(song);
   updateFlipButton();
   updatePlayer();

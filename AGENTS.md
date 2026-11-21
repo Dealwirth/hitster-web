@@ -3,25 +3,24 @@
 ## What this is
 Unofficial, ad-free, login-free HITSTER-style music party game and card expansion.
 Node/Express backend + vanilla JS/CSS frontend. No frontend build step.
-4,484 curated songs (1950–2026), 21 genres, 8 decades, 2,618 Spotify IDs + 300 chart hits + 63 curated classics.
-Three modes: **Freies Spiel** (classic), **Mit Original** (real Hitster QR scan only,
-blind draw from the same year) and **Playlist** (Spotify playlist, all tracks). The card
-front is deliberately neutral (no year, title, genre, group or QR); the back
-reveals year, title, artist, genre, group/solo, source and all ten Bingo answers.
+4,665 curated songs (1950–2026), 21 genres, 8 decades, 300 chart hits + 63 curated classics + 181 Songseeker rock/metal songs.
+Three modes: **Freies Spiel** (classic), **Mit Original** (real Hitster QR scan,
+exact Songseeker metadata and original clip) and **Playlist** (Spotify playlist, all
+tracks). The card front is deliberately neutral (no year, title, genre, group or QR);
+the back shows only the large release year, title, artist and a solo/band icon.
 A fixed vinyl player shows cover, progress, pause/replay and hides the title until flip.
-The back also lists all ten Hitster Bingo answers. Own playlists can be saved as local
-categories. Genre chips filter the catalog and are URL-synced; there is no
-difficulty/Bekanntheit UI.
+Own playlists can be saved as local categories. Genre chips filter the catalog and
+are URL-synced; there is no difficulty/Bekanntheit UI.
 
 ## Commands
 - `npm start` – serve on `PORT` (default 12000), binds 0.0.0.0.
-- `npm test` – 29 catalog + API + range tests.
+- `npm test` – 33 catalog + API + range + Songseeker card tests.
 - `npm run test:e2e` – 32 Playwright E2E checks; needs Chromium at `/usr/bin/chromium`
   or `CHROMIUM_PATH`.
 - `npm run test:v4` – blind scan, deck selection, full playlist, own categories,
   PWA and print; needs Chromium and network for Spotify/MusicBrainz.
-- `npm run test:v5` – all 51,208 official cards, 4,484-song catalog, genre chips,
-  card-link/deep-link scan, ten Bingo answers, new audio and the full 664-track playlist.
+- `npm run test:v5` – all 51,208 official cards, 4,665-song catalog, genre chips,
+  exact card/SKU deep links, new audio and the full 664-track playlist.
 - `npm run test:static` – builds and serves `docs/`, checks blind card, real QR,
   PWA and runtime errors against a local API.
 - `npm run test:a11y` – axe-core audit; server on 12000.
@@ -29,9 +28,11 @@ difficulty/Bekanntheit UI.
 - `npm run test:small` – 320 px overflow/card/flip check; server on 12000.
 - `npm run screenshots` – write `docs/screenshot-*.png`.
 - `npm run build:static` – build `docs/` for GitHub Pages (catalog, `hitster-db.json`,
-  4,484 QR SVGs, PWA). Set `PUBLIC_API_BASE` for playlist/Spotify resolution.
+  `hitster-cards.json`, 4,665 QR SVGs, PWA). Set `PUBLIC_API_BASE` for playlist/Spotify resolution.
 - `npm run build:catalog` – `data/songs.source.tsv` → `data/catalog.json`.
 - `npm run build:charts` – add current iTunes chart hits to `data/catalog.json`.
+- `npm run import:cards` – Songseeker CSVs → `public/hitster-cards.json`.
+- `npm run add:rock` – add missing Songseeker Rock/Metal songs to the catalog.
 - `scripts/serve-watchdog.sh` – restart loop for production; logs to `server.log`.
 
 ## Architecture
@@ -103,13 +104,17 @@ difficulty/Bekanntheit UI.
   back sheets use `direction: rtl` for duplex long-edge alignment.
 - No online multiplayer, accounts, or server-side game state. Stats/round are local.
 - `window.HITSTER` exposes state/actions for tests; keep it harmless (no secrets).
+- Songseeker card metadata lives in `data/songseeker/` (MIT, 18 decks, 5,192 cards)
+  and is compiled by `scripts/import-songseeker.js` into `public/hitster-cards.json`.
+  The scanner uses it for exact title/artist/year/group; never replace those years
+  with Spotify reissue years. Rock/Metal expansion: `scripts/add-songseeker-rock.js`.
 - The static build has no `/api/*` of its own; it uses `catalog.json`,
-  `hitster-db.json`, `qr/`, iTunes previews and a configurable `hitster-api` meta
-  for Spotify playlist/track resolution. Without that API, catalogue, QR scan,
-  audio fallback and print still work.
+  `hitster-db.json`, `hitster-cards.json`, `qr/`, iTunes previews and a
+  configurable `hitster-api` meta for Spotify playlist/track resolution. Without
+  that API, catalogue, QR scan, audio fallback and print still work.
 
 ## Style
 German UI copy, informal “du”. No ads, no tracking, no login. Keep the card the
-visual center: neutral black front; genre color, year, title/artist, genre,
-group/solo and the ten Bingo answers only on the back. No full Bingo scorecard.
-Front must stay spoiler-free.
+visual center: neutral black front; on the back only the large release year,
+song title, artist and a solo/band icon top right. No Bingo answers, no source
+footer, no genre chips. Front must stay spoiler-free.
