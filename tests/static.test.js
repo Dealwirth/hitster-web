@@ -64,10 +64,10 @@ await step('front is spoiler-free and back reveals metadata', async () => {
   await page.locator('#flipBtn').click();
   await page.waitForTimeout(700);
   assert.match(await page.locator('#backYear').innerText(), /^\d{4}$/);
-  assert.ok((await page.locator('#backGenre').innerText()).length > 1);
-  assert.equal(await page.locator('.back-bingo').count(), 1);
-  assert.match(await page.locator('#bingoBefore').innerText(), /^(Ja|Nein)$/);
-  assert.equal(await page.locator('#bingoYear').innerText(), await page.locator('#backYear').innerText());
+  assert.equal(await page.locator('.back-bingo .bingo-cell').count(), 10);
+  assert.match(await page.locator('#bingoBefore').textContent(), /^(Ja|Nein)$/);
+  assert.equal(await page.locator('#bingoYear').textContent(), await page.locator('#backYear').innerText());
+  assert.match(await page.locator('#backGroupTag').getAttribute('aria-label'), /^(Solo|Gruppe)$/i);
 });
 
 await step('static page can call the API cross-origin (CORS)', async () => {

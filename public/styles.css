@@ -312,7 +312,6 @@ img { max-width: 100%; }
   border-bottom: 3px solid var(--c, #ff2d95); display: inline-block;
   padding-bottom: 2px; align-self: flex-start;
 }
-.back-decade { margin-top: 5px; font-size: 9px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--card-muted); }
 .back-title-wrap { padding: 10px 18px 0; }
 .back-title { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: clamp(22px, 6vw, 27px); line-height: 1; color: var(--paper); }
 .back-artist { margin: 4px 0 0; font-size: 12px; font-weight: 700; color: var(--card-muted); }
@@ -631,7 +630,7 @@ kbd {
   content: ''; position: absolute; inset: 40%; border-radius: 50%;
   background: var(--c, #ff2d95); box-shadow: inset 0 0 0 6px #151517;
 }
-.back-hero, .back-title-wrap, .back-facts, .back-source, .back-actions { position: relative; z-index: 2; }
+.back-hero, .back-title-wrap, .back-source, .back-actions, .back-bingo-details { position: relative; z-index: 2; }
 .back-tags { display: flex; align-items: center; gap: 5px; min-width: 0; }
 .back-tag {
   display: inline-flex; align-items: center; gap: 4px; max-width: 130px;
@@ -640,26 +639,12 @@ kbd {
   font-size: 6.5px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.back-tag .group-icon { width: 12px; height: 12px; }
-.back-tag-genre { background: rgba(246, 240, 228, 0.92); color: var(--ink); border-color: transparent; }
+.back-tag .group-icon { width: 13px; height: 13px; }
+.back-tag-icon { width: 24px; height: 24px; max-width: none; justify-content: center; padding: 0; border-radius: 50%; background: rgba(246, 240, 228, 0.94); color: var(--ink); border-color: transparent; }
+.back-tag-icon .group-icon { color: var(--ink); opacity: 1; }
 .tag-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--c, #ff2d95); flex: 0 0 auto; }
 .back-hero { padding-top: 10px; }
 .back-year { font-size: clamp(44px, 12vw, 54px); }
-.back-facts {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;
-  margin: 10px 16px 0; padding: 7px 6px; border-radius: 11px;
-  background: rgba(246, 240, 228, 0.07); border: 1px solid rgba(246, 240, 228, 0.1);
-}
-.back-facts div { min-width: 0; text-align: center; }
-.back-facts small {
-  display: block; font-size: 5.5px; font-weight: 800; letter-spacing: 0.08em;
-  text-transform: uppercase; color: var(--card-muted);
-}
-.back-facts strong {
-  display: block; margin-top: 2px; font-size: 8px; font-weight: 900;
-  color: var(--paper); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.back-note { position: relative; z-index: 2; margin: 8px 18px 0; font-size: 7px; line-height: 1.45; color: rgba(246, 240, 228, 0.52); }
 .back-source {
   margin: 7px 18px 0; font-size: 6.5px; font-weight: 700; letter-spacing: 0.08em;
   text-transform: uppercase; color: rgba(246, 240, 228, 0.45);
@@ -813,13 +798,11 @@ kbd {
   .mp-btn { width: 30px; height: 30px; }
   #mpPlay { width: 38px; height: 38px; }
   .mp-eq { display: none; }
-  .back-facts { grid-template-columns: repeat(3, 1fr); }
   .back-art { width: 180px; height: 180px; right: -70px; top: 70px; }
   .media-player.show ~ .toast { bottom: 82px; }
 }
 @media (max-width: 380px) {
   .back-tag { max-width: 88px; font-size: 6px; }
-  .back-facts strong { font-size: 7px; }
   .mode-btn { padding: 7px 7px; font-size: 6px; }
 }
 
@@ -830,10 +813,25 @@ body.player-open { padding-bottom: 104px; }
 
 .panel-hint.panel-sub { color: #5f5a52; opacity: 1; }
 
+/* Compact, optional Bingo answers */
+.back-bingo-details {
+  margin: 8px 16px 0; padding-top: 7px;
+  border-top: 1px solid rgba(246, 240, 228, 0.12);
+}
+.back-bingo-details summary {
+  width: max-content; cursor: pointer; list-style: none;
+  font-size: 6px; font-weight: 900; letter-spacing: 0.1em;
+  text-transform: uppercase; color: rgba(246, 240, 228, 0.58);
+}
+.back-bingo-details summary::-webkit-details-marker { display: none; }
+.back-bingo-details summary::after { content: ' +'; color: var(--c, #ff2d95); }
+.back-bingo-details[open] summary::after { content: ' –'; }
+.back-bingo-details .back-bingo { margin: 6px 0 0; }
+
 /* Hitster Bingo answers on the card back */
 .back-bingo {
   position: relative; z-index: 2;
-  display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px;
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px;
   margin: 10px 16px 0;
 }
 .bingo-head {
@@ -841,17 +839,17 @@ body.player-open { padding-bottom: 104px; }
   text-transform: uppercase; color: rgba(246, 240, 228, 0.6); margin-bottom: 1px;
 }
 .back-bingo .bingo-cell {
-  min-width: 0; padding: 6px 4px; border-radius: 7px;
+  min-width: 0; padding: 7px 9px; border-radius: 7px;
   background: rgba(246, 240, 228, 0.07); border: 1px solid rgba(246, 240, 228, 0.1);
   text-align: center;
 }
 .back-bingo small {
-  display: block; font-size: 5.4px; font-weight: 800; letter-spacing: 0.05em;
+  display: block; font-size: 7px; font-weight: 800; letter-spacing: 0.05em;
   text-transform: uppercase; color: var(--card-muted); white-space: nowrap;
   overflow: hidden; text-overflow: ellipsis;
 }
 .back-bingo strong {
-  display: block; margin-top: 2px; font-size: clamp(6.2px, 0.7vw, 8px); font-weight: 900;
+  display: block; margin-top: 2px; font-size: clamp(8px, 0.85vw, 10px); font-weight: 900;
   color: var(--paper); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 

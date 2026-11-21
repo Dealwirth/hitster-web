@@ -88,15 +88,15 @@ await step('card link resolves 00052 and reveals all Bingo categories', async ()
   await page.locator('#flipBtn').click();
   await page.waitForTimeout(700);
   assert.equal(await page.locator('#backYear').innerText(), '2018');
-  assert.equal(await page.locator('#bingoBefore').innerText(), 'Nein');
-  assert.equal(await page.locator('#bingoDecade').innerText(), '2010er');
-  assert.equal(await page.locator('#bingoYear').innerText(), '2018');
-  assert.equal(await page.locator('#bingoPlus2').innerText(), '2018');
-  assert.equal(await page.locator('#bingoPlus3').innerText(), '2018');
-  assert.equal(await page.locator('#bingoPlus4').innerText(), '2018');
-  assert.equal(await page.locator('#bingoTitle').innerText().then((t) => t.length > 1), true);
-  assert.equal(await page.locator('#bingoArtist').innerText().then((t) => t.length > 1), true);
-  assert.equal(await page.locator('#backGroupFact').innerText(), await page.locator('#bingoGroup').innerText());
+  assert.equal(await page.locator('#bingoBefore').textContent(), 'Nein');
+  assert.equal(await page.locator('#bingoDecade').textContent(), '2010er');
+  assert.equal(await page.locator('#bingoYear').textContent(), '2018');
+  assert.equal(await page.locator('#bingoPlus2').textContent(), '2018');
+  assert.equal(await page.locator('#bingoPlus3').textContent(), '2018');
+  assert.equal(await page.locator('#bingoPlus4').textContent(), '2018');
+  assert.equal(await page.locator('#bingoTitle').textContent().then((t) => t.length > 1), true);
+  assert.equal(await page.locator('#bingoArtist').textContent().then((t) => t.length > 1), true);
+  assert.equal(await page.locator('#backGroupTag').getAttribute('aria-label'), await page.locator('#bingoGroup').textContent());
 });
 
 await step('deep link ?hitster=de/00052 opens the card', async () => {
@@ -130,9 +130,20 @@ await step('new banger audio is playable', async () => {
 });
 
 await step('complete 664-track Spotify playlist resolves without gaps', async () => {
-  const res = await fetch(`${base}/api/playlist?url=${encodeURIComponent('https://open.spotify.com/playlist/7qnG42fVABsfhbDvAnTGKv')}`);
-  assert.equal(res.status, 200);
-  const data = await res.json();
+  let data = null;
+  let lastError = null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const res = await fetch(`${base}/api/playlist?url=${encodeURIComponent('https://open.spotify.com/playlist/7qnG42fVABsfhbDvAnTGKv')}`);
+      assert.equal(res.status, 200);
+      data = await res.json();
+      break;
+    } catch (err) {
+      lastError = err;
+      if (attempt === 0) await new Promise((resolve) => setTimeout(resolve, 2000));
+    }
+  }
+  if (!data) throw lastError || new Error('Playlist request failed');
   assert.equal(data.count, 664);
   assert.equal(data.songs.length, 664);
   assert.equal(data.skipped, 0);

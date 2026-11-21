@@ -50,6 +50,7 @@
       <symbol id="i-scan" viewBox="0 0 24 24"><path d="M4 8V5.5A1.5 1.5 0 0 1 5.5 4H8M16 4h2.5A1.5 1.5 0 0 1 20 5.5V8M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16M8 20H5.5A1.5 1.5 0 0 1 4 18.5V16M7 12h10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
       <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 20h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
       <symbol id="i-list" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+      <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="11" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
       <symbol id="i-image" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="9" cy="10" r="1.6" fill="currentColor"/><path d="m5 17 4.5-4.5 3.2 3.2 2.1-2.1L20 17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
       <symbol id="i-print" viewBox="0 0 24 24"><path d="M7 9V4h10v5M7 17H5.5A1.5 1.5 0 0 1 4 15.5v-5A1.5 1.5 0 0 1 5.5 9h13A1.5 1.5 0 0 1 20 10.5v5a1.5 1.5 0 0 1-1.5 1.5H17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><rect x="7" y="14" width="10" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="17" cy="12" r=".8" fill="currentColor"/></symbol>
       <symbol id="i-qr" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="6" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="2"/><rect x="14.5" y="3.5" width="6" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="2"/><rect x="3.5" y="14.5" width="6" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="2"/><path d="M14.5 14.5h2.5v2.5h-2.5zM19 14.5h1.5M19 19h1.5M14.5 19h2.5M14.5 21.5h6" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
@@ -127,40 +128,34 @@
               <header class="card-band">
                 <span class="card-kicker">AUFGELÖST</span>
                 <span class="back-tags">
-                  <span class="back-tag" id="backGroupTag"><svg class="group-icon" id="backGroupIcon" role="img" aria-label="Gruppe"><use href="#i-users"></use></svg><span id="backGroupLabel">Gruppe</span></span>
-                  <span class="back-tag back-tag-genre" id="backGenreTag"><span class="tag-dot"></span><span id="backGenre">Pop</span></span>
+                  <span class="back-tag back-tag-icon" id="backGroupTag" role="img" aria-label="Solo" title="Solo"><svg class="group-icon" id="backGroupIcon"><use href="#i-user"></use></svg></span>
                 </span>
               </header>
               <div class="back-art" aria-hidden="true"><span class="back-disc"></span></div>
               <div class="back-hero">
                 <span class="back-year-label">Erschienen</span>
                 <span class="back-year" id="backYear">1976</span>
-                <span class="back-decade" id="backDecade">1970er</span>
               </div>
               <div class="back-title-wrap">
                 <h2 class="back-title" id="backTitle">Dancing Queen</h2>
                 <p class="back-artist" id="backArtist">ABBA</p>
               </div>
-              <div class="back-facts">
-                <div><small>Jahrzehnt</small><strong id="backDecadeFact">1970er</strong></div>
-                <div><small>Besetzung</small><strong id="backGroupFact">Gruppe</strong></div>
-                <div><small>Genre</small><strong id="backGenreFact">Pop</strong></div>
-              </div>
-              <div class="back-bingo" id="backBingo" aria-label="Hitster-Bingo-Kategorien">
-                <span class="bingo-head">HITSTER BINGO · 10 KATEGORIEN</span>
-                <div class="bingo-cell"><small>Solo/Gruppe</small><strong id="bingoGroup">Gruppe</strong></div>
-                <div class="bingo-cell"><small>Vor 2000?</small><strong id="bingoBefore">Ja</strong></div>
-                <div class="bingo-cell"><small>± 4 Jahre</small><strong id="bingoPlus4">1976</strong></div>
-                <div class="bingo-cell"><small>Dekade</small><strong id="bingoDecade">1970er</strong></div>
-                <div class="bingo-cell"><small>± 2 Jahre</small><strong id="bingoPlus2">1976</strong></div>
-                <div class="bingo-cell"><small>Titel</small><strong id="bingoTitle">Dancing Queen</strong></div>
-                <div class="bingo-cell"><small>Exaktes Jahr</small><strong id="bingoYear">1976</strong></div>
-                <div class="bingo-cell"><small>Interpret</small><strong id="bingoArtist">ABBA</strong></div>
-                <div class="bingo-cell"><small>Dekade</small><strong id="bingoDecade2">1970er</strong></div>
-                <div class="bingo-cell"><small>± 3 Jahre</small><strong id="bingoPlus3">1976</strong></div>
-              </div>
+              <details class="back-bingo-details" open>
+                <summary>Bingo-Antworten</summary>
+                <div class="back-bingo" id="backBingo" aria-label="Hitster-Bingo-Kategorien">
+                  <div class="bingo-cell"><small>Solo/Gruppe</small><strong id="bingoGroup">Gruppe</strong></div>
+                  <div class="bingo-cell"><small>Vor 2000?</small><strong id="bingoBefore">Ja</strong></div>
+                  <div class="bingo-cell"><small>± 4 Jahre</small><strong id="bingoPlus4">1976</strong></div>
+                  <div class="bingo-cell"><small>Dekade</small><strong id="bingoDecade">1970er</strong></div>
+                  <div class="bingo-cell"><small>± 2 Jahre</small><strong id="bingoPlus2">1976</strong></div>
+                  <div class="bingo-cell"><small>Titel</small><strong id="bingoTitle">Dancing Queen</strong></div>
+                  <div class="bingo-cell"><small>Exaktes Jahr</small><strong id="bingoYear">1976</strong></div>
+                  <div class="bingo-cell"><small>Interpret</small><strong id="bingoArtist">ABBA</strong></div>
+                  <div class="bingo-cell"><small>Dekade</small><strong id="bingoDecade2">1970er</strong></div>
+                  <div class="bingo-cell"><small>± 3 Jahre</small><strong id="bingoPlus3">1976</strong></div>
+                </div>
+              </details>
               <p class="back-source" id="backSource">Spotify · HITSTER</p>
-              <p class="back-note">Titel und Interpret sind die Bingo-Kategorien. ±2, ±3 und ±4 Jahre sind die Toleranzen der Bingo-Felder.</p>
               <div class="back-actions">
                 <button class="btn btn-spotify" id="spotifyBtn"><svg><use href="#i-spotify"></use></svg><span>Spotify</span></button>
                 <button class="btn btn-ghost btn-small" id="judgeRight"><svg><use href="#i-check"></use></svg> Richtig</button>
@@ -299,12 +294,12 @@
         <header class="modal-head"><h2 id="scanTitle"><svg><use href="#i-scan"></use></svg> Karte scannen</h2><button class="icon-btn" data-close="1" aria-label="Schließen"><svg><use href="#i-close"></use></svg></button></header>
         <div class="modal-body">
           <form class="scan-link" id="scanLinkForm">
-            <label for="scanLinkInput">Hitster-Kartenlink einfügen</label>
+            <label for="scanLinkInput">Kartenlink oder Spotify-Link einfügen</label>
             <div class="scan-link-row">
               <input id="scanLinkInput" type="text" inputmode="url" autocomplete="off" placeholder="https://www.hitstergame.com/de/00052" />
               <button class="btn btn-primary btn-small" type="submit"><svg><use href="#i-next"></use></svg> Öffnen</button>
             </div>
-            <p class="scan-link-hint">Der Link steht unter dem QR-Code auf deiner Karte. Kein Abtippen des Jahres nötig.</p>
+            <p class="scan-link-hint">Link aus dem QR-Code einfügen oder direkt mit der Kamera scannen. Das Jahr bleibt bis zum Umdrehen verborgen.</p>
           </form>
           <div class="scan-frame"><video id="scanVideo" playsinline muted></video><canvas id="scanCanvas" hidden></canvas></div>
           <p class="panel-sub" id="scanStatus" aria-live="polite">Richte die Kamera auf den QR-Code deiner Hitster-Karte.</p>
@@ -312,6 +307,7 @@
             <select id="deckSelect"><option value="auto">Automatisch (Original)</option></select>
           </label>
           <div class="scan-actions">
+            <button class="btn btn-ghost btn-small" id="scanPaste" type="button"><svg><use href="#i-copy"></use></svg> Aus Zwischenablage</button>
             <label class="btn btn-ghost btn-small" for="scanFile"><svg><use href="#i-image"></use></svg> Bild scannen</label>
             <input id="scanFile" type="file" accept="image/*" hidden />
           </div>

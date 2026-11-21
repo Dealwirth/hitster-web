@@ -89,17 +89,10 @@ const el = {
   frontNumber: $('#frontNumber'),
   backNumber: $('#backNumber'),
   backYear: $('#backYear'),
-  backDecade: $('#backDecade'),
   backTitle: $('#backTitle'),
   backArtist: $('#backArtist'),
   backGroupIcon: $('#backGroupIcon'),
-  backGroupLabel: $('#backGroupLabel'),
   backGroupTag: $('#backGroupTag'),
-  backGenre: $('#backGenre'),
-  backGenreTag: $('#backGenreTag'),
-  backDecadeFact: $('#backDecadeFact'),
-  backGroupFact: $('#backGroupFact'),
-  backGenreFact: $('#backGenreFact'),
   bingoGroup: $('#bingoGroup'),
   bingoBefore: $('#bingoBefore'),
   bingoDecade: $('#bingoDecade'),
@@ -128,6 +121,7 @@ const el = {
   scanStatus: $('#scanStatus'),
   scanLinkForm: $('#scanLinkForm'),
   scanLinkInput: $('#scanLinkInput'),
+  scanPaste: $('#scanPaste'),
   footerCount: $('#footerCount'),
   decadeChips: $('#decadeChips'),
   decadeCount: $('#decadeCount'),
@@ -507,6 +501,13 @@ function readUrl() {
     state.initialPlaylist = playlist;
     state.mode = 'playlist';
   }
+  // Official Hitster links can be opened directly by a phone camera.
+  if (!state.initialHitster) {
+    const pathHit = location.pathname.match(/\/([a-z]{2})(?:-[a-z]{2})?\/(\d{1,5})\/?$/i);
+    if (pathHit) {
+      state.initialHitster = { region: pathHit[1].toLowerCase(), card: pathHit[2].padStart(5, '0') };
+    }
+  }
 }
 
 /* --------------------------------------------------------------------------
@@ -519,10 +520,12 @@ function renderGroupIcon(song) {
   const node = el.backGroupIcon;
   if (!node) return;
   node.querySelector('use').setAttribute('href', icon);
-  node.setAttribute('aria-label', label);
-  node.setAttribute('title', label);
-  el.backGroupLabel.textContent = label;
-  el.backGroupTag.dataset.group = song.group ? 'group' : 'solo';
+  const tag = el.backGroupTag;
+  if (tag) {
+    tag.setAttribute('aria-label', label);
+    tag.setAttribute('title', label);
+    tag.dataset.group = song.group ? 'group' : 'solo';
+  }
 }
 
 
@@ -611,7 +614,7 @@ function renderCategories() {
   if (el.saveCategory) el.saveCategory.disabled = !state.playlist;
 }
 
-function saveCurrentCategory() {
+function saveCurrentCategory({ silent = false } = {}) {
   if (!state.playlist?.songs?.length) {
     showToast('Lade zuerst eine Playlist.');
     return false;
@@ -627,7 +630,7 @@ function saveCurrentCategory() {
   state.categories = [category, ...state.categories.filter((c) => c.id !== category.id)];
   saveCategories();
   renderCategories();
-  showToast(`Kategorie gespeichert: ${category.name}`, 3200);
+  if (!silent) showToast(`Kategorie gespeichert: ${category.name}`, 3200);
   return true;
 }
 
@@ -1221,14 +1224,8 @@ function loadCard(song) {
     : 'Tippe auf die Karte, um den Clip zu starten.';
   el.backNumber.textContent = `Karte #${song.id.slice(1)}`;
   el.backYear.textContent = String(song.year);
-  el.backDecade.textContent = decadeLabel(song.year);
-  el.backDecadeFact.textContent = decadeLabel(song.year);
   el.backTitle.textContent = song.title;
   el.backArtist.textContent = song.artist;
-  el.backGenre.textContent = genreLabel(song.genre);
-  el.backGenreFact.textContent = genreLabel(song.genre);
-  el.backGroupFact.textContent = song.group ? 'Gruppe' : 'Solo';
-  el.backGenreTag.style.setProperty('--c', genreColor(song.genre));
   if (el.bingoGroup) el.bingoGroup.textContent = song.group ? 'Gruppe' : 'Solo';
   if (el.bingoBefore) el.bingoBefore.textContent = song.year < 2000 ? 'Ja' : 'Nein';
   if (el.bingoDecade) el.bingoDecade.textContent = decadeLabel(song.year);
@@ -1578,9 +1575,21 @@ async function loadPlaylist(input) {
   }
   el.playlistStatus.textContent = 'Playlist wird geladen …';
   try {
-    const res = await fetch(API(`/api/playlist?url=${encodeURIComponent(raw)}`), { headers: { accept: 'application/json' } });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    let data = null;
+    let lastError = null;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const res = await fetch(API(`/api/playlist?url=${encodeURIComponent(raw)}`), { headers: { accept: 'application/json' } });
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
+        data = body;
+        break;
+      } catch (err) {
+        lastError = err;
+        if (attempt === 0) await new Promise((resolve) => setTimeout(resolve, 1500));
+      }
+    }
+    if (!data) throw lastError || new Error('Playlist konnte nicht geladen werden.');
     if (!data.songs?.length) throw new Error('Keine Lieder mit Jahr gefunden.');
     state.playlist = data;
     state.roundSeen = new Set([...state.roundSeen].filter((id) => !id.startsWith('p')));
@@ -1605,7 +1614,8 @@ async function loadPlaylist(input) {
       renderStats();
     }
     syncUrl();
-    showToast(`Playlist geladen: ${data.name}`, 3600);
+    saveCurrentCategory({ silent: true });
+    showToast(`Playlist geladen und gespeichert: ${data.name}`, 3600);
     return true;
   } catch (err) {
     el.playlistStatus.textContent = `Playlist konnte nicht geladen werden: ${err.message}`;
@@ -1806,12 +1816,32 @@ function bindEvents() {
   });
   el.scanBtn.addEventListener('click', openScan);
   el.genreReset?.addEventListener('click', clearGenres);
+  el.scanPaste?.addEventListener('click', async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (!text) {
+        el.scanStatus.textContent = 'Die Zwischenablage ist leer.';
+        return;
+      }
+      const parsed = parseScan(text);
+      if (!parsed) {
+        el.scanStatus.textContent = 'Kein Kartenlink in der Zwischenablage gefunden.';
+        el.scanLinkInput.value = text;
+        return;
+      }
+      closeModal(el.scanModal);
+      await handleScan(parsed);
+    } catch {
+      el.scanStatus.textContent = 'Zwischenablage nicht erlaubt. Bitte Link einfügen.';
+      el.scanLinkInput.focus();
+    }
+  });
   el.scanLinkForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const raw = el.scanLinkInput?.value?.trim();
     const parsed = parseScan(raw);
-    if (!parsed?.hitster) {
-      el.scanStatus.textContent = 'Bitte einen Hitster-Kartenlink wie hitstergame.com/de/00052 einfügen.';
+    if (!parsed) {
+      el.scanStatus.textContent = 'Bitte einen Hitster-Kartenlink, Spotify-Link oder eine Karten-URL einfügen.';
       return;
     }
     closeModal(el.scanModal);

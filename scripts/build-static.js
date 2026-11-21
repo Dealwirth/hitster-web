@@ -36,7 +36,7 @@ for (const name of ['fonts', 'vendor', 'icons']) {
   fs.rmSync(path.join(OUT, name), { recursive: true, force: true });
   fs.cpSync(path.join(PUBLIC, name), path.join(OUT, name), { recursive: true });
 }
-for (const name of ['manifest.webmanifest', 'sw.js', 'hitster-db.json']) {
+for (const name of ['manifest.webmanifest', 'sw.js', 'hitster-db.json', '404.html']) {
   fs.copyFileSync(path.join(PUBLIC, name), path.join(OUT, name));
 }
 

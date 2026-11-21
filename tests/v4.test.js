@@ -51,18 +51,17 @@ await step('front hides year, title, genre, group and QR', async () => {
   assert.equal(await page.locator('#frontYearBadge').count(), 0);
   assert.equal(await page.locator('#frontGroupIcon').count(), 0);
   assert.equal(await page.locator('#backQrImg').count(), 0);
-  assert.equal(await page.locator('#backGenre').innerText().then((t) => front.includes(t)), false);
+  assert.equal(await page.locator('.back-bingo .bingo-cell').count(), 10);
 });
 
 await step('back reveals year, genre, group and source', async () => {
   await page.locator('#flipBtn').click();
   await page.waitForTimeout(700);
   assert.match(await page.locator('#backYear').innerText(), /^\d{4}$/);
-  assert.ok((await page.locator('#backGenre').innerText()).length > 1);
-  assert.match((await page.locator('#backGroupLabel').innerText()).trim(), /^(Solo|Gruppe)$/i);
+  assert.match(await page.locator('#backGroupTag').getAttribute('aria-label'), /^(Solo|Gruppe)$/i);
   assert.match(await page.locator('#backSource').innerText(), /Spotify|HITSTER/i);
   assert.equal(await page.locator('#card .back-bingo').count(), 1);
-  assert.match(await page.locator('#bingoBefore').innerText(), /^(Ja|Nein)$/);
+  assert.match(await page.locator('#bingoBefore').textContent(), /^(Ja|Nein)$/);
 });
 
 await step('real Hitster QR is resolved without showing the year', async () => {

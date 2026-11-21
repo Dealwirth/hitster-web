@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Hitster-Karte wird geöffnet …</title>
+  <style>
+    html,body{margin:0;height:100%;background:#0b0b0d;color:#f6f0e4;font-family:system-ui,sans-serif;display:grid;place-items:center}
+    p{opacity:.7;font-size:14px}
+  </style>
+</head>
+<body>
+  <p>Hitster-Karte wird geöffnet …</p>
+  <script>
+    (() => {
+      const match = location.pathname.match(/\/([a-z]{2})(?:-[a-z]{2})?\/(\d{1,5})\/?$/i);
+      const base = location.pathname.replace(/\/[a-z]{2}(?:-[a-z]{2})?\/\d{1,5}\/?$/i, '/');
+      if (match) {
+        location.replace(`${base}?hitster=${encodeURIComponent(match[1].toLowerCase())}/${match[2].padStart(5, '0')}`);
+      } else {
+        location.replace(base || '/');
+      }
+    })();
+  </script>
+</body>
+</html>

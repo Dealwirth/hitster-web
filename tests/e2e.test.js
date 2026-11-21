@@ -119,13 +119,15 @@ await step('flipping reveals title, artist and year', async () => {
   assert.equal(await page.locator('#cardBack').getAttribute('aria-hidden'), 'false');
 });
 
-await step('card back reveals year, title, genre and group', async () => {
+await step('card back reveals year, title, artist, group and all Bingo categories', async () => {
   assert.equal(await page.locator('#backQrImg').count(), 0);
   assert.match(await page.locator('#backYear').innerText(), /^\d{4}$/);
   assert.ok((await page.locator('#backTitle').innerText()).length > 1);
   assert.ok((await page.locator('#backArtist').innerText()).length > 1);
-  assert.ok((await page.locator('#backGenre').innerText()).length > 1);
-  assert.match((await page.locator('#backGroupLabel').innerText()).trim(), /^(Solo|Gruppe)$/i);
+  assert.match(await page.locator('#backGroupTag').getAttribute('aria-label'), /^(Solo|Band)$/i);
+  assert.equal(await page.locator('.back-bingo .bingo-cell').count(), 10);
+  assert.match(await page.locator('#bingoYear').textContent(), /^\d{4}$/);
+  assert.match(await page.locator('#bingoDecade').textContent(), /^\d{4}er$/);
 });
 
 await step('judging a correct answer updates the statistics', async () => {
@@ -203,7 +205,7 @@ await step('decade filter changes the card and URL', async () => {
   await page.waitForTimeout(700);
   assert.equal(await page.evaluate(() => Math.floor(window.HITSTER.state.current.year / 10) * 10), 1990);
   assert.match(page.url(), /decade=1990s/);
-  assert.match(await page.locator('#backDecade').innerText(), /1990ER/);
+  assert.equal(await page.evaluate(() => Math.floor(window.HITSTER.state.current.year / 10) * 10), 1990);
 });
 
 await step('reset filters restores the full catalogue', async () => {
