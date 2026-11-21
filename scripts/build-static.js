@@ -6,7 +6,7 @@ import QRCode from 'qrcode';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 const PUBLIC = path.join(ROOT, 'public');
-const OUT = path.join(ROOT, 'docs');
+const OUT = process.env.PUBLIC_OUT ? path.resolve(ROOT, process.env.PUBLIC_OUT) : path.join(ROOT, 'docs');
 const BASE = (process.env.PUBLIC_BASE || 'https://dealwirth.github.io/hitster-web').replace(/\/$/, '');
 const API_BASE = (process.env.PUBLIC_API_BASE || 'https://work-1-biuhsvnutpptympz.prod-runtime.all-hands.dev').replace(/\/$/, '');
 

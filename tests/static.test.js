@@ -6,13 +6,14 @@ import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import http from 'node:http';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright-core';
 import { app } from '../server/index.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const DOCS = path.join(ROOT, 'docs');
+const DOCS = fs.mkdtempSync(path.join(os.tmpdir(), 'hitster-static-'));
 const CHROMIUM = process.env.CHROMIUM_PATH || '/usr/bin/chromium';
 let failures = 0;
 async function step(name, fn) {
@@ -25,7 +26,7 @@ await new Promise((resolve) => api.once('listening', resolve));
 const apiBase = `http://127.0.0.1:${api.address().port}`;
 execFileSync(process.execPath, ['scripts/build-static.js'], {
   cwd: ROOT,
-  env: { ...process.env, PUBLIC_API_BASE: apiBase },
+  env: { ...process.env, PUBLIC_API_BASE: apiBase, PUBLIC_OUT: DOCS },
   stdio: 'ignore',
 });
 
@@ -96,5 +97,6 @@ await step('no runtime errors', async () => {
 await browser.close();
 staticServer.close();
 api.close();
+fs.rmSync(DOCS, { recursive: true, force: true });
 console.log(`\n${failures ? '❌' : '✅'} Static checks: ${failures} failure(s)\n`);
 process.exit(failures ? 1 : 0);
