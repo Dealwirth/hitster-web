@@ -13,7 +13,7 @@ const pick = async (title) => {
 };
 await pick('Dancing Queen');
 await page.screenshot({ path:'docs/screenshot-front.png', fullPage:false });
-await page.locator('#flipBtn').click();
+await page.locator('#card').click();
 await page.waitForTimeout(1000);
 await page.screenshot({ path:'docs/screenshot-back.png', fullPage:false });
 await page.locator('#helpBtn').click();
@@ -52,7 +52,7 @@ await m.evaluate(async () => {
 });
 await m.waitForTimeout(900);
 await m.screenshot({ path:'docs/screenshot-mobile-front.png', fullPage:false });
-await m.locator('#flipBtn').tap();
+await m.locator('#card').tap();
 await m.waitForTimeout(1000);
 await m.screenshot({ path:'docs/screenshot-mobile-back.png', fullPage:false });
 console.log('screenshots written to docs/');

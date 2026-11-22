@@ -16,6 +16,7 @@ Kein Login, keine Werbung, kein externes Tracking. Open Source (MIT).
 ## Was die App kann
 
 - **Freies Spiel:** Zufällige Karte ziehen, 30-Sekunden-Clip hören, Jahr raten, umdrehen.
+- **Karte bedienen:** Tippen/Klick dreht die Karte um, ohne die Musik zu stoppen. Wischen (oder `N`) zieht die nächste Karte und startet den Clip automatisch. Nur Play und Scan bleiben als Buttons.
 - **Karten scannen:** **echten Hitster-QR-Code scannen** – kein Jahr eintippen. Die App erkennt Kartenset und das aufgedruckte Jahr, zieht aber ein **anderes Lied aus demselben Jahr** und spielt dessen Clip. Das Jahr bleibt vor dem Umdrehen unsichtbar.
 - **Versionen:** Große Auswahl statt nur ein Genre – **Guilty Pleasures**, **Party & Dance**, **Rock & Metal**, **Deutsch**, **One-Hit-Wonder**, **Oldies**, **90s Party**, **Love & Heartbreak**, **Film & Musical**, **Summer Hits**, **Charts & Neu** und **Bangers**. Jede Version lässt sich mit Musikrichtung und Jahrzehnt weiter eingrenzen.
 - **Kartenset wählen:** Original, Bingo, 100 % Deutsch, Rock, Schlager, Hip-Hop usw.
@@ -40,19 +41,23 @@ Kein Login, keine Werbung, kein externes Tracking. Open Source (MIT).
 - **Online-Bingo 1:1:** Host erstellt einen Raum, alle anderen treten per Link oder
   QR-Code bei – ohne Konto, ohne eigenen Server. Jeder hat eine echte 5×5-Farbkarte
   mit fünf Bingo-Kategorien, hört den Clip am eigenen Gerät und setzt bei richtiger
-  Antwort ein Kreuz in der passenden Farbe. Die erste vollständige Reihe gewinnt.
-  Sobald alle getippt haben, wird automatisch aufgelöst; nach dem Kreuzen startet
-  die nächste Runde ohne Host-Klick. Die Kreuzzeit ist hostseitig einstellbar
-  (6/10/12/20 s); kurz vor Ablauf blinkt das Feld fünfmal, danach wird ein freies
-  Feld zufällig gesetzt. Verbindung direkt zwischen den Geräten (WebRTC/PeerJS),
+  Antwort ein Kreuz in der passenden Farbe. Es gibt **kein festes Rundenlimit**:
+  Gespielt wird, bis jemand eine vollständige Reihe hat. Danach stimmt die Runde
+  ab, ob es bis zum nächsten Bingo weitergeht. Die Songauswahl lässt sich vorher
+  auf **Bekannt**, **Gemixt** oder **Unbekannt** stellen. Sobald alle getippt haben,
+  wird automatisch aufgelöst; nach dem Kreuzen startet die nächste Runde ohne
+  Host-Klick. Die Kreuzzeit ist hostseitig einstellbar (6/10/12/20 s); kurz vor
+  Ablauf blinkt das Feld fünfmal, danach wird ein freies Feld zufällig gesetzt.
+  Verbindung direkt zwischen den Geräten (WebRTC/PeerJS),
   gleicher Browser zusätzlich per BroadcastChannel. Bei blockiertem Autoplay
   erscheint ein großer „Ton aktivieren“-Button.
 - **Datenbank:** Alle 4.860 Songs mit Jahr, Genre, Kategorien, Beliebtheit,
   Spotify-/Deezer-/iTunes-IDs und Versionen als JSON herunterladen (`/api/database`).
 - **PWA:** Installierbar, offlinefähige Shell, Manifest, Icons, Service Worker.
-- **Filter:** 8 Jahrzehnte, **21 Musikrichtungen mit Live-Trefferzahlen**, Versionen,
-  One-Hit-Wonder und „nur mit Spotify-Link“. Die Auswahl steht in der URL
-  (`?genre=rock`, `?mode=versions&version=guilty`) und lässt sich zurücksetzen.
+- **Filter:** 8 Jahrzehnte, **21 Musikrichtungen mit Live-Trefferzahlen**, Bekanntheit
+  (**Alle / Bekannt / Gemixt / Unbekannt**), Versionen, One-Hit-Wonder und „nur mit
+  Spotify-Link“. Die Auswahl steht in der URL (`?genre=rock`, `?familiarity=known`,
+  `?mode=versions&version=guilty`) und lässt sich zurücksetzen.
 - **Lokale Nutzung:** Welche Versionen, Genres, Modi, Scans und Aktionen genutzt
   werden, wird ausschließlich im Browser gespeichert. Kein Konto, keine Übertragung;
   Export und Löschen sind im Hilfe-Dialog möglich.
@@ -145,7 +150,7 @@ Interpret/Band, Jahrzehnt, ±3 Jahre. Kein Login, keine Werbung.
 - Die exakte Karten-Datenbank (`hitster-cards.json`) ist **~2,0 MB roh / ~420 KB gzip**
   und wird nur beim ersten Scan geladen.
 - `/api/catalog` ist **1 Tag** cachebar, versionierte CSS/JS-Dateien **1 Jahr**
-  (`immutable`), Asset-Version `4.11.0`.
+  (`immutable`), Asset-Version `4.12.0`.
 - Audio-Quellen werden **parallel** (Deezer/iTunes) aufgelöst, Timeouts 8–15 s.
 - Cache-Hits brauchen keinen Verzeichnis-Scan.
 - `scripts/serve-watchdog.sh` startet den Node-Prozess nach einem Absturz neu.

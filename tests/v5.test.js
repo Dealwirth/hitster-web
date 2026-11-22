@@ -125,7 +125,7 @@ await step('QR code 00052 reveals a different song from the same year', async ()
   assert.equal(state.blind, true);
   assert.doesNotMatch(state.front, /2018/);
   assert.equal(await page.locator('#card .back-bingo').count(), 0);
-  await page.locator('#flipBtn').click();
+  await page.locator('#card').click();
   await page.waitForTimeout(700);
   assert.equal(await page.locator('#backYear').innerText(), '2018');
   const title = await page.locator('#backTitle').innerText();
@@ -144,7 +144,7 @@ await step('SKU URL aaaa0019/00215 reveals a different song from 2007', async ()
   await page.waitForTimeout(300);
   await page.locator('#scanFile').setInputFiles(qrFile);
   await page.waitForFunction(() => window.HITSTER?.state?.extensionYear === 2007, { timeout: 30000 });
-  await page.locator('#flipBtn').click();
+  await page.locator('#card').click();
   await page.waitForTimeout(700);
   assert.equal(await page.locator('#backYear').innerText(), '2007');
   const title = await page.locator('#backTitle').innerText();
@@ -201,9 +201,9 @@ await step('next after a scan leaves the scanned year and draws randomly', async
   await scanPage.waitForFunction(() => window.HITSTER?.state?.ready);
   await scanPage.waitForFunction(() => window.HITSTER.state.extensionYear === 2018);
   const scannedId = await scanPage.evaluate(() => window.HITSTER.state.current.id);
-  await scanPage.locator('#flipBtn').click();
+  await scanPage.locator('#card').click();
   await scanPage.waitForTimeout(800);
-  await scanPage.locator('#nextBtn').click();
+  await scanPage.evaluate(() => window.HITSTER.nextCard());
   await scanPage.waitForTimeout(900);
   const after = await scanPage.evaluate(() => ({
     id: window.HITSTER.state.current.id,
@@ -223,7 +223,7 @@ await step('deep link with SKU opens a different song from the same year', async
   await deep.waitForFunction(() => window.HITSTER?.state?.extensionYear === 2007, { timeout: 30000 });
   assert.notEqual(await deep.evaluate(() => window.HITSTER.state.current.title), 'Better in Time');
   assert.equal(await deep.evaluate(() => window.HITSTER.state.current.year), 2007);
-  await deep.locator('#flipBtn').click();
+  await deep.locator('#card').click();
   await deep.waitForTimeout(700);
   assert.equal(await deep.locator('#backYear').innerText(), '2007');
   assert.notEqual(await deep.locator('#backArtist').innerText(), 'Leona Lewis');

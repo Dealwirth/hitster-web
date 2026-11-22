@@ -7,7 +7,7 @@ const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
 const CLIP_SECONDS = 30;
-const VERSION = '4.11.0';
+const VERSION = '4.12.0';
 const STATIC = document.documentElement.dataset.static === 'true' || location.hostname.endsWith('github.io');
 const API_BASE = (document.querySelector('meta[name="hitster-api"]')?.content || '').replace(/\/$/, '');
 const API = (path) => `${API_BASE}${path}`;
@@ -65,10 +65,17 @@ const GENRES = {
   unbekannt: { label: 'Unbekannt', color: '#9aa0a6', icon: 'music' },
 };
 
+const FAMILIARITY = {
+  all: { label: 'Alle', short: 'Alle', color: '#ff2d95', desc: 'Der ganze Katalog' },
+  known: { label: 'Bekannt', short: 'Bekannt', color: '#c6ff3d', desc: 'Große Hits, die fast jede Runde kennt' },
+  mixed: { label: 'Gemixt', short: 'Gemixt', color: '#29e6ff', desc: 'Hits und Entdeckungen im Wechsel' },
+  unknown: { label: 'Unbekannt', short: 'Unbekannt', color: '#c4a7ff', desc: 'Tiefe Cuts für Musiknerds' },
+};
 
 const state = {
   songs: [],
-  filters: { genres: [], decade: 'all', oneHit: false, spotifyOnly: false },
+  filters: { genres: [], decade: 'all', oneHit: false, spotifyOnly: false, familiarity: 'all' },
+  artistFame: new Map(),
   current: null,
   recent: [],
   flipped: false,
@@ -95,6 +102,7 @@ const state = {
   scanVersion: null,
   returnMode: null,
   transitioning: false,
+  suppressClick: 0,
   installPrompt: null,
   scan: { stream: null, raf: null, active: false, detected: false, last: 0, deckSku: 'auto' },
   toastTimer: null,
@@ -111,8 +119,6 @@ const el = {
   timer: $('#timer'),
   playBtn: $('#playBtn'),
   playLabel: $('#playLabel'),
-  flipBtn: $('#flipBtn'),
-  nextBtn: $('#nextBtn'),
   cardPlay: $('#cardPlay'),
   frontSub: $('#frontSub'),
   frontNumber: $('#frontNumber'),
@@ -152,6 +158,8 @@ const el = {
   decadeCount: $('#decadeCount'),
   genreChips: $('#genreChips'),
   genreCount: $('#genreCount'),
+  familiarityChips: $('#familiarityChips'),
+  familiarityCount: $('#familiarityCount'),
   genreReset: $('#genreReset'),
   playlistBar: $('#playlistBar'),
   playlistUrl: $('#playlistUrl'),
@@ -259,10 +267,11 @@ function decadeKey(year) {
   return `${Math.floor(year / 10) * 10}s`;
 }
 
-function matchesFilters(song, { ignoreGenres = false, ignoreDecade = false } = {}) {
+function matchesFilters(song, { ignoreGenres = false, ignoreDecade = false, ignoreFamiliarity = false } = {}) {
   const f = state.filters;
   if (!ignoreGenres && f.genres.length && !songGenres(song).some((g) => f.genres.includes(g))) return false;
   if (!ignoreDecade && f.decade !== 'all' && decadeKey(song.year) !== f.decade) return false;
+  if (!ignoreFamiliarity && f.familiarity !== 'all' && familiarityOf(song) !== f.familiarity) return false;
   if (f.oneHit && !song.tags?.includes('onehit')) return false;
   if (f.spotifyOnly && !song.spotifyId) return false;
   return true;
@@ -286,7 +295,12 @@ function refreshVersionPools() {
   if (!songs.length) return;
   const known = (song) => Number(song.popularity) > 0 || song.tags?.includes('chart') || Boolean(song.spotifyId);
   const artistCounts = new Map();
-  for (const song of songs) artistCounts.set(normText(song.artist), (artistCounts.get(normText(song.artist)) || 0) + 1);
+  state.artistFame = new Map();
+  for (const song of songs) {
+    const artist = normText(song.artist);
+    artistCounts.set(artist, (artistCounts.get(artist) || 0) + 1);
+    state.artistFame.set(artist, Math.max(state.artistFame.get(artist) || 0, Number(song.popularity) || 0));
+  }
   const germanBase = new Set(songs.filter((song) => ['deutschpop', 'deutschrap', 'schlager', 'ndw'].some((genre) => songGenres(song).includes(genre))).map((song) => normText(song.artist)));
   for (const name of GERMAN_ARTISTS) germanBase.add(name);
   for (const id of Object.keys(VERSIONS)) {
@@ -325,6 +339,17 @@ function fameScore(song) {
   const chart = song?.tags?.includes('chart') ? 5_000_000 : 0;
   const spotify = song?.spotifyId ? 50_000 : 0;
   return chart + popularity + spotify;
+}
+
+function familiarityOf(song) {
+  if (!song) return 'unknown';
+  const popularity = Number(song.popularity) || 0;
+  const artist = normText(song.artist);
+  const artistFame = state.artistFame?.get(artist) || 0;
+  const score = Math.max(popularity, artistFame * 0.9);
+  if (song.tags?.includes('chart') || song.tags?.includes('onehit') || score >= 500_000) return 'known';
+  if (score < 250_000) return 'unknown';
+  return 'mixed';
 }
 
 function versionYearPool(versionId, year) {
@@ -634,6 +659,54 @@ function renderGenreChips() {
   if (el.genreCount) el.genreCount.textContent = state.filters.genres.length ? `${state.filters.genres.length} gewählt` : 'Alle';
 }
 
+function renderFamiliarityChips() {
+  if (!el.familiarityChips) return;
+  const base = activeSongs();
+  const frag = document.createDocumentFragment();
+  for (const [id, meta] of Object.entries(FAMILIARITY)) {
+    const count = base.filter((song) => matches(song, { ignoreFamiliarity: true }) && (id === 'all' || familiarityOf(song) === id)).length;
+    const active = state.filters.familiarity === id;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'chip' + (active ? ' active' : '');
+    btn.dataset.familiarity = id;
+    btn.style.setProperty('--c', meta.color);
+    btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+    btn.title = `${meta.label} – ${meta.desc} (${count} Karten)`;
+    const dot = document.createElement('span');
+    dot.className = 'dot';
+    const label = document.createElement('span');
+    label.textContent = meta.short;
+    const n = document.createElement('span');
+    n.className = 'n';
+    n.textContent = count;
+    btn.append(dot, label, n);
+    btn.addEventListener('click', () => selectFamiliarity(id));
+    frag.append(btn);
+  }
+  el.familiarityChips.replaceChildren(frag);
+  const current = FAMILIARITY[state.filters.familiarity] || FAMILIARITY.all;
+  if (el.familiarityCount) el.familiarityCount.textContent = current.short;
+}
+
+function selectFamiliarity(id) {
+  if (!FAMILIARITY[id] || state.filters.familiarity === id) return;
+  const before = state.filters.familiarity;
+  state.filters.familiarity = id;
+  if (!activeSongs().some((song) => matches(song))) {
+    state.filters.familiarity = before;
+    renderFamiliarityChips();
+    return showToast('Keine Karten mit dieser Kombination.');
+  }
+  if (state.mode === 'extension') {
+    state.extensionYear = null;
+    state.blindYear = false;
+    setMode('classic', { silent: true, reload: false });
+  }
+  trackEvent('familiarity', { familiarity: id });
+  afterFilterChange();
+}
+
 function renderDecadeChips() {
   const frag = document.createDocumentFragment();
   const base = activeSongs();
@@ -673,6 +746,7 @@ function updateFilterSummary() {
   if (state.mode === 'playlist') parts.push(state.playlist?.name ? `Playlist: ${state.playlist.name}` : 'Playlist');
   if (state.mode === 'versions') parts.push(VERSIONS[state.version]?.label || 'Versionen');
   if (state.filters.genres.length) parts.push(state.filters.genres.map(genreLabel).join(', '));
+  if (state.filters.familiarity !== 'all') parts.push(FAMILIARITY[state.filters.familiarity]?.label || state.filters.familiarity);
   if (state.filters.decade !== 'all') parts.push(state.filters.decade);
   if (state.mode === 'extension') parts.push('Karte gescannt');
   if (state.filters.oneHit) parts.push('One-Hit-Wonder');
@@ -748,6 +822,7 @@ function selectDecade(decade) {
 
 function afterFilterChange() {
   renderGenreChips();
+  renderFamiliarityChips();
   renderDecadeChips();
   renderVersionChips();
   updateFilterSummary();
@@ -771,6 +846,7 @@ function syncUrl() {
   if (incoming.get('start') === '1' && !document.body.classList.contains('started')) params.set('start', '1');
   if (state.filters.genres.length) params.set('genre', state.filters.genres.join(','));
   if (state.filters.decade !== 'all') params.set('decade', state.filters.decade);
+  if (state.filters.familiarity !== 'all') params.set('familiarity', state.filters.familiarity);
   if (state.filters.oneHit) params.set('onehit', '1');
   if (state.filters.spotifyOnly) params.set('spotify', '1');
   if (state.mode !== 'classic') params.set('mode', state.mode);
@@ -784,6 +860,7 @@ function readUrl() {
   const p = new URLSearchParams(location.search);
   state.filters.genres = [];
   state.filters.decade = 'all';
+  state.filters.familiarity = 'all';
   state.filters.oneHit = false;
   state.filters.spotifyOnly = false;
   state.mode = 'classic';
@@ -800,6 +877,8 @@ function readUrl() {
   state.filters.genres = genreParam.split(',').map((g) => g.trim()).filter((g) => GENRES[g] && g !== 'all');
   const decade = p.get('decade');
   if (decade && /^\d{4}s$/.test(decade)) state.filters.decade = decade;
+  const familiarity = p.get('familiarity');
+  if (FAMILIARITY[familiarity]) state.filters.familiarity = familiarity;
   state.filters.oneHit = p.get('onehit') === '1';
   state.filters.spotifyOnly = p.get('spotify') === '1';
   const mode = p.get('mode');
@@ -1004,11 +1083,14 @@ function activateCategory(id) {
   if (!category) return false;
   state.playlist = category;
   state.roundSeen = new Set([...state.roundSeen].filter((sid) => !sid.startsWith('p')));
-  state.filters = { genres: [], decade: 'all', oneHit: false, spotifyOnly: false };
+  state.filters = { genres: [], decade: 'all', oneHit: false, spotifyOnly: false, familiarity: 'all' };
   if (el.oneHitToggle) el.oneHitToggle.checked = false;
   if (el.spotifyToggle) el.spotifyToggle.checked = false;
   state.mode = 'playlist';
   setMode('playlist', { silent: true, reload: false });
+  renderGenreChips();
+  renderFamiliarityChips();
+  renderDecadeChips();
   updatePlaylistStatus();
   renderCategories();
   const song = pickSong();
@@ -1096,6 +1178,7 @@ function setMode(mode, { silent = false, reload = true, preserveYear = false } =
     }
   }
   renderGenreChips();
+  renderFamiliarityChips();
   renderDecadeChips();
   renderVersionChips();
   updateFilterSummary();
@@ -1683,7 +1766,7 @@ function printSheets(cards, side, style = 'compact') {
 }
 
 function openPrint() {
-  el.printFilter.checked = state.filters.decade !== 'all' || state.filters.genres.length || state.filters.oneHit || state.filters.spotifyOnly;
+  el.printFilter.checked = state.filters.decade !== 'all' || state.filters.genres.length || state.filters.familiarity !== 'all' || state.filters.oneHit || state.filters.spotifyOnly;
   openModal(el.printModal);
 }
 
@@ -1729,14 +1812,13 @@ function loadCard(song) {
   setCardAccent(false);
   el.frontNumber.textContent = `Karte #${song.cardNumber || song.id.slice(1)}`;
   el.frontSub.textContent = state.mode === 'extension'
-    ? 'Tippe für den Clip – die Auflösung kommt erst beim Umdrehen.'
-    : 'Tippe auf die Karte, um den Clip zu starten.';
+    ? 'Play startet den Clip – Tippen auf die Karte dreht sie um.'
+    : 'Play startet den Clip – Tippen auf die Karte dreht sie um.';
   el.backYear.textContent = String(song.year);
   el.backTitle.textContent = song.title;
   el.backArtist.textContent = song.artist;
   renderCardCategories(song);
   renderGroupIcon(song);
-  updateFlipButton();
   updatePlayer();
 
   el.cardWrap.classList.remove('dealing');
@@ -1745,7 +1827,6 @@ function loadCard(song) {
 
   el.spotifyBtn.disabled = false;
   el.playBtn.disabled = false;
-  el.flipBtn.disabled = false;
   if (state.mode === 'extension') updateYearHint();
 }
 
@@ -1767,10 +1848,6 @@ function setFaceAccessibility(flipped) {
   }
 }
 
-function updateFlipButton() {
-  el.flipBtn.innerHTML = `<svg><use href="#i-flip"></use></svg> ${state.flipped ? 'Zurück zur Vorderseite' : 'Karte umdrehen'}`;
-  el.flipBtn.setAttribute('aria-pressed', state.flipped ? 'true' : 'false');
-}
 
 /* --------------------------------------------------------------------------
    Audio & timer
@@ -1890,9 +1967,7 @@ async function playClip({ restart = false } = {}) {
       return;
     }
     el.audio.src = url;
-    el.frontSub.textContent = state.mode === 'extension'
-      ? 'Tippe für den Clip – die Auflösung kommt erst beim Umdrehen.'
-      : 'Tippe auf die Karte, um den Clip zu starten.';
+    el.frontSub.textContent = 'Play startet den Clip – Tippen auf die Karte dreht sie um.';
   }
   if (state.timer.remaining <= 0.05) resetTimer();
   trackEvent('play');
@@ -1981,15 +2056,12 @@ function flipCard() {
   el.card.dataset.flipped = state.flipped ? 'true' : 'false';
   setCardAccent(state.flipped);
   if (state.flipped) {
-    pauseClip();
-    stopTimer();
     state.stats.flipped += 1;
     saveStats();
     renderStats();
     trackEvent('flip');
   }
   setFaceAccessibility(state.flipped);
-  updateFlipButton();
   updatePlayer();
   if (state.flipped) {
     // Give the 3D animation a moment, then focus the answer side.
@@ -2018,6 +2090,8 @@ function nextCard() {
     state.stats.played += 1;
     saveStats();
     renderStats();
+    // Swiping/next should start the new clip immediately; the tap then only flips.
+    if (state.current?.id === song.id) playClip();
   };
   if (!state.flipped) {
     reveal();
@@ -2029,7 +2103,6 @@ function nextCard() {
   el.card.dataset.flipped = 'false';
   setCardAccent(false);
   setFaceAccessibility(false);
-  updateFlipButton();
   updatePlayer();
   state.transitioning = true;
   const delay = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 30 : 760;
@@ -2116,13 +2189,14 @@ function writePlaylistCache(raw, data) {
 function applyPlaylist(data, raw, { cached = false } = {}) {
   state.playlist = data;
   state.roundSeen = new Set([...state.roundSeen].filter((id) => !id.startsWith('p')));
-  state.filters = { genres: [], decade: 'all', oneHit: false, spotifyOnly: false };
+  state.filters = { genres: [], decade: 'all', oneHit: false, spotifyOnly: false, familiarity: 'all' };
   if (el.oneHitToggle) el.oneHitToggle.checked = false;
   if (el.spotifyToggle) el.spotifyToggle.checked = false;
   state.mode = 'playlist';
   state.blindYear = false;
   setMode('playlist', { silent: true, reload: false });
   renderGenreChips();
+  renderFamiliarityChips();
   renderDecadeChips();
   updateFilterSummary();
   updatePlaylistStatus();
@@ -2424,6 +2498,29 @@ function initCollapsiblePanels() {
   }
 }
 
+function initCardGestures() {
+  if (!el.cardWrap) return;
+  let start = null;
+  const point = (event) => event.touches?.[0] || event.changedTouches?.[0] || event;
+  el.cardWrap.addEventListener('pointerdown', (event) => {
+    if (event.target.closest('button, a, input, label')) return;
+    const p = point(event);
+    start = { x: p.clientX, y: p.clientY };
+  }, { passive: true });
+  const finish = (event) => {
+    if (!start) return;
+    const p = point(event);
+    const dx = p.clientX - start.x, dy = p.clientY - start.y;
+    start = null;
+    if (Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.25) {
+      state.suppressClick = Date.now() + 500;
+      nextCard();
+    }
+  };
+  el.cardWrap.addEventListener('pointerup', finish, { passive: true });
+  el.cardWrap.addEventListener('pointercancel', () => { start = null; }, { passive: true });
+}
+
 function bindEvents() {
   el.cardPlay.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -2433,13 +2530,11 @@ function bindEvents() {
 
   el.card.addEventListener('click', (e) => {
     if (e.target.closest('button, a, input, label')) return;
-    if (state.flipped) flipCard();
-    else playClip();
+    if (Date.now() < state.suppressClick) { e.preventDefault(); e.stopPropagation(); return; }
+    flipCard();
   });
 
   el.playBtn.addEventListener('click', () => playClip());
-  el.flipBtn.addEventListener('click', flipCard);
-  el.nextBtn.addEventListener('click', nextCard);
   el.spotifyBtn.addEventListener('click', openSpotify);
   el.judgeRight.addEventListener('click', () => judge(true));
   el.judgeWrong.addEventListener('click', () => judge(false));
@@ -2465,6 +2560,7 @@ function bindEvents() {
     if (!document.fullscreenElement) document.body.classList.remove('is-fullscreen');
   });
   initCollapsiblePanels();
+  initCardGestures();
   el.scanBtn.addEventListener('click', openScan);
   if (el.versionScanBtn) el.versionScanBtn.addEventListener('click', (event) => { event.preventDefault(); event.stopPropagation(); openScan(); });
   el.genreReset?.addEventListener('click', clearGenres);
@@ -2473,7 +2569,7 @@ function bindEvents() {
   el.printGo.addEventListener('click', doPrint);
 
   el.resetFilters.addEventListener('click', () => {
-    state.filters = { genres: [], decade: 'all', oneHit: false, spotifyOnly: false };
+    state.filters = { genres: [], decade: 'all', oneHit: false, spotifyOnly: false, familiarity: 'all' };
     el.oneHitToggle.checked = false;
     el.spotifyToggle.checked = false;
       afterFilterChange();
@@ -2726,6 +2822,9 @@ async function init() {
     clearAnalytics,
     setVersion,
     versions: VERSIONS,
+    FAMILIARITY,
+    familiarity: familiarityOf,
+    selectFamiliarity,
     versionPools,
     refreshVersionPools,
     versionMatches,

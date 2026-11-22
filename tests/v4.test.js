@@ -55,7 +55,7 @@ await step('front hides year, title, genre, group and QR', async () => {
 });
 
 await step('back reveals only year, title, artist and group icon', async () => {
-  await page.locator('#flipBtn').click();
+  await page.locator('#card').click();
   await page.waitForTimeout(700);
   assert.match(await page.locator('#backYear').innerText(), /^\d{4}$/);
   assert.match(await page.locator('#backGroupTag').getAttribute('aria-label'), /^(Solo|Gruppe)$/i);

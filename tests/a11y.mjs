@@ -14,7 +14,7 @@ for (const v of result.violations) {
   console.log('  nodes:', v.nodes.length);
   for (const n of v.nodes.slice(0,5)) console.log('   -', n.target.join(' '), '|', (n.failureSummary||'').split('\n').slice(0,2).join(' '));
 }
-await page.locator('#flipBtn').click();
+await page.locator('#card').click();
 await page.waitForTimeout(900);
 const result2 = await page.evaluate(async () => await axe.run(document, { runOnly: { type:'tag', values:['wcag2a','wcag2aa','wcag21a','wcag21aa'] } }));
 console.log('\nback violations:', result2.violations.length);

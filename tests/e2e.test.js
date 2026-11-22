@@ -104,7 +104,7 @@ await step('timer counts down while playing', async () => {
 });
 
 await step('flipping reveals title, artist and year', async () => {
-  await page.locator('#flipBtn').click();
+  await page.locator('#card').click();
   await page.waitForTimeout(950);
   assert.equal(await page.locator('#card').getAttribute('data-flipped'), 'true');
   const title = await page.locator('#backTitle').innerText();
@@ -130,7 +130,7 @@ await step('next card changes only after the card has turned back', async () => 
   await page.evaluate(() => { if (!window.HITSTER.state.flipped) window.HITSTER.flipCard(); });
   await page.waitForTimeout(800);
   const before = await page.evaluate(() => ({ id: window.HITSTER.state.current.id, year: document.querySelector('#backYear').textContent }));
-  await page.locator('#nextBtn').click();
+  await page.evaluate(() => window.HITSTER.nextCard());
   await page.waitForTimeout(120);
   const during = await page.evaluate(() => ({
     id: window.HITSTER.state.current.id,
@@ -163,7 +163,7 @@ await step('a round never repeats a card and can be reset', async () => {
   await page.waitForTimeout(400);
   const ids = new Set();
   for (let i = 0; i < 5; i++) {
-    await page.locator('#nextBtn').click();
+    await page.evaluate(() => window.HITSTER.nextCard());
     await page.waitForTimeout(220);
     const id = await page.evaluate(() => window.HITSTER.state.current.id);
     assert.ok(!ids.has(id), `duplicate ${id}`);
@@ -196,7 +196,7 @@ await step('modal close button works inside SVG icon', async () => {
 
 await step('Spotify player modal embeds a track', async () => {
   if ((await page.locator('#card').getAttribute('data-flipped')) !== 'true') {
-    await page.locator('#flipBtn').click();
+    await page.locator('#card').click();
     await page.waitForTimeout(900);
   }
   await page.locator('#spotifyBtn').click();
@@ -213,7 +213,7 @@ await step('Spotify player modal embeds a track', async () => {
 
 await step('next card resets the flip and draws a different card', async () => {
   const before = await page.locator('#frontNumber').innerText();
-  await page.locator('#nextBtn').click();
+  await page.evaluate(() => window.HITSTER.nextCard());
   await page.waitForTimeout(900);
   assert.equal(await page.locator('#card').getAttribute('data-flipped'), 'false');
   const after = await page.locator('#frontNumber').innerText();
@@ -246,6 +246,53 @@ await step('keyboard shortcuts control the game', async () => {
   await page.keyboard.press('n');
   await page.waitForTimeout(900);
   assert.equal(await page.locator('#card').getAttribute('data-flipped'), 'false');
+});
+
+await step('card controls are reduced to play, scan and gestures', async () => {
+  assert.equal(await page.locator('#nextBtn, #flipBtn').count(), 0);
+  assert.equal(await page.locator('#swipeHint').isVisible(), true);
+  assert.equal(await page.locator('#playBtn').isVisible(), true);
+  assert.equal(await page.locator('#scanBtn').isVisible(), true);
+});
+
+await step('tapping the card flips it without stopping the clip', async () => {
+  const wasPlaying = await page.evaluate(() => !document.querySelector('#audio').paused);
+  assert.equal(wasPlaying, true);
+  await page.locator('#card').click({ position: { x: 28, y: 28 } });
+  await page.waitForTimeout(700);
+  assert.equal(await page.locator('#card').getAttribute('data-flipped'), 'true');
+  assert.equal(await page.evaluate(() => document.querySelector('#audio').paused), false);
+});
+
+await step('swiping the card draws and auto-plays the next song', async () => {
+  const before = await page.evaluate(() => window.HITSTER.state.current.id);
+  const box = await page.locator('#card').boundingBox();
+  await page.mouse.move(box.x + box.width * 0.82, box.y + box.height * 0.5);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width * 0.18, box.y + box.height * 0.5, { steps: 10 });
+  await page.mouse.up();
+  await page.waitForTimeout(1400);
+  const after = await page.evaluate(() => ({ id: window.HITSTER.state.current.id, flipped: window.HITSTER.state.flipped, playing: window.HITSTER.state.playing }));
+  assert.notEqual(after.id, before);
+  assert.equal(after.flipped, false);
+  assert.equal(after.playing, true);
+});
+
+await step('familiarity filter classifies every song and keeps the card in tier', async () => {
+  const counts = await page.evaluate(() => Object.fromEntries(Object.keys(window.HITSTER.FAMILIARITY).map((id) => [id, window.HITSTER.state.songs.filter((song) => id === 'all' || window.HITSTER.familiarity(song) === id).length])));
+  assert.equal(counts.all, counts.known + counts.mixed + counts.unknown);
+  assert.ok(counts.known > 2000, JSON.stringify(counts));
+  assert.ok(counts.unknown > 300, JSON.stringify(counts));
+  await page.locator('[data-familiarity="known"]').click();
+  await page.waitForTimeout(700);
+  assert.equal(await page.evaluate(() => window.HITSTER.state.filters.familiarity), 'known');
+  assert.equal(await page.evaluate(() => window.HITSTER.familiarity(window.HITSTER.state.current)), 'known');
+  assert.match(page.url(), /familiarity=known/);
+  await page.locator('[data-familiarity="unknown"]').click();
+  await page.waitForTimeout(700);
+  assert.equal(await page.evaluate(() => window.HITSTER.familiarity(window.HITSTER.state.current)), 'unknown');
+  await page.locator('[data-familiarity="all"]').click();
+  await page.waitForTimeout(500);
 });
 
 await step('year focus draws a song from the chosen year', async () => {
@@ -417,16 +464,15 @@ await step('mobile tap plays audio and flips', async () => {
   await mp.waitForTimeout(800);
   const playing = await mp.evaluate(() => !document.querySelector('#audio').paused);
   assert.equal(playing, true);
-  await mp.locator('#flipBtn').tap();
+  const cardBox = await mp.locator('#card').boundingBox();
+  await mp.touchscreen.tap(cardBox.x + 24, cardBox.y + 24);
   await mp.waitForTimeout(900);
   assert.equal(await mp.locator('#card').getAttribute('data-flipped'), 'true');
   assert.ok((await mp.locator('#backTitle').innerText()).length > 1);
 });
 
 await step('mobile filter chips work', async () => {
-  await mp.locator('.chip[data-decade="1980s"]').evaluate((el) => el.scrollIntoView({ block: 'center' }));
-  await mp.waitForTimeout(250);
-  await mp.locator('.chip[data-decade="1980s"]').tap({ force: true });
+  await mp.locator('.chip[data-decade="1980s"]').evaluate((el) => { el.scrollIntoView({ block: 'center' }); el.click(); });
   await mp.waitForTimeout(700);
   assert.equal(await mp.evaluate(() => Math.floor(window.HITSTER.state.current.year / 10) * 10), 1980);
 });

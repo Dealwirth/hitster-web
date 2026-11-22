@@ -32,7 +32,7 @@ assert.ok(info.scrollWidth <= info.innerWidth + 1, JSON.stringify(info));
 assert.ok(info.card.width <= info.innerWidth, JSON.stringify(info));
 assert.ok(info.topbarHeight < 100, JSON.stringify(info));
 assert.deepEqual(errors, []);
-await page.locator('#flipBtn').tap();
+await page.touchscreen.tap(info.card.x + 18, info.card.y + 18);
 await page.waitForTimeout(900);
 assert.equal(await page.locator('#card').getAttribute('data-flipped'), 'true');
 assert.deepEqual(errors, []);

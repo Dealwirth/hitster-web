@@ -63,7 +63,7 @@ await step('static flag, catalog and API base are wired', async () => {
 await step('front is spoiler-free and back reveals metadata', async () => {
   const front = (await page.locator('#cardFront').innerText()).replace(/KARTE #[^\n]*/i, '');
   assert.doesNotMatch(front, /19\d\d|20\d\d/);
-  await page.locator('#flipBtn').click();
+  await page.locator('#card').click();
   await page.waitForTimeout(700);
   assert.match(await page.locator('#backYear').innerText(), /^\d{4}$/);
   assert.equal(await page.locator('.back-bingo').count(), 0);

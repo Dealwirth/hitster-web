@@ -1108,7 +1108,7 @@ body.online-active { background: #0b0910; }
 .online-screen .online-form .btn-primary,.online-screen .online-card .btn-primary { background:var(--opink); border-color:var(--opink); color:#180813; }
 .online-screen .online-form .btn-accent,.online-screen .online-card .btn-accent { background:var(--olime); border-color:var(--olime); color:#101407; }
 .online-screen .online-form .btn-ghost,.online-screen .online-card .btn-ghost { background:rgba(255,255,255,.05); border-color:rgba(255,255,255,.16); color:#fff; }
-.online-field-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; }
+.online-field-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; }
 .online-screen .online-hint { margin:0; color:var(--omuted); font-size:10px; line-height:1.5; }
 .online-screen .online-hint strong { color:#fff; }
 .online-screen .online-error { min-height:14px; margin:0; color:#ff8a9a; font-size:10px; font-weight:700; }
@@ -1342,10 +1342,44 @@ body.online-active #onlineScreen { display:block !important; }
 
 .online-spotify-link { display:inline-flex; align-items:center; gap:5px; margin-top:10px; padding:7px 10px; border:1px solid rgba(255,255,255,.16); border-radius:999px; color:#fff; text-decoration:none; font-size:9px; font-weight:800; background:rgba(255,255,255,.05); }
 .online-spotify-link:hover { border-color:#1db954; color:#1ed760; }
-@media (max-width:720px){ .online-create .online-field-grid { grid-template-columns:1fr 1fr; } .online-create .online-setting:last-child { grid-column:1/-1; } }
+@media (max-width:720px){ .online-create .online-field-grid { grid-template-columns:1fr 1fr; } }
 @media (max-width:380px){ .online-create .online-field-grid { grid-template-columns:1fr; } .online-create .online-setting:last-child { grid-column:auto; } }
 .online-join-note { display:flex; align-items:center; gap:8px; margin-top:auto; padding:9px 10px; border:1px solid rgba(198,255,61,.16); border-radius:10px; background:rgba(198,255,61,.045); }
 .online-join-note > span:first-child { display:grid; place-items:center; width:19px; height:19px; border-radius:50%; background:rgba(198,255,61,.16); color:var(--olime); font-size:10px; font-weight:900; }
 .online-join-note > span:last-child { display:grid; gap:1px; }
 .online-join-note strong { color:#fff; font-size:9px; }
 .online-join-note small { color:var(--omuted); font-size:8px; }
+
+/* Card gestures */
+.card-wrap { touch-action: pan-y; }
+.card { cursor: pointer; }
+.card-swipe-hint { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 10px auto 0; font-size: 8px; color: rgba(246,240,228,.6); }
+.card-swipe-hint span { display: grid; place-items: center; width: 20px; height: 20px; border: 1px solid rgba(246,240,228,.2); border-radius: 50%; color: var(--paper); font-size: 11px; }
+.card-swipe-hint small { font-size: 7px; opacity: .8; }
+.card-swipe-hint kbd { font-size: 6px; }
+@media (max-width: 720px) { .card-swipe-hint { font-size: 9px; } .card-swipe-hint small { display: none; } }
+
+/* Familiarity filter */
+.familiarity-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.familiarity-chips .chip { font-size: 8px; padding: 5px 7px; }
+.familiarity-chips .chip .n { font-size: 7px; }
+
+/* Bingo song familiarity */
+.online-familiarity-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:7px; }
+.online-familiarity-option { display:flex; align-items:center; gap:8px; min-width:0; padding:10px; border:1px solid rgba(255,255,255,.1); border-radius:12px; background:rgba(255,255,255,.035); color:#fff; font:inherit; text-align:left; cursor:pointer; }
+.online-familiarity-option:hover { border-color:rgba(41,230,255,.55); }
+.online-familiarity-option.selected { border-color:var(--olime); background:rgba(198,255,61,.1); box-shadow:inset 3px 0 0 var(--olime); }
+.online-familiarity-icon { display:grid; place-items:center; width:28px; height:28px; border-radius:9px; background:rgba(255,255,255,.08); font-size:14px; }
+.online-familiarity-option > span:nth-child(2) { display:grid; gap:1px; min-width:0; }
+.online-familiarity-option strong { font-size:10px; }
+.online-familiarity-option small { color:var(--omuted); font-size:8px; line-height:1.25; }
+.online-familiarity-option b { margin-left:auto; color:var(--olime); font-size:11px; }
+.online-bingo-decision { display:grid; gap:7px; margin-top:10px; padding:12px; border:1px solid rgba(198,255,61,.45); border-radius:12px; background:linear-gradient(135deg,rgba(198,255,61,.14),rgba(255,79,154,.1)); }
+.online-bingo-decision > strong { font-family:var(--font-heavy); font-size:20px; color:#fff; }
+.online-bingo-decision p { margin:0; color:#e8dff3; font-size:10px; }
+.online-bingo-choice { display:grid; grid-template-columns:1fr 1fr; gap:7px; }
+.online-bingo-choice button { display:flex; align-items:center; justify-content:center; gap:6px; padding:9px; border:1px solid rgba(255,255,255,.14); border-radius:10px; background:rgba(0,0,0,.22); color:#fff; font:800 10px var(--font-body); cursor:pointer; }
+.online-bingo-choice button:first-child { border-color:rgba(198,255,61,.4); background:rgba(198,255,61,.12); }
+.online-bingo-choice button.selected { outline:2px solid var(--olime); outline-offset:1px; }
+.online-bingo-decision > small { color:var(--omuted); font-size:8px; }
+@media (max-width:720px) { .online-familiarity-grid { grid-template-columns:1fr; } .online-familiarity-option { padding:8px; } .online-bingo-choice { grid-template-columns:1fr; } }
