@@ -33,7 +33,7 @@ const online = {
   audioUrl: '', startAt: 0, deadline: 0, answers: {}, correct: {}, pending: new Set(), revealAnswers: {},
   votes: {}, choices: { version: '', difficulty: '' }, card: null, marked: new Set(), answer: null,
   submitted: false, winner: null, recent: [], recentCategories: [], audioBlocked: false, audioUnlocked: false,
-  screen: null, localMode: new URLSearchParams(location.search).has('localonline'), markDeadline: 0, audioError: '', audioPending: false, audioPlaying: false, audioFallbackTried: false, warningKey: '',
+  screen: null, localMode: new URLSearchParams(location.search).has('localonline'), markDeadline: 0, wheelKey: '', wheelAngle: 0, audioError: '', audioPending: false, audioPlaying: false, audioFallbackTried: false, warningKey: '',
   timers: { phase: null, audio: null, round: null, tick: null, mark: null, countdown: null, next: null }
 };
 const api = () => window.HITSTER;
@@ -65,9 +65,33 @@ const audioUrl = (song) => song?.previewUrl || ((api()?.API_BASE || '') ? `${api
 const spotifyLink = (song) => song?.spotifyId && /^[A-Za-z0-9]{22}$/.test(song.spotifyId) ? `https://open.spotify.com/track/${song.spotifyId}` : `https://open.spotify.com/search/${encodeURIComponent(`${song?.title || ''} ${song?.artist || ''}`.trim())}`;
 function makeBingoCard(difficulty) {
   const ids = categoriesFor(difficulty).map((c) => c.id);
-  const cells = [];
-  for (let i = 0; i < 5; i++) cells.push(...ids);
-  return shuffle(cells);
+  const remaining = new Map(ids.map((id) => [id, 5]));
+  const rowCounts = Array.from({ length: 5 }, () => new Map());
+  const colCounts = Array.from({ length: 5 }, () => new Map());
+  const cells = Array(25).fill(null);
+  const canPlace = (id, row, col) => (remaining.get(id) || 0) > 0
+    && (rowCounts[row].get(id) || 0) < 2
+    && (colCounts[col].get(id) || 0) < 2;
+  const place = (pos) => {
+    if (pos === 25) return true;
+    const row = Math.floor(pos / 5), col = pos % 5;
+    const options = shuffle(ids.filter((id) => canPlace(id, row, col)));
+    for (const id of options) {
+      cells[pos] = id;
+      remaining.set(id, remaining.get(id) - 1);
+      rowCounts[row].set(id, (rowCounts[row].get(id) || 0) + 1);
+      colCounts[col].set(id, (colCounts[col].get(id) || 0) + 1);
+      if (place(pos + 1)) return true;
+      remaining.set(id, remaining.get(id) + 1);
+      rowCounts[row].set(id, rowCounts[row].get(id) - 1);
+      colCounts[col].set(id, colCounts[col].get(id) - 1);
+      cells[pos] = null;
+    }
+    return false;
+  };
+  if (place(0)) return cells;
+  const order = shuffle(ids), offset = Math.floor(Math.random() * 5);
+  return Array.from({ length: 25 }, (_, i) => order[(Math.floor(i / 5) + (i % 5) + offset) % 5]);
 }
 function hasBingo(marked) {
   for (let r = 0; r < 5; r++) if ([0, 1, 2, 3, 4].every((c) => marked.has(r * 5 + c))) return true;
@@ -209,11 +233,16 @@ function buildScreen() {
 
       <div class="online-lobby-grid">
         <form class="online-card online-form online-create" id="onlineHostForm">
-          <div class="online-card-head"><span class="online-step">01</span><div><h2>Raum erstellen</h2><p>Du bist der Host und teilst den Code.</p></div></div>
-          <label>Dein Name<input id="onlineHostName" maxlength="18" autocomplete="nickname" required placeholder="z. B. Alex" /></label>
-          <div class="online-field-grid"><label>Runden<select id="onlineRounds"><option value="10">10 Runden</option><option value="15" selected>15 Runden</option><option value="20">20 Runden</option></select></label><label>Antwortzeit<select id="onlineTimerSelect"><option value="15">15 Sekunden</option><option value="25" selected>25 Sekunden</option><option value="35">35 Sekunden</option></select></label><label>Kreuzen<select id="onlineMarkTimerSelect"><option value="6">6 Sekunden</option><option value="10">10 Sekunden</option><option value="12" selected>12 Sekunden</option><option value="20">20 Sekunden</option></select></label></div>
-          <p class="online-hint">Version und Schwierigkeit wählen später <strong>alle Spieler gemeinsam</strong>.</p>
-          <button class="btn btn-primary btn-wide" type="submit">Raum erstellen →</button>
+          <div class="online-create-head"><span class="online-step">01</span><div><span class="online-kicker">HOST-MODUS</span><h2>Raum erstellen</h2><p>Du bist der DJ. Teile den Code, alle anderen kommen dazu.</p></div><span class="online-create-live"><i></i>LIVE</span></div>
+          <label class="online-name-field"><span>Dein Name</span><div class="online-input-wrap"><span class="online-input-icon">@</span><input id="onlineHostName" maxlength="18" autocomplete="nickname" required placeholder="z. B. Alex" /></div></label>
+          <div class="online-setup-label"><span>SPIEL-SETUP</span><small>Du legst die Regie fest</small></div>
+          <div class="online-field-grid">
+            <label class="online-setting"><span class="online-setting-icon">↻</span><span><b>Runden</b><select id="onlineRounds"><option value="10">10 Runden</option><option value="15" selected>15 Runden</option><option value="20">20 Runden</option></select></span></label>
+            <label class="online-setting"><span class="online-setting-icon">◷</span><span><b>Antwortzeit</b><select id="onlineTimerSelect"><option value="15">15 Sekunden</option><option value="25" selected>25 Sekunden</option><option value="35">35 Sekunden</option></select></span></label>
+            <label class="online-setting"><span class="online-setting-icon">✦</span><span><b>Kreuzen</b><select id="onlineMarkTimerSelect"><option value="6">6 Sekunden</option><option value="10">10 Sekunden</option><option value="12" selected>12 Sekunden</option><option value="20">20 Sekunden</option></select></span></label>
+          </div>
+          <div class="online-create-note"><span>✦</span><p><strong>Danach entscheidet ihr gemeinsam:</strong> Version und Schwierigkeit. Der Rest läuft automatisch.</p></div>
+          <button class="btn btn-primary btn-wide online-create-btn" type="submit"><span>Raum erstellen</span><span>→</span></button>
           <p class="online-error" id="onlineError" role="alert"></p>
         </form>
 
@@ -223,6 +252,7 @@ function buildScreen() {
           <label>Raum-Code<input id="onlineJoinCode" maxlength="6" autocapitalize="characters" autocomplete="off" required placeholder="ABC123" /></label>
           <button class="btn btn-accent btn-wide" type="submit">Beitreten →</button>
           <p class="online-hint">Den Code findest du im Einladungslink oder im QR-Code des Hosts.</p>
+          <div class="online-join-note"><span>✓</span><span><strong>Kein Login nötig</strong><small>Einfach Code eingeben – dein Name genügt.</small></span></div>
         </form>
       </div>
 
@@ -266,7 +296,7 @@ function buildScreen() {
             <div class="online-game-grid">
               <div class="online-game-main">
                 <div class="online-spin-card">
-                  <div class="online-disco-wrap"><div class="online-disco" id="onlineDisco"><div class="online-disco-shine"></div><div class="online-disco-grid"></div><span class="online-disco-letter">H</span></div><div class="online-disco-base"></div></div>
+                  <div class="online-wheel" id="onlineWheel" aria-hidden="true"><div class="online-wheel-disc" id="onlineWheelDisc"><span class="online-wheel-lines"></span></div><div class="online-wheel-pointer"></div><div class="online-wheel-hub"><div class="online-disco" id="onlineDisco"><div class="online-disco-shine"></div><div class="online-disco-grid"></div><span class="online-disco-letter">H</span></div></div></div>
                   <div class="online-category-card" id="onlineCategoryCard"><span class="online-kicker">KATEGORIE</span><strong id="onlineCategoryLabel">Dreht …</strong><small id="onlineCategoryQuestion">Die Discokugel entscheidet.</small></div>
                 </div>
                 <div class="online-audio" id="onlineAudio" hidden><button class="online-play" id="onlinePlay" type="button" aria-label="Song abspielen"><svg><use href="#i-play"></use></svg></button><div class="online-audio-copy"><strong id="onlineAudioTitle">Song für alle</strong><small id="onlineAudioHint">Gleich geht es los.</small></div><div class="online-progress"><i id="onlineProgress"></i></div></div>
@@ -322,6 +352,7 @@ function buildScreen() {
   return section;
 }
 function showScreen() { buildScreen(); online.screen.hidden = false; document.body.classList.add('online-active', 'started'); document.body.style.overflow = ''; }
+function resetWheel() { online.wheelKey = ''; online.wheelAngle = 0; const wheel = $('#onlineWheel'); if (wheel) wheel.style.setProperty('--wheel-end', '0deg'); $('#onlineWheelDisc')?.classList.remove('is-spinning'); }
 function close() {
   online.transport?.close(); online.transport = null; online.role = null; online.phase = 'lobby'; stopTimers();
   onlineAudio?.pause();
@@ -333,7 +364,7 @@ function close() {
 function open(prefillCode = '') {
   if (!api()?.state?.songs?.length) { setTimeout(() => open(prefillCode), 350); return; }
   online.transport?.close(); online.transport = null; online.role = null; online.phase = 'lobby';
-  showScreen(); online.name = localStorage.getItem(NAME_KEY) || '';
+  resetWheel(); showScreen(); online.name = localStorage.getItem(NAME_KEY) || '';
   $('#onlineHostName').value = online.name; $('#onlineJoinName').value = online.name;
   $('#onlineLobby').hidden = false; $('#onlineRoom').hidden = true; $('#onlineSetup').hidden = true; $('#onlineGame').hidden = true;
   $('#onlineRoomBadge').hidden = true; $('#onlineError').textContent = ''; $('#onlineQr').hidden = true;
@@ -350,7 +381,7 @@ function onCreateRoom(event) {
   if (!name) return showError('Bitte gib deinen Namen ein.');
   localStorage.setItem(NAME_KEY, name); online.name = name; online.role = 'host'; online.code = randomCode();
   online.settings = readSettings(); online.players = []; online.connections = new Map(); online.phase = 'lobby';
-  online.round = 0; online.answers = {}; online.correct = {}; online.pending = new Set(); online.votes = {};
+  resetWheel(); online.round = 0; online.answers = {}; online.correct = {}; online.pending = new Set(); online.votes = {};
   online.choices = { version: '', difficulty: '' }; online.winner = null; online.recent = []; online.recentCategories = [];
   const player = { id: 'host', name, connected: true, score: 0, card: null, marked: new Set(), bingo: false, correct: false };
   online.players.push(player); online.card = null; online.marked = player.marked;
@@ -463,7 +494,7 @@ function primaryAction() {
 }
 function startSetup() {
   if (online.role !== 'host') return;
-  stopTimers();
+  stopTimers(); resetWheel();
   online.phase = 'setup'; online.round = 0; online.votes = {}; online.choices = { version: '', difficulty: '' };
   online.answers = {}; online.correct = {}; online.pending = new Set(); online.revealAnswers = {}; online.winner = null;
   online.category = null; online.song = null; online.startAt = 0; online.deadline = 0; online.markDeadline = 0; online.warningKey = ''; online.audioError = ''; online.audioPending = false; online.answer = null; online.submitted = false;
@@ -733,9 +764,27 @@ function renderGame() {
   $('#onlineDifficultyLabel').textContent = difficultyLabel(online.choices.difficulty || 'easy');
   const spinning = phase === 'spinning';
   const disco = $('#onlineDisco'); disco.classList.toggle('is-spinning', spinning); disco.classList.toggle('is-playing', phase === 'playing');
-  if (category) {
-    disco.style.setProperty('--cat', category.color); $('#onlineCategoryCard').style.setProperty('--cat', category.color);
-    $('.online-spin-card')?.style.setProperty('--cat', category.color); $('.online-disco-wrap')?.style.setProperty('--cat', category.color);
+  const wheel = $('#onlineWheel'), wheelDisc = $('#onlineWheelDisc'), wheelCats = categoriesFor(online.choices.difficulty || 'easy');
+  if (wheel) {
+    wheelCats.forEach((cat, index) => wheel.style.setProperty(`--w${index}`, cat.color));
+    const index = category ? wheelCats.findIndex((cat) => cat.id === category.id) : -1;
+    if (category && index >= 0) {
+      wheel.style.setProperty('--cat', category.color);
+      $('#onlineCategoryCard').style.setProperty('--cat', category.color);
+      $('.online-spin-card')?.style.setProperty('--cat', category.color);
+      const key = `${online.round}:${category.id}`;
+      if (online.wheelKey !== key) {
+        online.wheelKey = key;
+        const current = online.wheelAngle || 0;
+        const targetSegment = (360 - index * 72) % 360;
+        const delta = (targetSegment - (current % 360) + 360) % 360;
+        online.wheelAngle = current + 360 * 5 + delta;
+        wheel.style.setProperty('--wheel-end', `${online.wheelAngle}deg`);
+        if (wheelDisc) {
+          wheelDisc.classList.remove('is-spinning'); void wheelDisc.offsetWidth; wheelDisc.classList.add('is-spinning');
+        }
+      }
+    }
   }
   $('#onlineCategoryLabel').textContent = spinning ? 'Dreht …' : category?.label || 'Kategorie';
   $('#onlineCategoryQuestion').textContent = spinning ? 'Die Discokugel entscheidet für alle.' : category?.question || '';

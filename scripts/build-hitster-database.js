@@ -11,9 +11,11 @@ const appSource = fs.readFileSync(path.join(ROOT, 'public/app.js'), 'utf8');
 const versionsSource = appSource.match(/const VERSIONS = (\{[\s\S]*?\n\});/)?.[1];
 if (!versionsSource) throw new Error('VERSIONS not found');
 const VERSIONS = vm.runInNewContext(`(${versionsSource})`);
+const germanSource = appSource.match(/const GERMAN_ARTISTS = new Set\(`([\s\S]*?)`/)?.[1] || '';
 
 const norm = (value = '') => String(value).normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
   .replace(/&/g, ' and ').replace(/[^a-z0-9]+/g, ' ').trim();
+const GERMAN_ARTISTS = new Set(germanSource.split('|').map((name) => norm(name)).filter(Boolean));
 const decadeKey = (year) => `${Math.floor(year / 10) * 10}s`;
 const genresOf = (song) => [...new Set((song.genres?.length ? song.genres : [song.genre]).filter(Boolean))];
 const playable = (song) => Boolean(song.previewUrl || song.itunesId || song.deezerId || song.spotifyId || song.streamUrl);
@@ -35,8 +37,32 @@ const songs = catalog.songs.map((song) => ({
   playable: playable(song),
   fame: fame(song),
   yearRank: 0,
-  versionIds: Object.keys(VERSIONS).filter((id) => matchesVersion(song, id)),
+  versionIds: [],
 }));
+const VERSION_MIN_CARDS = 500;
+const artistCounts = new Map();
+for (const song of songs) artistCounts.set(norm(song.artist), (artistCounts.get(norm(song.artist)) || 0) + 1);
+const germanArtists = new Set([...GERMAN_ARTISTS, ...songs.filter((song) => ['deutschpop', 'deutschrap', 'schlager', 'ndw'].some((genre) => song.genres.includes(genre))).map((song) => norm(song.artist))]);
+const versionPools = new Map();
+for (const id of Object.keys(VERSIONS)) {
+  if (id === 'all') { versionPools.set(id, new Set(songs.map((song) => song.id))); continue; }
+  const base = songs.filter((song) => matchesVersion(song, id));
+  const chosen = new Map(base.map((song) => [song.id, song]));
+  const add = (list) => {
+    for (const song of list) {
+      if (chosen.size >= VERSION_MIN_CARDS) break;
+      if (!chosen.has(song.id)) chosen.set(song.id, song);
+    }
+  };
+  if (chosen.size < VERSION_MIN_CARDS) {
+    if (id === 'deutsch') add(songs.filter((song) => germanArtists.has(norm(song.artist))).sort((a, b) => b.fame - a.fame));
+    if (id === 'movie') add(songs.filter((song) => /soundtrack|original motion|motion picture|musical|disney|score/i.test(song.album || '')).sort((a, b) => b.fame - a.fame));
+    if (id === 'onehit') add(songs.filter((song) => artistCounts.get(norm(song.artist)) === 1).sort((a, b) => b.fame - a.fame));
+    add(songs.filter((song) => !chosen.has(song.id)).sort((a, b) => b.fame - a.fame));
+  }
+  versionPools.set(id, new Set(chosen.keys()));
+}
+for (const song of songs) song.versionIds = Object.keys(VERSIONS).filter((id) => versionPools.get(id).has(song.id));
 const byId = new Map(songs.map((song) => [song.id, song]));
 for (const year of years) {
   const ranked = songs.filter((song) => song.year === year).sort((a, b) => b.fame - a.fame);
@@ -45,7 +71,7 @@ for (const year of years) {
 
 const versionData = {};
 for (const [id, version] of Object.entries(VERSIONS)) {
-  const pool = songs.filter((song) => matchesVersion(song, id));
+  const pool = songs.filter((song) => versionPools.get(id).has(song.id));
   const perYear = {};
   for (const year of years) {
     const own = pool.filter((song) => song.year === year);
@@ -87,7 +113,7 @@ const indexes = {
   byYear: Object.fromEntries(years.map((year) => [year, songs.filter((song) => song.year === year).map((song) => song.id)])),
   byGenre: Object.fromEntries([...new Set(songs.flatMap((song) => song.genres))].sort().map((genre) => [genre, songs.filter((song) => song.genres.includes(genre)).map((song) => song.id)])),
   byArtist: Object.fromEntries([...new Set(songs.map((song) => norm(song.artist)))].sort().map((key) => [key, songs.filter((song) => norm(song.artist) === key).map((song) => song.id)])),
-  byVersion: Object.fromEntries(Object.keys(VERSIONS).map((id) => [id, songs.filter((song) => matchesVersion(song, id)).map((song) => song.id)])),
+  byVersion: Object.fromEntries(Object.keys(VERSIONS).map((id) => [id, songs.filter((song) => versionPools.get(id).has(song.id)).map((song) => song.id)])),
 };
 
 const db = {

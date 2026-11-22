@@ -7,7 +7,7 @@ const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
 const CLIP_SECONDS = 30;
-const VERSION = '4.10.0';
+const VERSION = '4.11.0';
 const STATIC = document.documentElement.dataset.static === 'true' || location.hostname.endsWith('github.io');
 const API_BASE = (document.querySelector('meta[name="hitster-api"]')?.content || '').replace(/\/$/, '');
 const API = (path) => `${API_BASE}${path}`;
@@ -33,6 +33,11 @@ const VERSIONS = {
   charts: { label: 'Charts & Neu', short: 'Charts', desc: '2010er und 2020er', color: '#29e6ff', icon: '📈', decades: ['2010s', '2020s'] },
   bangers: { label: 'Bangers', short: 'Bangers', desc: 'Laut, schnell, Party', color: '#ff3b5c', icon: '🔥', genres: ['metal', 'rock', 'electronic', 'hiphop'] },
 };
+
+// German-language / German-act pool. Used only to widen the Deutsch version
+// when the catalog's German genre tags alone do not reach the 500-card target.
+const GERMAN_ARTISTS = new Set(`
+nena|rammstein|helene fischer|herbert gronemeyer|udo lindenberg|marius muller westernhagen|peter maffay|howard carpendale|modern talking|tokio hotel|die toten hosen|die arzte|pur|sasha|sarah connor|xavier naidoo|sido|bushido|kool savas|peter fox|seeed|fettes brot|deichkind|beatsteaks|wir sind helden|juli|silbermond|revolverheld|sportfreunde stiller|annenmaykantereit|mark forster|namika|wincent weiss|lena|cro|apache 207|capital bra|raf camora|bonez mc|gzuz|kontra k|trettmann|nura|juju|shirin david|badmomzjay|katja krasavice|andrea berg|matthias reim|wolfgang petry|mickie krause|dj otzi|andreas gabalier|santiano|faun|oonagh|unheilig|mono inc|eisbrecher|oomph|blumchen|scooter|atb|paul van dyk|boris dlugosch|alle farben|robin schulz|zedd|felix jaehn|topic|lost frequencies|falco|peter schilling|joachim witt|helloween|scorpions|accept|warlock|doro|kreator|sodom|destruction|blind guardian|edguy|gamma ray|avantasia|powerwolf|saltatio mortis|schandmaul|subway to sally|in extremo|lacrimosa|bohse onkelz|kraftwerk|ideal|fehlfarben|spider murphy gang|hubert kah|spliff|trio|geier sturzflug|rio reiser|nicole|roy black|udo jurgens|reinhard mey|jurgen drews|sandra|blue system|bad boys blue|silent circle|fancy|alphaville|opus|erste allgemeine verunsicherung|reamonn|clueso|max giesinger|tim bendzko|andreas bourani|vincent gross|la bouche|snap|culture beat|real mccoy|sash|mr president|masterboy|captain hollywood project|haddaway|2 unlimited|magic affair|rednex|eiffel 65|gala|alice deejay|vengaboys|atc|cascada|groove coverage|novaspace|sylver|kate ryan|milk inc|ian van dahl|lasgo|dj sammy|nina chuba|01099|domiziana|t low|tlow|luciano|farid bang|kollegah|haftbefehl|ssio|casper|prinz pi|frittenbude|tomte|kraftklub|killerpilze|panik|nevada tan|ich ich|fotos|mia|beginner|absolute beginner|blumentopf|dendemann|max herre|freundeskreis|die fantastischen vier|fanta 4|advanced chemistry|stieber twins|torch|samy deluxe|afrob|ferris mc|dynamite deluxe|jan delay|sxtn|schwesta ewa|esther graf|lea|maggie lindemann|vanessa mai|michelle|beatrice egli|kerstin ott|maite kelly|voxxclub|amigos|die amigas|klubbb3|fantasy|wolkenfrei|sonia liebing|nik p|ben zucker|roland kaiser|peter kraus|dicht und ergreifend|die atzen|atze schroder|frauenarzt|manny marc|massiv|kay one|pa sports|kc rebell|capo|187|sa4|ak ausserkontrolle|omik k|zerozero|gregor le dahl|gestort aber geil|klangkarussell|klaus nomi|haindling|biermosl|blumentopf|deichkind|faber|annett louisan|element of crime|selig|ton steine scherben|interpol|puhdys|city|karat|silly|renft|electra|engelbert|bernd cluver|chris roberts|guildo horn|stefan raab|trucks|höhner|hoehner|bläck fööss|black fooss|koelsche|bap|wolf maahn|zeltinger|geier sturzflug|fehlfarben|mittagspause|abwaerts|abwarts|ea80|die goldenen zitronen|goldenen zitronen|die sterne|sterne|tocotronic|blumfeld|kante|kreidler|mouse on mars|thomas d|piano has no wrong notes|christian steiffen|daf|deutsch amerikanische freundschaft|liaisons dangereuses|der plan|pyrolator|fehlfarben|ideal|nena|spliff|trio|hubert kah|geier sturzflug|spider murphy gang|freiwillige selbstkontrolle|fsk|drahdiwaberl|hallucination company|erste allgemeine verunsicherung|eav|falco|opus|sts|ostbahn kurti|kurt ostbahn|wiener blut|reinhard fendrich|rainhard fendrich|georg danzer|auge|schiffkowitz|ambros|wolfgang ambros|liedermacher|hannes wader|konstantin wecker|haindling|biermosl|karl valentin|weiss Ferdl|weiss ferdl`.split('|').map((name) => normText(name)).filter(Boolean));
 
 const GENRES = {
   all: { label: 'Alle', color: '#ff2d95', icon: 'grid' },
@@ -263,13 +268,56 @@ function matchesFilters(song, { ignoreGenres = false, ignoreDecade = false } = {
   return true;
 }
 
-function versionMatches(song, versionId = state.version) {
+const VERSION_MIN_CARDS = 500;
+const versionPools = new Map();
+
+function baseVersionMatches(song, versionId) {
   const version = VERSIONS[versionId];
   if (!version || versionId === 'all') return true;
   if (version.genres?.length && !songGenres(song).some((genre) => version.genres.includes(genre))) return false;
   if (version.decades?.length && !version.decades.includes(decadeKey(song.year))) return false;
   if (version.tags?.length && !version.tags.some((tag) => song.tags?.includes(tag))) return false;
   return true;
+}
+
+function refreshVersionPools() {
+  versionPools.clear();
+  const songs = state.songs || [];
+  if (!songs.length) return;
+  const known = (song) => Number(song.popularity) > 0 || song.tags?.includes('chart') || Boolean(song.spotifyId);
+  const artistCounts = new Map();
+  for (const song of songs) artistCounts.set(normText(song.artist), (artistCounts.get(normText(song.artist)) || 0) + 1);
+  const germanBase = new Set(songs.filter((song) => ['deutschpop', 'deutschrap', 'schlager', 'ndw'].some((genre) => songGenres(song).includes(genre))).map((song) => normText(song.artist)));
+  for (const name of GERMAN_ARTISTS) germanBase.add(name);
+  for (const id of Object.keys(VERSIONS)) {
+    if (id === 'all') { versionPools.set(id, new Set(songs.map((song) => song.id))); continue; }
+    const base = songs.filter((song) => baseVersionMatches(song, id));
+    if (base.length >= VERSION_MIN_CARDS) { versionPools.set(id, new Set(base.map((song) => song.id))); continue; }
+    const chosen = new Map(base.map((song) => [song.id, song]));
+    const add = (list) => {
+      for (const song of list) {
+        if (chosen.size >= VERSION_MIN_CARDS) break;
+        if (!chosen.has(song.id)) chosen.set(song.id, song);
+      }
+    };
+    if (id === 'deutsch') {
+      add(songs.filter((song) => germanBase.has(normText(song.artist))).sort((a, b) => fameScore(b) - fameScore(a)));
+    }
+    if (id === 'movie') {
+      add(songs.filter((song) => /soundtrack|original motion|motion picture|musical|disney|score/i.test(song.album || '')).sort((a, b) => fameScore(b) - fameScore(a)));
+    }
+    if (id === 'onehit') {
+      add(songs.filter((song) => known(song) && artistCounts.get(normText(song.artist)) === 1).sort((a, b) => fameScore(b) - fameScore(a)));
+    }
+    add(songs.filter((song) => known(song) && !chosen.has(song.id)).sort((a, b) => fameScore(b) - fameScore(a)));
+    versionPools.set(id, new Set(chosen.keys()));
+  }
+}
+
+function versionMatches(song, versionId = state.version) {
+  const pool = versionPools.get(versionId);
+  if (pool?.has(song.id)) return true;
+  return baseVersionMatches(song, versionId);
 }
 
 function fameScore(song) {
@@ -2606,6 +2654,7 @@ async function init() {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     state.songs = data.songs || [];
+    refreshVersionPools();
     el.catalogPill.textContent = `${data.count} Karten`;
     if (el.footerCount) el.footerCount.textContent = data.count.toLocaleString('de-DE');
     if (!state.songs.length) throw new Error('Katalog leer');
@@ -2677,6 +2726,8 @@ async function init() {
     clearAnalytics,
     setVersion,
     versions: VERSIONS,
+    versionPools,
+    refreshVersionPools,
     versionMatches,
     versionYearPool,
     fameScore,

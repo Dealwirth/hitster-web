@@ -145,7 +145,7 @@ Interpret/Band, Jahrzehnt, ±3 Jahre. Kein Login, keine Werbung.
 - Die exakte Karten-Datenbank (`hitster-cards.json`) ist **~2,0 MB roh / ~420 KB gzip**
   und wird nur beim ersten Scan geladen.
 - `/api/catalog` ist **1 Tag** cachebar, versionierte CSS/JS-Dateien **1 Jahr**
-  (`immutable`), Asset-Version `4.10.0`.
+  (`immutable`), Asset-Version `4.11.0`.
 - Audio-Quellen werden **parallel** (Deezer/iTunes) aufgelöst, Timeouts 8–15 s.
 - Cache-Hits brauchen keinen Verzeichnis-Scan.
 - `scripts/serve-watchdog.sh` startet den Node-Prozess nach einem Absturz neu.
@@ -201,7 +201,7 @@ Logs: `server.log`. Für Dauerbetrieb eignen sich auch systemd, PM2 oder Docker.
 
 ## Daten & Lizenz
 
-- 4.860 Songs, 1950–2026, 21 Genres, 300 Chart-Hits, 63 kuratierte Klassiker, 181 Rock-/Metal-Ergänzungen, 36 Oldie-Ergänzungen für die Jahre 1950–1955 und 159 Soundtrack-/One-Hit-Erweiterungen. Jede Version hat mindestens 200 Karten.
+- 4.860 Songs, 1950–2026, 21 Genres, 300 Chart-Hits, 63 kuratierte Klassiker, 181 Rock-/Metal-Ergänzungen, 36 Oldie-Ergänzungen für die Jahre 1950–1955 und 159 Soundtrack-/One-Hit-Erweiterungen. Jede Version hat mindestens 500 Karten; kleine Genres werden mit bekannten passenden Songs aufgefüllt.
 - Song-Clips sind offizielle 30-Sekunden-Vorschauen von Deezer, Spotify bzw. iTunes.
 - Jahres-Auflösung: kuratierter Katalog, sonst MusicBrainz-Erstveröffentlichung, sonst iTunes/Spotify.
 - Echte Kartendaten: `public/hitster-db.json` (176 Spieldatenbanken, Karten → Spotify-ID + Gruppe/Solo) und `public/hitster-cards.json` (5.192 Karten mit exakten Songdaten).

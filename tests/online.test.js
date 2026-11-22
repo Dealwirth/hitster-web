@@ -115,7 +115,7 @@ await step('database has guaranteed coverage and full metadata', async () => {
   const db = JSON.parse(fs.readFileSync('data/hitster-database.json', 'utf8'));
   assert.equal(db.schema, 'hitster-web-database/v1');
   assert.equal(db.totalSongs, 4860);
-  for (const [id, version] of Object.entries(db.versions)) assert.ok(version.guaranteedMinPerYear >= 10, `${id}: ${version.guaranteedMinPerYear}`);
+  for (const [id, version] of Object.entries(db.versions)) { assert.ok(version.guaranteedMinPerYear >= 10, `${id}: ${version.guaranteedMinPerYear}`); assert.ok(version.count >= 500, `${id}: ${version.count}`); }
   assert.ok(db.songs.every((song) => Array.isArray(song.genres) && song.decade && typeof song.fame === 'number'));
 });
 
@@ -184,6 +184,17 @@ await step('online bingo: voting, 5x5 color cards, sync audio, answer, marking a
   assert.equal(rules.noLine, false);
   assert.equal(rules.card.length, 25);
   assert.deepEqual(Object.values(rules.card.reduce((a, x) => { a[x] = (a[x] || 0) + 1; return a; }, {})).sort(), [5, 5, 5, 5, 5]);
+  const balanced = await host.evaluate(() => {
+    const d = window.HitsterOnline.debug;
+    const cards = Array.from({ length: 40 }, () => d.makeBingoCard('easy'));
+    const maxInLine = (line) => Math.max(...Object.values(line.reduce((out, id) => ({ ...out, [id]: (out[id] || 0) + 1 }), {})));
+    const rowMax = Math.max(...cards.flatMap((card) => Array.from({ length: 5 }, (_, row) => maxInLine(card.slice(row * 5, row * 5 + 5)))));
+    const colMax = Math.max(...cards.flatMap((card) => Array.from({ length: 5 }, (_, col) => maxInLine(Array.from({ length: 5 }, (_, row) => card[row * 5 + col])))));
+    return { rowMax, colMax, unique: new Set(cards.map((card) => card.join(','))).size };
+  });
+  assert.equal(balanced.rowMax, 2);
+  assert.equal(balanced.colMax, 2);
+  assert.ok(balanced.unique >= 20);
 
   const direct = await context.newPage();
   await direct.goto(`${base}/?online`, { waitUntil: 'networkidle' });
@@ -259,6 +270,18 @@ await step('online bingo: voting, 5x5 color cards, sync audio, answer, marking a
   await host.waitForFunction(() => window.HitsterOnline.state.phase === 'spinning', { timeout: 6000 });
   await host.waitForFunction(() => window.HitsterOnline.state.phase === 'playing', { timeout: 8000 });
   assert.ok(await host.evaluate(() => window.HitsterOnline.state.round) >= 2);
+  const wheel = await host.evaluate(() => {
+    const s = window.HitsterOnline.state;
+    const order = ['solo', 'before2000', 'year4', 'decade', 'year2'];
+    const index = order.indexOf(s.category?.id);
+    const angle = ((s.wheelAngle || 0) % 360 + 360) % 360;
+    const expected = (360 - index * 72) % 360;
+    const el = document.querySelector('#onlineWheel');
+    return { index, angle, expected, colors: [0, 1, 2, 3, 4].map((i) => getComputedStyle(el).getPropertyValue(`--w${i}`).trim()) };
+  });
+  assert.ok(wheel.index >= 0);
+  assert.ok(Math.abs(wheel.angle - wheel.expected) < 1, JSON.stringify(wheel));
+  assert.equal(wheel.colors.filter(Boolean).length, 5);
 
   const forms = await host.evaluate(() => {
     const d = window.HitsterOnline.debug, o = d.online;

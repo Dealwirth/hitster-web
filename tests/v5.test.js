@@ -97,13 +97,13 @@ await step('version presets combine genres and are URL-synced', async () => {
   await page.waitForTimeout(300);
 });
 
-await step('every version preset has at least 200 cards', async () => {
+await step('every version preset has at least 500 cards', async () => {
   const counts = await page.$$eval('#versionChips .version-card', (cards) => cards.map((card) => ({
     id: card.dataset.version,
     count: Number(card.querySelector('.version-n')?.textContent || 0),
   })));
   assert.ok(counts.length >= 13);
-  for (const { id, count } of counts) assert.ok(count >= 200, `${id} has only ${count}`);
+  for (const { id, count } of counts) assert.ok(count >= 500, `${id} has only ${count}`);
 });
 
 await step('QR code 00052 reveals a different song from the same year', async () => {
