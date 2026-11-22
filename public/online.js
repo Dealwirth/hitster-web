@@ -29,12 +29,12 @@ const BINGO_MODES = {
 };
 const online = {
   role: null, code: '', name: '', transport: null, peerId: '', players: [], connections: new Map(),
-  settings: { rounds: 15, timer: 25 }, phase: 'lobby', round: 0, category: null, song: null,
+  settings: { rounds: 15, timer: 25, markTimer: 12 }, phase: 'lobby', round: 0, category: null, song: null,
   audioUrl: '', startAt: 0, deadline: 0, answers: {}, correct: {}, pending: new Set(), revealAnswers: {},
   votes: {}, choices: { version: '', difficulty: '' }, card: null, marked: new Set(), answer: null,
   submitted: false, winner: null, recent: [], recentCategories: [], audioBlocked: false, audioUnlocked: false,
-  screen: null, localMode: new URLSearchParams(location.search).has('localonline'), markDeadline: 0,
-  timers: { phase: null, audio: null, round: null, tick: null, mark: null, countdown: null }
+  screen: null, localMode: new URLSearchParams(location.search).has('localonline'), markDeadline: 0, audioError: '', audioPending: false, audioPlaying: false, audioFallbackTried: false, warningKey: '',
+  timers: { phase: null, audio: null, round: null, tick: null, mark: null, countdown: null, next: null }
 };
 const api = () => window.HITSTER;
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -57,7 +57,7 @@ const publicState = () => ({
   players: publicPlayers(), votes: online.votes, winner: online.winner,
   category: publicCategory(online.category), choices: online.choices,
   answersCount: Object.keys(online.answers || {}).length, startIn: online.startAt ? Math.max(0, online.startAt - Date.now()) : null,
-  deadline: online.deadline || null, timer: online.settings.timer, versionLabel: versionLabel(online.choices.version || 'party'),
+  deadline: online.deadline || null, timer: online.settings.timer, markDeadline: online.markDeadline || null, markTimer: online.settings.markTimer, versionLabel: versionLabel(online.choices.version || 'party'),
   difficulty: online.choices.difficulty || '', difficultyLabel: difficultyLabel(online.choices.difficulty || 'easy')
 });
 const isPlayable = (song) => Boolean(song?.previewUrl || song?.itunesId || song?.deezerId || song?.spotifyId || song?.streamUrl);
@@ -86,12 +86,27 @@ function similarity(a, b) {
   for (let i = 1; i <= m; i++) for (let j = 1; j <= n; j++) dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
   return 1 - dp[m][n] / Math.max(m, n);
 }
+const CURRENT_YEAR = new Date().getFullYear();
+function expandYear(raw) {
+  const digits = String(raw ?? '').replace(/[^0-9]/g, '');
+  if (!digits || digits.length > 4) return null;
+  let year = Number(digits);
+  if (digits.length <= 2) {
+    const century = Math.floor(CURRENT_YEAR / 100) * 100;
+    year = year <= CURRENT_YEAR % 100 ? century + year : century - 100 + year;
+  }
+  return year >= 1000 && year <= 2100 ? year : null;
+}
 function isCorrect(category, song, raw) {
   const value = String(raw ?? '').trim();
   if (!category || !song || !value) return false;
   if (category.type === 'choice') return value === (category.id === 'solo' ? (song.group ? 'group' : 'solo') : (song.year < 2000 ? 'yes' : 'no'));
-  if (category.type === 'year') { const year = Number(value); return Number.isFinite(year) && Math.abs(year - Number(song.year)) <= (category.tolerance || 0); }
-  if (category.type === 'decade') { const m = value.match(/(19|20)\d{2}/); const d = m ? decadeOf(m[0]) : value.replace(/[^0-9]/g, '').replace(/^(\d{2})$/, '19$1').replace(/^(\d{4})$/, '$1s'); return d === decadeOf(song.year) || value === decadeLabel(decadeOf(song.year)); }
+  if (category.type === 'year') { const year = expandYear(value); return year != null && Math.abs(year - Number(song.year)) <= (category.tolerance || 0); }
+  if (category.type === 'decade') {
+    const full = value.match(/(19|20)\d{2}/)?.[0];
+    const year = expandYear(full || value);
+    return year != null && decadeOf(year) === decadeOf(song.year);
+  }
   if (category.type === 'title') return similarity(normalizeText(value), normalizeText(song.title)) >= 0.8;
   if (category.type === 'artist') {
     const target = normalizeText(song.artist), answer = normalizeText(value);
@@ -104,7 +119,8 @@ function isCorrect(category, song, raw) {
 function formatAnswer(category, raw) {
   if (raw == null || raw === '') return '—';
   if (category?.type === 'choice') return category.options.find((o) => o.value === raw)?.label || String(raw);
-  if (category?.type === 'decade') return decadeLabel(raw);
+  if (category?.type === 'decade') { const full = String(raw).match(/(19|20)\d{2}/)?.[0]; const year = expandYear(full || raw); return year != null ? decadeLabel(decadeOf(year)) : String(raw); }
+  if (category?.type === 'year') { const year = expandYear(raw); return year != null ? String(year) : String(raw); }
   return String(raw);
 }
 function send(type, payload = {}, to = null) {
@@ -195,7 +211,7 @@ function buildScreen() {
         <form class="online-card online-form online-create" id="onlineHostForm">
           <div class="online-card-head"><span class="online-step">01</span><div><h2>Raum erstellen</h2><p>Du bist der Host und teilst den Code.</p></div></div>
           <label>Dein Name<input id="onlineHostName" maxlength="18" autocomplete="nickname" required placeholder="z. B. Alex" /></label>
-          <div class="online-field-grid"><label>Runden<select id="onlineRounds"><option value="10">10 Runden</option><option value="15" selected>15 Runden</option><option value="20">20 Runden</option></select></label><label>Timer<select id="onlineTimerSelect"><option value="15">15 Sekunden</option><option value="25" selected>25 Sekunden</option><option value="35">35 Sekunden</option></select></label></div>
+          <div class="online-field-grid"><label>Runden<select id="onlineRounds"><option value="10">10 Runden</option><option value="15" selected>15 Runden</option><option value="20">20 Runden</option></select></label><label>Antwortzeit<select id="onlineTimerSelect"><option value="15">15 Sekunden</option><option value="25" selected>25 Sekunden</option><option value="35">35 Sekunden</option></select></label><label>Kreuzen<select id="onlineMarkTimerSelect"><option value="6">6 Sekunden</option><option value="10">10 Sekunden</option><option value="12" selected>12 Sekunden</option><option value="20">20 Sekunden</option></select></label></div>
           <p class="online-hint">Version und Schwierigkeit wählen später <strong>alle Spieler gemeinsam</strong>.</p>
           <button class="btn btn-primary btn-wide" type="submit">Raum erstellen →</button>
           <p class="online-error" id="onlineError" role="alert"></p>
@@ -227,9 +243,8 @@ function buildScreen() {
       <div class="online-grid">
         <aside class="online-side">
           <div class="online-card online-players-card"><div class="online-card-head"><h3>Spieler <span class="panel-count" id="onlinePlayerCount">0</span></h3><span class="online-live-dot" title="Live verbunden"></span></div><ul class="online-players" id="onlinePlayers"></ul><div class="online-reactions" id="onlineReactions" aria-label="Reaktionen"><button type="button" data-reaction="☺" aria-label="Lächeln">☺</button><button type="button" data-reaction="♥" aria-label="Herz">♥</button><button type="button" data-reaction="★" aria-label="Stern">★</button><button type="button" data-reaction="!" aria-label="Überraschung">!</button><button type="button" data-reaction="♪" aria-label="Musik">♪</button></div></div>
-          <div class="online-card" id="onlineHostControls"><h3>Host</h3><p class="online-hint" id="onlineHostHint">Lade Spieler ein und starte dann die Abstimmung.</p><button class="btn btn-primary btn-wide" id="onlineStart" type="button">Spiel vorbereiten</button><button class="btn btn-ghost btn-wide" id="onlineForceStart" type="button" hidden>Jetzt starten</button></div>
-          <div class="online-card online-legend-card"><h3>Deine Farben</h3><div class="online-legend" id="onlineLegendSide"></div></div>
-        </aside>
+          <div class="online-card" id="onlineHostControls"><h3>Host</h3><p class="online-hint" id="onlineHostHint">Lade Spieler ein und starte dann die Abstimmung.</p><button class="btn btn-primary btn-wide" id="onlineStart" type="button">Spiel vorbereiten</button></div>
+                  </aside>
 
         <main class="online-main">
           <div class="online-panel online-waiting" id="onlineWaiting"><span class="online-waiting-icon">H</span><h2 id="onlineWaitingTitle">Raum ist offen</h2><p class="online-hint" id="onlineWaitingText">Teile den Link. Sobald alle da sind, startet der Host die Abstimmung.</p><div class="online-toast" id="onlineStatus" aria-live="polite"></div></div>
@@ -255,15 +270,17 @@ function buildScreen() {
                   <div class="online-category-card" id="onlineCategoryCard"><span class="online-kicker">KATEGORIE</span><strong id="onlineCategoryLabel">Dreht …</strong><small id="onlineCategoryQuestion">Die Discokugel entscheidet.</small></div>
                 </div>
                 <div class="online-audio" id="onlineAudio" hidden><button class="online-play" id="onlinePlay" type="button" aria-label="Song abspielen"><svg><use href="#i-play"></use></svg></button><div class="online-audio-copy"><strong id="onlineAudioTitle">Song für alle</strong><small id="onlineAudioHint">Gleich geht es los.</small></div><div class="online-progress"><i id="onlineProgress"></i></div></div>
+                <div class="online-audio-gate" id="onlineAudioGate" hidden><div><strong>Ton ist blockiert</strong><small id="onlineAudioGateHint">Dein Browser braucht einen Tipp, damit der Song startet.</small></div><button class="online-audio-gate-btn" id="onlineAudioGateBtn" type="button">Ton aktivieren</button></div>
                 <div class="online-answer" id="onlineAnswerBox" hidden></div>
                 <div class="online-toast" id="onlineGameStatus" aria-live="polite"></div>
                 <div class="online-reveal" id="onlineReveal" hidden></div>
               </div>
               <aside class="online-card-panel">
                 <div class="online-card-head"><div><span class="online-kicker">DEINE KARTE</span><strong id="onlineCardName">Bingo</strong></div><span id="onlineCardProgress">0 / 25</span></div>
+                <div class="online-mark-timer" id="onlineMarkTimer" hidden></div>
                 <div class="online-bingo" id="onlineBingo" aria-label="Bingo-Karte"></div>
                 <div class="online-legend" id="onlineLegend"></div>
-                <div class="online-score" id="onlineScore"></div>
+                <details class="online-leaderboard" id="onlineLeaderboard"><summary><span>Rangliste</span><b id="onlineLeaderboardSummary">0 Pkt.</b></summary><div class="online-score" id="onlineScore"></div></details>
               </aside>
             </div>
           </section>
@@ -287,7 +304,6 @@ function buildScreen() {
   $('#onlineHostForm', section).addEventListener('submit', onCreateRoom);
   $('#onlineJoinForm', section).addEventListener('submit', onJoinRoom);
   $('#onlineStart', section).addEventListener('click', primaryAction);
-  $('#onlineForceStart', section).addEventListener('click', finishVotes);
   $('#onlineForceStart2', section).addEventListener('click', finishVotes);
   $('#onlineCopy', section).addEventListener('click', () => copyText($('#onlineInvite').value, 'Einladungslink kopiert.'));
   $('#onlineCopyCode', section).addEventListener('click', () => copyText(online.code, 'Raum-Code kopiert.'));
@@ -297,6 +313,8 @@ function buildScreen() {
   $('#onlineRulesClose', section).addEventListener('click', () => { $('#onlineRulesModal').hidden = true; });
   $('#onlineRulesModal', section).addEventListener('click', (event) => { if (event.target.id === 'onlineRulesModal') event.currentTarget.hidden = true; });
   $('#onlinePlay', section).addEventListener('click', playOnlineAudio);
+  $('#onlineAudioGateBtn', section).addEventListener('click', playOnlineAudio);
+  section.addEventListener('pointerdown', unlockAudio, { passive: true });
   $('#onlineScrollHost', section).addEventListener('click', () => $('#onlineHostName')?.focus());
   $('#onlineScrollJoin', section).addEventListener('click', () => $('#onlineJoinName')?.focus());
   $('#onlineReactions', section).addEventListener('click', (event) => { const button = event.target.closest('[data-reaction]'); if (button) { send('reaction', { emoji: button.dataset.reaction }); showReaction(button.dataset.reaction, online.name); } });
@@ -324,7 +342,7 @@ function open(prefillCode = '') {
 }
 
 function readSettings() {
-  return { rounds: Number($('#onlineRounds').value) || 15, timer: Number($('#onlineTimerSelect').value) || 25 };
+  return { rounds: Number($('#onlineRounds').value) || 15, timer: Number($('#onlineTimerSelect').value) || 25, markTimer: Number($('#onlineMarkTimerSelect').value) || 12 };
 }
 function onCreateRoom(event) {
   event.preventDefault(); unlockAudio();
@@ -360,7 +378,7 @@ function handleMessage(message, from) {
   if (!message?.type) return;
   if (message.type === '_error') return showError(message.payload?.message || 'Verbindungsfehler');
   if (message.type === '_peer') { if (online.role === 'host') online.connections.set(from, from); return; }
-  if (message.type === '_close') { if (online.role === 'host') { const p = online.players.find((e) => e.id === from); if (p) { p.connected = false; broadcastState(); } } return; }
+  if (message.type === '_close') { if (online.role === 'host') { const p = online.players.find((e) => e.id === from); if (p) { p.connected = false; broadcastState(); maybeRevealEarly(); } } return; }
   if (message.type === '_open') { if (online.role === 'player') send('join', { name: online.name }); return; }
   if (online.role === 'host') return handleHostMessage(message, from);
   return handlePlayerMessage(message);
@@ -373,12 +391,12 @@ function handleHostMessage(message, from) {
     if (!player) { player = { id: from, name, connected: true, score: 0, card: null, marked: new Set(), bingo: false, correct: false }; online.players.push(player); }
     player.name = name; player.connected = true;
     if (!player.card && online.choices.difficulty && ['countdown', 'spinning', 'playing', 'reveal', 'ended'].includes(online.phase)) player.card = makeBingoCard(online.choices.difficulty);
-    sendTo(from, 'welcome', { id: from, code: online.code, name: online.name, card: player.card, settings: online.settings, players: publicPlayers(), phase: online.phase, votes: online.votes, choices: online.choices, category: publicCategory(online.category), round: online.round, winner: online.winner, correct: online.correct });
+    sendTo(from, 'welcome', { id: from, code: online.code, name: online.name, card: player.card, settings: online.settings, players: publicPlayers(), phase: online.phase, votes: online.votes, choices: online.choices, category: publicCategory(online.category), round: online.round, winner: online.winner, correct: online.correct, markDeadline: online.markDeadline });
     broadcastState(); return;
   }
   if (message.type === 'answer' && online.phase === 'playing') {
     const value = String(message.payload?.value ?? '').slice(0, 80).trim();
-    if (value) { online.answers[from] = { value, at: Date.now() }; broadcastState(); }
+    if (value) { online.answers[from] = { value, at: Date.now() }; broadcastState(); maybeRevealEarly(); }
     return;
   }
   if (message.type === 'vote' && online.phase === 'setup') {
@@ -399,7 +417,7 @@ function handlePlayerMessage(message) {
     online.phase = message.payload?.phase || 'lobby'; online.votes = message.payload?.votes || {};
     online.choices = message.payload?.choices || online.choices; online.category = message.payload?.category || online.category;
     online.round = message.payload?.round || online.round; online.winner = message.payload?.winner || null;
-    online.correct = message.payload?.correct || {};
+    online.correct = message.payload?.correct || {}; online.markDeadline = message.payload?.markDeadline || 0;
     online.pending = new Set((online.players || []).filter((p) => p.pending).map((p) => p.id));
     if (message.payload?.card) online.card = message.payload.card;
     const mine = online.players.find((p) => p.id === online.peerId); if (mine?.marked) online.marked = new Set(mine.marked);
@@ -417,6 +435,7 @@ function handlePlayerMessage(message) {
     online.category = next.category || online.category; online.correct = next.players ? Object.fromEntries(next.players.map((p) => [p.id, Boolean(p.correct)])) : online.correct;
     online.pending = new Set((online.players || []).filter((p) => p.pending).map((p) => p.id));
     if (next.deadline) online.deadline = next.deadline;
+    if (next.markDeadline) online.markDeadline = next.markDeadline;
     const mine = online.players.find((p) => p.id === online.peerId); if (mine?.marked) online.marked = new Set(mine.marked);
     render(); return;
   }
@@ -424,7 +443,7 @@ function handlePlayerMessage(message) {
   if (message.type === 'reveal') {
     stopTimers(); online.phase = message.payload?.phase || 'reveal'; online.winner = message.payload?.winner || null;
     online.category = message.payload?.category || online.category; online.song = message.payload?.song || online.song;
-    online.correct = message.payload?.correct || {}; online.revealAnswers = message.payload?.answers || {};
+    online.correct = message.payload?.correct || {}; online.revealAnswers = message.payload?.answers || {}; online.markDeadline = message.payload?.markDeadline || online.markDeadline;
     if (message.payload?.players) online.players = message.payload.players;
     online.pending = new Set((online.players || []).filter((p) => p.pending).map((p) => p.id));
     const mine = online.players.find((p) => p.id === online.peerId); if (mine?.marked) online.marked = new Set(mine.marked);
@@ -437,6 +456,7 @@ function handlePlayerMessage(message) {
 
 function primaryAction() {
   if (online.role !== 'host') return;
+  unlockAudio();
   if (online.phase === 'lobby' || online.phase === 'ended') return startSetup();
   if (online.phase === 'setup') return finishVotes();
   if (online.phase === 'reveal') return beginRound();
@@ -446,7 +466,7 @@ function startSetup() {
   stopTimers();
   online.phase = 'setup'; online.round = 0; online.votes = {}; online.choices = { version: '', difficulty: '' };
   online.answers = {}; online.correct = {}; online.pending = new Set(); online.revealAnswers = {}; online.winner = null;
-  online.category = null; online.song = null; online.startAt = 0; online.deadline = 0; online.answer = null; online.submitted = false;
+  online.category = null; online.song = null; online.startAt = 0; online.deadline = 0; online.markDeadline = 0; online.warningKey = ''; online.audioError = ''; online.audioPending = false; online.answer = null; online.submitted = false;
   online.card = null; online.marked = new Set(); online.recent = []; online.recentCategories = [];
   for (const player of online.players) { player.score = 0; player.card = null; player.marked = new Set(); player.bingo = false; player.correct = false; }
   send('state', publicState()); render();
@@ -460,8 +480,15 @@ function submitVote(version, difficulty) {
   if (online.role === 'host') { broadcastState(); if (allVoted()) setTimeout(finishVotes, 450); }
   else { send('vote', vote); render(); }
 }
+function activePlayers() { return online.players.filter((p) => p.connected !== false); }
+function allAnswered() { const active = activePlayers(); return active.length > 0 && active.every((p) => online.answers[p.id]); }
+function maybeRevealEarly() {
+  if (online.role !== 'host' || online.phase !== 'playing' || !allAnswered()) return;
+  clearTimeout(online.timers.round);
+  online.timers.round = setTimeout(revealRound, 180);
+}
 function allVoted() {
-  const active = online.players.filter((p) => p.connected !== false);
+  const active = activePlayers();
   return active.length > 0 && active.every((p) => online.votes[p.id]?.version && online.votes[p.id]?.difficulty);
 }
 function tally(key, fallback) {
@@ -512,7 +539,7 @@ function beginRound() {
   if (!song) return showError('Keine Lieder für diese Auswahl.');
   online.round += 1; online.category = category; online.song = song; online.audioUrl = audioUrl(song);
   online.phase = 'spinning'; online.answers = {}; online.correct = {}; online.pending = new Set(); online.revealAnswers = {}; online.winner = null;
-  online.answer = null; online.submitted = false; online.audioBlocked = false; online.startIn = 4200; online.startAt = Date.now() + online.startIn; online.deadline = online.startAt + online.settings.timer * 1000;
+  online.answer = null; online.submitted = false; online.audioBlocked = false; online.audioError = ''; online.audioPending = false; online.audioPlaying = false; online.audioFallbackTried = false; online.markDeadline = 0; online.warningKey = ''; online.startIn = 3200; online.startAt = Date.now() + online.startIn; online.deadline = online.startAt + online.settings.timer * 1000;
   online.recent.push(song.id); if (online.recent.length > 100) online.recent.shift();
   const payload = { round: online.round, startIn: online.startIn, timer: online.settings.timer, audio: online.audioUrl, category: publicCategory(category), version: online.choices.version, difficulty: online.choices.difficulty };
   send('round', payload); send('state', publicState());
@@ -524,7 +551,7 @@ function applyRound(payload) {
   online.category = payload.category || online.category; online.startIn = payload.startIn || 4200;
   online.startAt = Date.now() + online.startIn; online.deadline = online.startAt + (payload.timer || online.settings.timer) * 1000;
   online.answers = {}; online.correct = {}; online.pending = new Set(); online.revealAnswers = {}; online.winner = null;
-  online.answer = null; online.submitted = false; online.audioBlocked = false;
+  online.answer = null; online.submitted = false; online.audioBlocked = false; online.audioError = ''; online.audioPending = false; online.audioPlaying = false; online.audioFallbackTried = false; online.markDeadline = 0; online.warningKey = '';
   setupAudio(payload.audio); render(); scheduleClientRound(online.startIn);
 }
 function scheduleHostRound(startIn) {
@@ -545,6 +572,34 @@ function scheduleClientRound(startIn) {
 }
 function startHostTimer() { online.timers.round = setTimeout(revealRound, Math.max(0, online.deadline - Date.now())); }
 function startClientTimer() { online.timers.round = setTimeout(render, Math.max(0, online.deadline - Date.now()) + 200); }
+function eligibleCells(player, categoryId = online.category?.id) {
+  return (player?.card || []).map((cat, index) => (cat === categoryId && !player.marked.has(index) ? index : -1)).filter((index) => index >= 0);
+}
+function randomCell(player, categoryId = online.category?.id) {
+  const cells = eligibleCells(player, categoryId);
+  if (!cells.length) return null;
+  const buffer = new Uint32Array(1); crypto.getRandomValues(buffer);
+  return cells[buffer[0] % cells.length];
+}
+function scheduleNextRound(delay = 1800) {
+  if (online.role !== 'host' || online.phase !== 'reveal' || online.winner) return;
+  clearTimeout(online.timers.next);
+  online.timers.next = setTimeout(() => {
+    online.timers.next = null;
+    if (online.phase === 'reveal' && !online.winner) beginRound();
+  }, delay);
+}
+function autoMarkPending() {
+  if (online.role !== 'host' || online.phase !== 'reveal') return;
+  for (const playerId of [...online.pending]) {
+    const player = online.players.find((p) => p.id === playerId);
+    const index = randomCell(player);
+    if (index == null) { online.pending.delete(playerId); continue; }
+    hostMark(playerId, index, true);
+    if (online.phase === 'ended') return;
+  }
+  if (online.phase === 'reveal') { broadcastState(); scheduleNextRound(1700); }
+}
 function revealRound() {
   if (online.role !== 'host' || online.phase !== 'playing' || !online.song) return;
   stopTimers();
@@ -554,17 +609,22 @@ function revealRound() {
     const raw = online.answers[player.id]?.value ?? '';
     const ok = isCorrect(category, song, raw);
     player.correct = ok; online.correct[player.id] = ok; online.revealAnswers[player.id] = formatAnswer(category, raw);
-    if (ok && (player.card || []).some((cat, i) => cat === category.id && !player.marked.has(i))) online.pending.add(player.id);
+    if (ok && eligibleCells(player).length) online.pending.add(player.id);
   }
-  online.phase = 'reveal'; online.markDeadline = Date.now() + 12000;
-  const payload = { phase: 'reveal', category: publicCategory(category), song: { year: song.year, title: song.title, artist: song.artist, group: Boolean(song.group), spotifyId: song.spotifyId || '' }, correct: online.correct, answers: online.revealAnswers, players: publicPlayers(), winner: null };
+  online.phase = 'reveal';
+  online.markDeadline = Date.now() + Math.max(3, Number(online.settings.markTimer) || 12) * 1000;
+  online.warningKey = '';
+  const payload = { phase: 'reveal', category: publicCategory(category), song: { year: song.year, title: song.title, artist: song.artist, group: Boolean(song.group), spotifyId: song.spotifyId || '' }, correct: online.correct, answers: online.revealAnswers, players: publicPlayers(), winner: null, markDeadline: online.markDeadline, markTimer: online.settings.markTimer };
   send('reveal', payload); send('state', publicState()); render();
-  online.timers.mark = setTimeout(() => { if (online.phase === 'reveal') { online.pending.clear(); send('state', publicState()); render(); } }, 12000);
+  if (!online.pending.size) scheduleNextRound(2600);
+  else online.timers.mark = setTimeout(autoMarkPending, Math.max(0, online.markDeadline - Date.now()));
 }
-function hostMark(playerId, index) {
+function hostMark(playerId, index, auto = false) {
   if (online.role !== 'host' || online.phase !== 'reveal' || !online.correct[playerId]) return;
+  if (!online.pending.has(playerId)) return;
   const player = online.players.find((p) => p.id === playerId); if (!player?.card || player.marked.has(index)) return;
   if (player.card[index] !== online.category?.id) return;
+  if (!auto && online.markDeadline && Date.now() > online.markDeadline + 600) return;
   player.marked.add(index); player.score = (player.score || 0) + 1; online.pending.delete(playerId);
   if (playerId === 'host') online.marked = player.marked;
   player.bingo = hasBingo(player.marked);
@@ -573,12 +633,14 @@ function hostMark(playerId, index) {
     api()?.confetti?.(90);
     send('ended', { winner: online.winner, players: publicPlayers() }); send('state', publicState()); render(); return;
   }
-  send('state', publicState()); render();
+  broadcastState();
+  if (online.pending.size === 0) scheduleNextRound(1700);
 }
 function onCellClick(index) {
   const me = online.players.find((p) => p.id === myId());
   const pending = online.role === 'host' ? online.pending.has('host') : Boolean(me?.pending);
   if (online.phase !== 'reveal' || !online.correct[myId()] || !pending) return;
+  if (online.markDeadline && Date.now() > online.markDeadline + 600) return;
   if (online.card?.[index] !== online.category?.id || online.marked.has(index)) return;
   if (online.role === 'host') hostMark('host', index); else send('mark', { index });
 }
@@ -594,7 +656,7 @@ function submitAnswer(value) {
   const clean = String(value ?? '').trim().slice(0, 80);
   if (!clean) { $('#onlineGameStatus').textContent = 'Bitte gib zuerst eine Antwort ein.'; return; }
   online.answer = clean; online.submitted = true;
-  if (online.role === 'host') { online.answers.host = { value: clean, at: Date.now() }; broadcastState(); }
+  if (online.role === 'host') { online.answers.host = { value: clean, at: Date.now() }; broadcastState(); maybeRevealEarly(); }
   else send('answer', { value: clean });
   render(); $('#onlineGameStatus').textContent = 'Tipp gespeichert. Warte auf die Auflösung …';
 }
@@ -622,19 +684,19 @@ function render() {
     const badge = phase === 'setup' ? (vote ? '<span class="online-player-state done">✓</span>' : '<span class="online-player-state">…</span>') : p.correct && phase === 'reveal' ? '<span class="online-player-state done">✓</span>' : p.bingo ? '<span class="online-player-state bingo">B</span>' : '';
     return `<li><span class="dot ${p.connected === false ? 'offline' : ''}"></span><span class="online-player-name">${esc(p.name)}${p.id === myId() ? ' <small>(du)</small>' : ''}</span>${badge}<strong>${p.score || 0}</strong></li>`;
   }).join('') || '<li class="online-empty">Noch niemand da.</li>';
-  $('#onlineWaiting').hidden = phase !== 'lobby';
+  $('#onlineWaiting').hidden = phase !== 'lobby' || isHost;
   $('#onlineSetup').hidden = !['setup', 'countdown'].includes(phase);
   $('#onlineGame').hidden = !gamePhases.includes(phase);
+  online.screen.classList.toggle('is-game', gamePhases.includes(phase));
   const start = $('#onlineStart');
-  start.hidden = !isHost || !['lobby', 'reveal', 'ended'].includes(phase);
-  start.textContent = phase === 'lobby' ? 'Spiel vorbereiten' : phase === 'ended' ? 'Nochmal spielen' : 'Nächste Runde';
-  $('#onlineForceStart').hidden = true;
+  start.hidden = !isHost || !['lobby', 'ended'].includes(phase);
+  start.textContent = phase === 'lobby' ? 'Spiel vorbereiten' : 'Nochmal spielen';
   $('#onlineForceStart2').hidden = !isHost || phase !== 'setup';
-  $('#onlineHostControls').hidden = !isHost;
+  $('#onlineHostControls').hidden = !isHost || ['spinning', 'playing', 'reveal'].includes(phase);
   const hint = phase === 'lobby' ? (isHost ? 'Lade Spieler ein. Danach startest du die gemeinsame Abstimmung.' : 'Warte, bis der Host die Abstimmung startet.')
     : phase === 'setup' ? 'Alle wählen Version und Schwierigkeit. Danach geht es automatisch los.'
     : phase === 'countdown' ? 'Die Runde startet gleich …'
-    : phase === 'reveal' ? (online.pending.size ? 'Warte kurz, bis alle richtigen Tipps ihr Kreuz gesetzt haben.' : 'Weiter mit der nächsten Runde.')
+    : phase === 'reveal' ? (online.pending.size ? 'Kreuzen läuft. Die nächste Runde startet automatisch.' : 'Nächste Runde startet automatisch …')
     : phase === 'ended' ? 'Noch eine Runde?'
     : isHost ? 'Du bist der Host. Die Discokugel dreht für alle.' : 'Hör zu und tippe deine Antwort ein.';
   $('#onlineHostHint').textContent = hint;
@@ -644,7 +706,6 @@ function render() {
   }
   if (['setup', 'countdown'].includes(phase)) renderSetup();
   if (gamePhases.includes(phase)) renderGame();
-  $('#onlineLegendSide').innerHTML = legendHtml();
   $('#onlineRoomCode').textContent = online.code;
 }
 function voteCount(key, value) { return Object.values(online.votes || {}).filter((v) => v[key] === value).length; }
@@ -672,18 +733,42 @@ function renderGame() {
   $('#onlineDifficultyLabel').textContent = difficultyLabel(online.choices.difficulty || 'easy');
   const spinning = phase === 'spinning';
   const disco = $('#onlineDisco'); disco.classList.toggle('is-spinning', spinning); disco.classList.toggle('is-playing', phase === 'playing');
-  if (category) { disco.style.setProperty('--cat', category.color); $('#onlineCategoryCard').style.setProperty('--cat', category.color); }
+  if (category) {
+    disco.style.setProperty('--cat', category.color); $('#onlineCategoryCard').style.setProperty('--cat', category.color);
+    $('.online-spin-card')?.style.setProperty('--cat', category.color); $('.online-disco-wrap')?.style.setProperty('--cat', category.color);
+  }
   $('#onlineCategoryLabel').textContent = spinning ? 'Dreht …' : category?.label || 'Kategorie';
   $('#onlineCategoryQuestion').textContent = spinning ? 'Die Discokugel entscheidet für alle.' : category?.question || '';
   const remaining = phase === 'playing' ? Math.max(0, Math.ceil((online.deadline - Date.now()) / 1000)) : phase === 'spinning' ? Math.max(0, Math.ceil((online.startAt - Date.now()) / 1000)) : 0;
-  $('#onlineTimer').innerHTML = phase === 'playing' ? `${remaining}<small>s</small>` : phase === 'spinning' ? `${Math.max(1, remaining)}<small>s</small>` : phase === 'reveal' ? '✓<small>aufgelöst</small>' : '🏆<small>Bingo</small>';
+  const me = online.players.find((p) => p.id === myId());
+  const markPending = phase === 'reveal' && (isHost ? online.pending.has('host') : Boolean(me?.pending));
+  const markLeft = markPending && online.markDeadline ? Math.max(0, Math.ceil((online.markDeadline - Date.now()) / 1000)) : 0;
+  $('#onlineTimer').innerHTML = phase === 'playing' ? `${remaining}<small>s</small>` : phase === 'spinning' ? `${Math.max(1, remaining)}<small>s</small>` : phase === 'reveal' && markPending ? `${markLeft}<small>s kreuzen</small>` : phase === 'reveal' ? '✓<small>aufgelöst</small>' : '★<small>Bingo</small>';
   const audio = $('#onlineAudio');
-  audio.hidden = !['spinning', 'playing', 'reveal'].includes(phase) || !online.audioUrl;
+  audio.hidden = !['spinning', 'playing'].includes(phase) || !online.audioUrl;
   if (!audio.hidden) {
     $('#onlineAudioTitle').textContent = phase === 'spinning' ? 'Song startet gleich' : 'Song läuft für alle';
-    $('#onlineAudioHint').textContent = online.audioBlocked ? 'Ton antippen, falls dein Browser blockiert.' : phase === 'playing' ? 'Hör zu und antworte unten.' : phase === 'reveal' ? 'Auflösung unten.' : 'Discokugel dreht …';
+    $('#onlineAudioHint').textContent = online.audioError ? 'Audio-Fehler – noch einmal antippen.' : online.audioBlocked ? 'Ton antippen, falls dein Browser blockiert.' : phase === 'playing' ? 'Hör zu und antworte unten.' : phase === 'reveal' ? 'Auflösung unten.' : 'Discokugel dreht …';
     $('#onlinePlay').classList.toggle('is-blocked', online.audioBlocked);
     $('#onlinePlay').setAttribute('aria-label', online.audioBlocked ? 'Ton aktivieren' : 'Song abspielen');
+  }
+  const gate = $('#onlineAudioGate');
+  gate.hidden = !(phase === 'playing' && (online.audioBlocked || (!online.audioUnlocked && !online.audioPlaying)));
+  if (!gate.hidden) {
+    $('#onlineAudioGateHint').textContent = online.audioError || 'Dein Browser braucht einen Tipp, damit der Song startet.';
+    $('#onlineAudioGateBtn').textContent = online.audioError ? 'Audio neu laden' : 'Ton aktivieren';
+  }
+  const markBox = $('#onlineMarkTimer');
+  markBox.hidden = !markPending;
+  if (markPending) {
+    markBox.innerHTML = `<span>Kreuz setzen</span><strong>${markLeft}s</strong><small>danach zufällig</small>`;
+    const warning = markLeft > 0 && markLeft <= 3;
+    const key = `${online.round}:${online.markDeadline}`;
+    if (warning && online.warningKey !== key) {
+      online.warningKey = key;
+      const grid = $('#onlineBingo'); grid.classList.remove('is-warning'); void grid.offsetWidth; grid.classList.add('is-warning');
+      setTimeout(() => grid.classList.remove('is-warning'), 3200);
+    }
   }
   renderAnswerForm();
   renderBingo();
@@ -691,10 +776,14 @@ function renderGame() {
   renderScore();
   $('#onlineCardName').textContent = online.name || 'Deine Karte';
   const marks = online.marked?.size || 0; $('#onlineCardProgress').textContent = `${marks} / 25`;
-  if (phase === 'spinning') $('#onlineGameStatus').textContent = '🪩 Die Discokugel dreht …';
+  if (phase === 'spinning') $('#onlineGameStatus').textContent = 'Die Discokugel dreht …';
   else if (phase === 'playing') { const count = Object.keys(online.answers || {}).length; $('#onlineGameStatus').textContent = `${count} / ${online.players.filter((p) => p.connected !== false).length} haben getippt.`; }
-  else if (phase === 'reveal') { const me = online.correct[myId()]; $('#onlineGameStatus').textContent = me ? 'Richtig! Setze jetzt dein Kreuz in der Kategoriefarbe.' : 'Schade – diesmal kein Kreuz. Die Auflösung steht unten.'; }
-  else if (phase === 'ended') $('#onlineGameStatus').textContent = online.winner ? `🏆 ${online.winner.name} hat BINGO!` : 'Spiel beendet.';
+  else if (phase === 'reveal') {
+    if (markPending) $('#onlineGameStatus').textContent = `Richtig! ${markLeft}s zum Kreuzen – danach wird zufällig gesetzt.`;
+    else if (online.correct[myId()]) $('#onlineGameStatus').textContent = 'Kreuz gesetzt. Nächste Runde startet automatisch …';
+    else $('#onlineGameStatus').textContent = 'Schade – diesmal kein Kreuz. Die Auflösung steht unten.';
+  }
+  else if (phase === 'ended') $('#onlineGameStatus').textContent = online.winner ? `${online.winner.name} hat BINGO!` : 'Spiel beendet.';
   $('#onlineLegend').innerHTML = legendHtml();
 }
 
@@ -713,7 +802,7 @@ function renderAnswerForm() {
   let fields = '';
   if (cat.type === 'choice') fields = `<div class="online-answer-choices">${cat.options.map((o) => `<button type="button" class="online-answer-choice" data-answer="${esc(o.value)}">${esc(o.label)}</button>`).join('')}</div>`;
   else if (cat.type === 'decade') fields = `<div class="online-answer-choices online-decades">${['1950s', '1960s', '1970s', '1980s', '1990s', '2000s', '2010s', '2020s'].map((d) => `<button type="button" class="online-answer-choice" data-answer="${d}">${decadeLabel(d)}</button>`).join('')}</div>`;
-  else if (cat.type === 'year') fields = `<form class="online-answer-form" id="onlineAnswerForm"><input id="onlineAnswerInput" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="z. B. 1998" aria-label="Jahr" autocomplete="off" /><button class="online-answer-submit" type="submit">Tipp abgeben</button></form>`;
+  else if (cat.type === 'year') fields = `<form class="online-answer-form" id="onlineAnswerForm"><input id="onlineAnswerInput" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="z. B. 98 oder 1998" aria-label="Jahr" autocomplete="off" /><button class="online-answer-submit" type="submit">Tipp abgeben</button></form><small class="online-input-hint">2 Ziffern reichen: 84 = 1984, 06 = 2006.</small>`;
   else fields = `<form class="online-answer-form" id="onlineAnswerForm"><input id="onlineAnswerInput" maxlength="80" placeholder="${cat.type === 'title' ? 'Songtitel …' : 'Interpret oder Band …'}" aria-label="${esc(cat.label)}" autocomplete="off" /><button class="online-answer-submit" type="submit">Tipp abgeben</button></form>`;
   box.innerHTML = `<div class="online-answer-head"><span class="online-kicker">DEINE ANTWORT</span><strong>${esc(cat.question)}</strong></div>${fields}`;
   $('#onlineAnswerInput')?.focus({ preventScroll: true });
@@ -747,6 +836,8 @@ function renderReveal() {
 function renderScore() {
   const sorted = [...online.players].sort((a, b) => (b.score || 0) - (a.score || 0));
   $('#onlineScore').innerHTML = sorted.length ? sorted.map((p, i) => `<div class="${p.id === myId() ? 'is-me' : ''}"><span>${i + 1}. ${esc(p.name)}${p.bingo ? ' · <b>BINGO</b>' : ''}</span><strong>${p.score || 0} Pkt.</strong></div>`).join('') : '';
+  const me = sorted.find((p) => p.id === myId());
+  $('#onlineLeaderboardSummary').textContent = me ? `${me.score || 0} Pkt. · Platz ${sorted.indexOf(me) + 1}` : '';
 }
 function broadcastState() { if (online.role === 'host') send('state', publicState()); render(); }
 function showReaction(emoji, name) { const layer = document.createElement('div'); layer.className = 'online-reaction-float'; layer.textContent = `${emoji} ${name}`; document.body.append(layer); setTimeout(() => layer.remove(), 2200); }
@@ -756,35 +847,74 @@ async function copyText(text, message) {
 }
 
 let onlineAudio = null;
+async function resolveItunesAudio() {
+  if (online.audioFallbackTried || !online.song) return false;
+  online.audioFallbackTried = true;
+  const song = online.song;
+  const match = (item) => item?.previewUrl && /song|music/i.test(item.kind || 'song');
+  try {
+    let data = null;
+    if (song.itunesId) data = await fetch(`https://itunes.apple.com/lookup?id=${encodeURIComponent(song.itunesId)}&country=DE`).then((r) => r.json());
+    let item = data?.results?.find(match);
+    if (!item) {
+      data = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(`${song.title} ${song.artist}`)}&entity=song&limit=8&country=DE`).then((r) => r.json());
+      item = data?.results?.find(match);
+    }
+    if (!item?.previewUrl) return false;
+    online.audioUrl = item.previewUrl;
+    setupAudio(item.previewUrl);
+    return true;
+  } catch { return false; }
+}
 const SILENT_AUDIO = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
 function ensureAudio() {
   if (onlineAudio) return onlineAudio;
-  onlineAudio = new Audio(); onlineAudio.preload = 'auto';
+  onlineAudio = new Audio(); onlineAudio.preload = 'auto'; onlineAudio.setAttribute('playsinline', ''); onlineAudio.style.display = 'none'; document.body.append(onlineAudio);
   onlineAudio.addEventListener('timeupdate', () => { const bar = $('#onlineProgress'); if (bar && onlineAudio.duration) bar.style.width = `${Math.min(100, (onlineAudio.currentTime / onlineAudio.duration) * 100)}%`; });
+  onlineAudio.addEventListener('playing', () => {
+    if (!onlineAudio.getAttribute('src') || onlineAudio.src.startsWith('data:')) return;
+    online.audioError = ''; online.audioBlocked = false; online.audioPending = false; online.audioPlaying = true;
+    $('#onlinePlay')?.classList.add('is-playing'); render();
+  });
+  onlineAudio.addEventListener('error', () => {
+    if (!onlineAudio.getAttribute('src') || onlineAudio.src.startsWith('data:')) return;
+    online.audioError = onlineAudio.error?.message || 'Audio konnte nicht geladen werden.';
+    online.audioBlocked = true; render();
+    if (!online.audioFallbackTried) resolveItunesAudio().then((ok) => { if (ok && online.phase === 'playing') playScheduledAudio(); });
+  });
   return onlineAudio;
 }
 function unlockAudio() {
   if (online.audioUnlocked) return;
   const audio = ensureAudio();
+  if (online.phase === 'playing' && audio.src && !audio.src.startsWith('data:')) return;
+  if (!audio.paused && audio.src && !audio.src.startsWith('data:')) return;
   audio.muted = true; audio.src = SILENT_AUDIO;
-  audio.play().then(() => { audio.pause(); audio.muted = false; audio.removeAttribute('src'); online.audioUnlocked = true; }).catch(() => { audio.muted = false; });
+  audio.play().then(() => {
+    audio.pause(); audio.muted = false; audio.removeAttribute('src'); online.audioUnlocked = true;
+  }).catch(() => { audio.muted = false; });
 }
 function setupAudio(url) {
-  const audio = ensureAudio(); audio.pause(); audio.src = url || ''; audio.currentTime = 0; audio.muted = false;
+  const audio = ensureAudio(); audio.pause(); audio.muted = false; audio.src = url || ''; audio.currentTime = 0;
+  if (url) audio.load();
+  online.audioError = ''; online.audioBlocked = false; online.audioPending = false; online.audioPlaying = false;
   $('#onlineProgress')?.style.setProperty('width', '0%'); $('#onlinePlay')?.classList.remove('is-playing');
 }
 function playScheduledAudio() {
-  const audio = ensureAudio(); if (!audio.src) return;
+  const audio = ensureAudio(); if (!audio.src || audio.src.startsWith('data:') || online.audioError) return;
   audio.currentTime = 0;
-  audio.play().then(() => { online.audioBlocked = false; $('#onlinePlay')?.classList.add('is-playing'); render(); })
+  audio.play().then(() => { online.audioBlocked = false; online.audioPending = false; $('#onlinePlay')?.classList.add('is-playing'); render(); })
     .catch(() => { online.audioBlocked = true; render(); });
 }
-function playOnlineAudio() {
-  const audio = ensureAudio(); if (!audio.src) return;
-  if (audio.paused) audio.play().then(() => { online.audioBlocked = false; $('#onlinePlay')?.classList.add('is-playing'); render(); }).catch(() => { online.audioBlocked = true; render(); api()?.showToast('Audio konnte nicht gestartet werden.', 3000); });
+async function playOnlineAudio() {
+  if (!online.audioUrl) return;
+  if (online.phase === 'spinning') { online.audioPending = true; online.audioBlocked = false; api()?.showToast('Ton aktiviert – der Song startet gleich.', 2200); render(); return; }
+  if (online.audioError) { const resolved = await resolveItunesAudio(); if (!resolved) setupAudio(online.audioUrl); }
+  const audio = ensureAudio(); if (!audio.src) setupAudio(online.audioUrl);
+  if (audio.paused) audio.play().then(() => { online.audioBlocked = false; $('#onlinePlay')?.classList.add('is-playing'); render(); }).catch(() => { online.audioBlocked = true; render(); api()?.showToast('Audio konnte nicht gestartet werden. Bitte noch einmal tippen.', 3000); });
   else { audio.pause(); $('#onlinePlay')?.classList.remove('is-playing'); }
 }
-function clearRoundTimers() { clearTimeout(online.timers.phase); clearTimeout(online.timers.audio); clearTimeout(online.timers.round); clearTimeout(online.timers.mark); clearInterval(online.timers.tick); online.timers.phase = online.timers.audio = online.timers.round = online.timers.mark = online.timers.tick = null; }
+function clearRoundTimers() { clearTimeout(online.timers.phase); clearTimeout(online.timers.audio); clearTimeout(online.timers.round); clearTimeout(online.timers.mark); clearTimeout(online.timers.next); clearInterval(online.timers.tick); online.timers.phase = online.timers.audio = online.timers.round = online.timers.mark = online.timers.next = online.timers.tick = null; }
 function stopTimers() { clearRoundTimers(); clearTimeout(online.timers.countdown); online.timers.countdown = null; }
 
 function boot() {
@@ -792,6 +922,6 @@ function boot() {
   const params = new URLSearchParams(location.search);
   const code = cleanCode(params.get('online') || '');
   if (params.has('online')) open(code.length === 6 ? code : '');
-  window.HitsterOnline = { open, close, state: online, debug: { isCorrect, makeBingoCard, hasBingo, hostMark, revealRound, beginRound, endGame, render, online } };
+  window.HitsterOnline = { open, close, state: online, debug: { isCorrect, expandYear, makeBingoCard, hasBingo, hostMark, randomCell, autoMarkPending, scheduleNextRound, revealRound, beginRound, endGame, render, audio: ensureAudio, online } };
 }
 if (window.HITSTER) boot(); else window.addEventListener('hitster-ready', boot, { once: true });

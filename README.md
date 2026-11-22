@@ -41,8 +41,12 @@ Kein Login, keine Werbung, kein externes Tracking. Open Source (MIT).
   QR-Code bei – ohne Konto, ohne eigenen Server. Jeder hat eine echte 5×5-Farbkarte
   mit fünf Bingo-Kategorien, hört den Clip am eigenen Gerät und setzt bei richtiger
   Antwort ein Kreuz in der passenden Farbe. Die erste vollständige Reihe gewinnt.
-  Verbindung direkt zwischen den Geräten (WebRTC/PeerJS), gleicher Browser
-  zusätzlich per BroadcastChannel.
+  Sobald alle getippt haben, wird automatisch aufgelöst; nach dem Kreuzen startet
+  die nächste Runde ohne Host-Klick. Die Kreuzzeit ist hostseitig einstellbar
+  (6/10/12/20 s); kurz vor Ablauf blinkt das Feld fünfmal, danach wird ein freies
+  Feld zufällig gesetzt. Verbindung direkt zwischen den Geräten (WebRTC/PeerJS),
+  gleicher Browser zusätzlich per BroadcastChannel. Bei blockiertem Autoplay
+  erscheint ein großer „Ton aktivieren“-Button.
 - **Datenbank:** Alle 4.860 Songs mit Jahr, Genre, Kategorien, Beliebtheit,
   Spotify-/Deezer-/iTunes-IDs und Versionen als JSON herunterladen (`/api/database`).
 - **PWA:** Installierbar, offlinefähige Shell, Manifest, Icons, Service Worker.
@@ -63,8 +67,13 @@ Kein Login, keine Werbung, kein externes Tracking. Open Source (MIT).
 2. Link oder QR-Code teilen. Alle anderen öffnen ihn und treten mit Namen bei.
 3. Alle stimmen über **Version** und **Schwierigkeit** ab – Seite A (Einsteiger) oder Seite B (Expert).
 4. Der Host startet. Die Discokugel wählt eine Kategorie, der Clip läuft für alle gleichzeitig.
-5. Innerhalb von 25 Sekunden antworten. Richtig? Kreuz auf ein freies Feld in der Kategoriefarbe.
-6. Wer zuerst fünf Felder waagerecht, senkrecht oder diagonal voll hat, ruft **BINGO**.
+5. Innerhalb der Antwortzeit tippen – bei Jahresfragen reichen zwei Ziffern
+   (`84` = 1984, `06` = 2006). Sobald alle getippt haben, wird sofort aufgelöst.
+6. Richtig? Kreuz auf ein freies Feld in der Kategoriefarbe. Dafür läuft die
+   hostseitig eingestellte Kreuzzeit; kurz vor Schluss blinkt das Feld fünfmal,
+   danach wird automatisch ein freies Feld zufällig gesetzt.
+7. Wer zuerst fünf Felder waagerecht, senkrecht oder diagonal voll hat, ruft **BINGO**.
+   Die nächste Runde startet automatisch – der Host muss nicht klicken.
 
 Die Karte ist wie beim echten Hitster Bingo ein **5×5-Farbfeld**: jede Farbe steht
 für eine Kategorie, jede Kategorie kommt genau fünfmal vor. Seite A: Solo/Gruppe,
@@ -136,7 +145,7 @@ Interpret/Band, Jahrzehnt, ±3 Jahre. Kein Login, keine Werbung.
 - Die exakte Karten-Datenbank (`hitster-cards.json`) ist **~2,0 MB roh / ~420 KB gzip**
   und wird nur beim ersten Scan geladen.
 - `/api/catalog` ist **1 Tag** cachebar, versionierte CSS/JS-Dateien **1 Jahr**
-  (`immutable`), Asset-Version `4.9.0`.
+  (`immutable`), Asset-Version `4.10.0`.
 - Audio-Quellen werden **parallel** (Deezer/iTunes) aufgelöst, Timeouts 8–15 s.
 - Cache-Hits brauchen keinen Verzeichnis-Scan.
 - `scripts/serve-watchdog.sh` startet den Node-Prozess nach einem Absturz neu.

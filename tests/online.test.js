@@ -142,8 +142,10 @@ await step('online bingo: voting, 5x5 color cards, sync audio, answer, marking a
   await host.locator('[data-start="online"]').click();
   await host.locator('#onlineHostName').fill('Host');
   await host.selectOption('#onlineTimerSelect', '15');
+  await host.selectOption('#onlineMarkTimerSelect', '6');
   await host.locator('#onlineHostForm button[type=submit]').click();
   await host.waitForSelector('#onlineRoom:not([hidden])');
+  assert.equal(await host.evaluate(() => window.HitsterOnline.state.settings.markTimer), 6);
   const code = (await host.locator('#onlineRoomCode').innerText()).trim();
   assert.match(code, /^[A-Z0-9]{6}$/);
   assert.match(await host.locator('#onlineQr').getAttribute('src'), /\/api\/qr\?text=/);
@@ -164,6 +166,10 @@ await step('online bingo: voting, 5x5 color cards, sync audio, answer, marking a
       before: d.isCorrect({ id: 'before2000', type: 'choice' }, song, 'yes'),
       year2: d.isCorrect({ id: 'year2', type: 'year', tolerance: 2 }, song, '2000'),
       year2bad: d.isCorrect({ id: 'year2', type: 'year', tolerance: 2 }, song, '2002'),
+      short84: d.isCorrect({ id: 'year', type: 'year', tolerance: 0 }, { ...song, year: 1984 }, '84'),
+      short06: d.isCorrect({ id: 'year', type: 'year', tolerance: 0 }, { ...song, year: 2006 }, '06'),
+      shortBad: d.isCorrect({ id: 'year', type: 'year', tolerance: 0 }, { ...song, year: 1984 }, '85'),
+      decadeShort: d.isCorrect({ id: 'decade', type: 'decade' }, song, '90'),
       decade: d.isCorrect({ id: 'decade', type: 'decade' }, song, '1990s'),
       title: d.isCorrect({ id: 'title', type: 'title' }, song, 'believe'),
       artist: d.isCorrect({ id: 'artist', type: 'artist' }, song, 'Cher'),
@@ -172,8 +178,9 @@ await step('online bingo: voting, 5x5 color cards, sync audio, answer, marking a
       card: d.makeBingoCard('easy')
     };
   });
-  assert.deepEqual([rules.solo, rules.group, rules.before, rules.year2, rules.decade, rules.title, rules.artist, rules.line], [true, true, true, true, true, true, true, true]);
+  assert.deepEqual([rules.solo, rules.group, rules.before, rules.year2, rules.short84, rules.short06, rules.decadeShort, rules.decade, rules.title, rules.artist, rules.line], [true, true, true, true, true, true, true, true, true, true, true]);
   assert.equal(rules.year2bad, false);
+  assert.equal(rules.shortBad, false);
   assert.equal(rules.noLine, false);
   assert.equal(rules.card.length, 25);
   assert.deepEqual(Object.values(rules.card.reduce((a, x) => { a[x] = (a[x] || 0) + 1; return a; }, {})).sort(), [5, 5, 5, 5, 5]);
@@ -216,6 +223,11 @@ await step('online bingo: voting, 5x5 color cards, sync audio, answer, marking a
   assert.deepEqual(Object.values(hostState.card.reduce((a, x) => { a[x] = (a[x] || 0) + 1; return a; }, {})).sort(), [5, 5, 5, 5, 5]);
   assert.notDeepEqual(hostState.card, playerState.card);
   assert.match(hostState.audio || '', /is-playing/);
+  await host.waitForFunction(() => { const a = window.HitsterOnline.debug.audio(); return a.currentTime > 0.2 && !a.paused && !a.muted; }, { timeout: 5000 });
+  await host.evaluate(() => { const d = window.HitsterOnline.debug, o = d.online, a = d.audio(); a.pause(); o.audioBlocked = true; o.audioPlaying = false; o.audioUnlocked = false; d.render(); });
+  assert.equal(await host.locator('#onlineAudioGate').isVisible(), true);
+  await host.locator('#onlineAudioGateBtn').click();
+  await host.waitForFunction(() => { const a = window.HitsterOnline.debug.audio(); return a.currentTime > 0.2 && !a.paused; }, { timeout: 5000 });
 
   const submitCorrect = async (page, cat, song) => {
     let value = String(song.year);
@@ -229,9 +241,10 @@ await step('online bingo: voting, 5x5 color cards, sync audio, answer, marking a
     else await page.locator(`[data-answer="${value}"]`).click();
   };
   await submitCorrect(host, hostState.cat, hostState.song);
+  assert.equal(await host.evaluate(() => window.HitsterOnline.state.phase), 'playing');
   await submitCorrect(player, hostState.cat, hostState.song);
-  await host.waitForFunction(() => window.HitsterOnline.state.phase === 'reveal', { timeout: 18000 });
-  await player.waitForFunction(() => window.HitsterOnline.state.phase === 'reveal', { timeout: 18000 });
+  await host.waitForFunction(() => window.HitsterOnline.state.phase === 'reveal', { timeout: 2500 });
+  await player.waitForFunction(() => window.HitsterOnline.state.phase === 'reveal', { timeout: 2500 });
   assert.equal(await host.locator('#onlineBingo .is-eligible').count() > 0, true);
   assert.equal(await player.locator('#onlineBingo .is-eligible').count() > 0, true);
   assert.match(await player.locator('#onlineReveal').innerText(), new RegExp(String(hostState.song.year)));
@@ -243,8 +256,7 @@ await step('online bingo: voting, 5x5 color cards, sync audio, answer, marking a
   assert.ok(scores.find((p) => p.name === 'Host').score >= 1);
   assert.ok(scores.find((p) => p.name === 'Player').score >= 1);
 
-  await host.locator('#onlineStart').click();
-  await host.waitForFunction(() => window.HitsterOnline.state.phase === 'spinning', { timeout: 3000 });
+  await host.waitForFunction(() => window.HitsterOnline.state.phase === 'spinning', { timeout: 6000 });
   await host.waitForFunction(() => window.HitsterOnline.state.phase === 'playing', { timeout: 8000 });
   assert.ok(await host.evaluate(() => window.HitsterOnline.state.round) >= 2);
 
@@ -271,15 +283,37 @@ await step('online bingo: voting, 5x5 color cards, sync audio, answer, marking a
     ['solo', 2, false], ['before2000', 2, false], ['year4', 0, true], ['decade', 8, false], ['title', 0, true], ['artist', 0, true]
   ]);
 
+  const fallback = await host.evaluate(() => {
+    const d = window.HitsterOnline.debug, o = d.online;
+    o.card = Array(25).fill('decade'); o.marked = new Set();
+    o.category = { id: 'decade', label: 'Jahrzehnt', short: 'Jahrzehnt', icon: '10s', color: '#7dd3fc', ink: '#082333', question: 'Jahrzehnt?', type: 'decade' };
+    o.phase = 'reveal'; o.correct = { host: true }; o.pending = new Set(['host']); o.markDeadline = Date.now() + 1500; o.settings.markTimer = 3;
+    const p = o.players.find((x) => x.id === 'host');
+    p.card = o.card; p.marked = new Set(); p.score = 0; p.bingo = false; p.correct = true;
+    d.render();
+    const grid = document.querySelector('#onlineBingo');
+    const warning = grid.classList.contains('is-warning');
+    const blinks = getComputedStyle(grid).animationIterationCount;
+    const cell = d.randomCell(p);
+    d.autoMarkPending();
+    return { warning, blinks, cell, score: p.score, marked: p.marked.size, pending: o.pending.size };
+  });
+  assert.equal(fallback.warning, true);
+  assert.equal(fallback.blinks, '5');
+  assert.ok(fallback.cell != null);
+  assert.equal(fallback.score, 1);
+  assert.equal(fallback.marked, 1);
+  assert.equal(fallback.pending, 0);
+
   await host.evaluate(() => {
     const d = window.HitsterOnline.debug, o = d.online;
     o.card = Array(25).fill('decade');
     o.marked = new Set();
     o.category = { id: 'decade', label: 'Jahrzehnt', short: 'Jahrzehnt', icon: '10s', color: '#7dd3fc', ink: '#082333', question: 'Jahrzehnt?', type: 'decade' };
-    o.phase = 'reveal'; o.correct = { host: true }; o.pending = new Set(['host']);
+    o.phase = 'reveal'; o.correct = { host: true }; o.pending = new Set(['host']); o.markDeadline = Date.now() + 12000;
     const p = o.players.find((x) => x.id === 'host');
     p.card = o.card; p.marked = new Set(); p.score = 0; p.bingo = false;
-    for (let i = 0; i < 5; i++) d.hostMark('host', i);
+    for (let i = 0; i < 5; i++) { o.pending.add('host'); d.hostMark('host', i); }
   });
   await host.waitForTimeout(400);
   const win = await host.evaluate(() => ({ phase: window.HitsterOnline.state.phase, winner: window.HitsterOnline.state.winner, text: document.querySelector('#onlineReveal')?.innerText, progress: document.querySelector('#onlineCardProgress')?.textContent }));
@@ -287,6 +321,12 @@ await step('online bingo: voting, 5x5 color cards, sync audio, answer, marking a
   assert.ok(win.winner?.name);
   assert.match(win.text, /BINGO/);
   assert.match(win.progress, /5 \/ 25/);
+
+  assert.equal(await host.locator('#onlineLeaderboard').evaluate((el) => el.tagName), 'DETAILS');
+  assert.equal(await host.locator('#onlineLeaderboard').evaluate((el) => el.open), false);
+  await host.locator('#onlineLeaderboard summary').click();
+  assert.equal(await host.locator('#onlineLeaderboard').evaluate((el) => el.open), true);
+  await host.locator('#onlineLeaderboard summary').click();
 
   await host.locator('#onlineStart').click();
   await host.waitForFunction(() => window.HitsterOnline.state.phase === 'setup', { timeout: 3000 });
