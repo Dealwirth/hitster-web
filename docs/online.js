@@ -598,7 +598,7 @@ function autoMarkPending() {
     hostMark(playerId, index, true);
     if (online.phase === 'ended') return;
   }
-  if (online.phase === 'reveal') { broadcastState(); scheduleNextRound(1700); }
+  if (online.phase === 'reveal') { broadcastState(); scheduleNextRound(2200); }
 }
 function revealRound() {
   if (online.role !== 'host' || online.phase !== 'playing' || !online.song) return;
@@ -616,7 +616,7 @@ function revealRound() {
   online.warningKey = '';
   const payload = { phase: 'reveal', category: publicCategory(category), song: { year: song.year, title: song.title, artist: song.artist, group: Boolean(song.group), spotifyId: song.spotifyId || '' }, correct: online.correct, answers: online.revealAnswers, players: publicPlayers(), winner: null, markDeadline: online.markDeadline, markTimer: online.settings.markTimer };
   send('reveal', payload); send('state', publicState()); render();
-  if (!online.pending.size) scheduleNextRound(2600);
+  if (!online.pending.size) scheduleNextRound(3200);
   else online.timers.mark = setTimeout(autoMarkPending, Math.max(0, online.markDeadline - Date.now()));
 }
 function hostMark(playerId, index, auto = false) {
@@ -634,7 +634,7 @@ function hostMark(playerId, index, auto = false) {
     send('ended', { winner: online.winner, players: publicPlayers() }); send('state', publicState()); render(); return;
   }
   broadcastState();
-  if (online.pending.size === 0) scheduleNextRound(1700);
+  if (online.pending.size === 0) scheduleNextRound(2400);
 }
 function onCellClick(index) {
   const me = online.players.find((p) => p.id === myId());
