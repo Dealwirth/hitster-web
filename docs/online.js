@@ -743,7 +743,7 @@ function renderGame() {
   const me = online.players.find((p) => p.id === myId());
   const markPending = phase === 'reveal' && (isHost ? online.pending.has('host') : Boolean(me?.pending));
   const markLeft = markPending && online.markDeadline ? Math.max(0, Math.ceil((online.markDeadline - Date.now()) / 1000)) : 0;
-  $('#onlineTimer').innerHTML = phase === 'playing' ? `${remaining}<small>s</small>` : phase === 'spinning' ? `${Math.max(1, remaining)}<small>s</small>` : phase === 'reveal' && markPending ? `${markLeft}<small>s kreuzen</small>` : phase === 'reveal' ? '✓<small>aufgelöst</small>' : '★<small>Bingo</small>';
+  $('#onlineTimer').innerHTML = phase === 'playing' ? `${remaining}<small>s</small>` : phase === 'spinning' ? `${Math.max(1, remaining)}<small>s</small>` : phase === 'reveal' ? '✓<small>aufgelöst</small>' : '★<small>Bingo</small>';
   const audio = $('#onlineAudio');
   audio.hidden = !['spinning', 'playing'].includes(phase) || !online.audioUrl;
   if (!audio.hidden) {
@@ -779,7 +779,7 @@ function renderGame() {
   if (phase === 'spinning') $('#onlineGameStatus').textContent = 'Die Discokugel dreht …';
   else if (phase === 'playing') { const count = Object.keys(online.answers || {}).length; $('#onlineGameStatus').textContent = `${count} / ${online.players.filter((p) => p.connected !== false).length} haben getippt.`; }
   else if (phase === 'reveal') {
-    if (markPending) $('#onlineGameStatus').textContent = `Richtig! ${markLeft}s zum Kreuzen – danach wird zufällig gesetzt.`;
+    if (markPending) $('#onlineGameStatus').textContent = 'Richtig! Setze dein Kreuz in der Kategoriefarbe – danach wird zufällig gesetzt.';
     else if (online.correct[myId()]) $('#onlineGameStatus').textContent = 'Kreuz gesetzt. Nächste Runde startet automatisch …';
     else $('#onlineGameStatus').textContent = 'Schade – diesmal kein Kreuz. Die Auflösung steht unten.';
   }
